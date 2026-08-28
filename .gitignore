@@ -1,0 +1,35 @@
+# Fichiers et dossiers à ignorer (racine du projet)
+
+# Variables d'environnement — NE JAMAIS COMMITER
+backend/.env
+frontend/.env
+*.env
+.env
+
+# Dépendances npm
+backend/node_modules/
+frontend/node_modules/
+
+# Build frontend
+frontend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Uploads (si activé)
+backend/uploads/

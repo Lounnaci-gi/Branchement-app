@@ -1,0 +1,339 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   TOKENS DE DESIGN — Suivi des Branchements AEP
+   Concept : le "pipeline" aquatique moderne & interactif
+   ============================================================ */
+
+:root {
+  /* Thème Clair */
+  --color-bg: #F4F8FA;
+  --color-surface: #FFFFFF;
+  --color-surface-sunken: #EAF2F6;
+  --color-primary: #2599FB;
+  --color-primary-dark: #1D506B;
+  --color-primary-light: #72BCFC;
+  --color-primary-hover: #007CE6;
+  --color-primary-active: #0062B8;
+  --color-primary-selection: #E9F5FF;
+  --color-accent: #F07857;
+  --color-accent-light: #FDE8E2;
+  --color-text: #1E384D;
+  --color-text-muted: #627F92;
+  --color-border: #DCEBF2;
+  --color-border-subtle: rgba(29, 80, 107, 0.08);
+  --color-success: #16A34A;
+  --color-success-bg: #DCFCE7;
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEE2E2;
+  --color-warning: #D97706;
+  --color-warning-bg: #FEF3C7;
+  --color-glow: rgba(37, 153, 251, 0.15);
+
+  --color-sidebar-bg: #2599FB;
+  --color-sidebar-text: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.12);
+
+  /* Typographie */
+  --font-display: 'Poppins', sans-serif;
+  --font-body: 'Poppins', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  /* Rayon / ombres */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 3px rgba(29, 80, 107, 0.04), 0 10px 28px rgba(29, 80, 107, 0.06);
+  --shadow-elevated: 0 16px 34px rgba(29, 80, 107, 0.14);
+}
+
+:root[data-theme='dark'] {
+  /* Thème Sombre Moderne (Deep Obsidian / Aquatic Cyan) */
+  --color-bg: #090F16;
+  --color-surface: #111D2A;
+  --color-surface-sunken: #0B141E;
+  --color-primary: #38BDF8;
+  --color-primary-dark: #F1F5F9;
+  --color-primary-light: #7DD3FC;
+  --color-primary-hover: #0EA5E9;
+  --color-primary-active: #0284C7;
+  --color-primary-selection: rgba(56, 189, 248, 0.14);
+  --color-accent: #FB923C;
+  --color-accent-light: rgba(251, 146, 60, 0.15);
+  --color-text: #F1F5F9;
+  --color-text-muted: #94A3B8;
+  --color-border: #1E3247;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-success: #4ADE80;
+  --color-success-bg: rgba(74, 222, 128, 0.14);
+  --color-danger: #F87171;
+  --color-danger-bg: rgba(248, 113, 113, 0.14);
+  --color-warning: #FBBF24;
+  --color-warning-bg: rgba(251, 191, 36, 0.14);
+  --color-glow: rgba(56, 189, 248, 0.25);
+
+  --color-sidebar-bg: #0C1622;
+  --color-sidebar-text: #F1F5F9;
+  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-elevated: 0 20px 40px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(56, 189, 248, 0.18);
+}
+
+/* View Transition API Circular Reveal Support */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+:root[data-theme='dark'] body {
+  background: radial-gradient(circle at 85% 15%, #0e1c2a 0%, #090f16 100%);
+  background-attachment: fixed;
+}
+
+/* Scrollbars modernes personnalisées */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface-sunken);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  margin: 0;
+}
+
+a { color: inherit; text-decoration: none; }
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.mono { font-family: var(--font-mono); }
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------- Boutons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px var(--color-glow);
+}
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+  box-shadow: 0 4px 14px var(--color-glow);
+}
+.btn-primary:active {
+  background: var(--color-primary-active);
+}
+
+:root[data-theme='dark'] .btn-primary {
+  color: #06111B;
+  font-weight: 600;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+}
+:root[data-theme='dark'] .btn-primary:hover {
+  background: #7DD3FC;
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+.btn-secondary:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-selection);
+}
+
+.btn-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+.btn-danger:hover {
+  background: var(--color-danger);
+  color: #FFFFFF;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Cartes ---------- */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+:root[data-theme='dark'] .card {
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(17, 29, 42, 0.95) 0%, rgba(14, 25, 36, 0.95) 100%);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.ligne-demande {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.ligne-demande:hover {
+  background: var(--color-primary-selection);
+}
+.ligne-demande:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* ---------- Champs de formulaire ---------- */
+.champ { margin-bottom: 16px; }
+.champ label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+.champ input, .champ select, .champ textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.champ input:focus, .champ select:focus, .champ textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-glow);
+  outline: none;
+}
+
+.filtres-demandes input, .filtres-demandes select {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.filtres-demandes input::placeholder { color: var(--color-text-muted); }
+.filtres-demandes input:focus, .filtres-demandes select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-glow);
+  outline: none;
+}
+
+:root[data-theme='dark'] .champ input,
+:root[data-theme='dark'] .champ select,
+:root[data-theme='dark'] .champ textarea,
+:root[data-theme='dark'] .filtres-demandes input,
+:root[data-theme='dark'] .filtres-demandes select {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .champ input::placeholder,
+:root[data-theme='dark'] .champ textarea::placeholder {
+  color: #64748B;
+}
+
+:root[data-theme='dark'] select option {
+  background: #111D2A;
+  color: #F1F5F9;
+}
+:root[data-theme='dark'] .filtres-demandes select {
+  color-scheme: dark;
+}
+
+/* ---------- Badges de statut ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+}
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}

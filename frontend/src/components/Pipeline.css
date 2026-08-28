@@ -1,0 +1,127 @@
+/* ============================================================
+   PIPELINE — Conduite d'eau & Visualisation interactive
+   ============================================================ */
+
+.pipeline {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+}
+
+.pipeline-segment-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.pipeline-segment {
+  height: 12px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.pipeline-segment-groupe:first-child .pipeline-segment {
+  border-radius: 8px 4px 4px 8px;
+}
+.pipeline-segment-groupe:last-child .pipeline-segment {
+  border-radius: 4px 8px 8px 4px;
+}
+
+.pipeline-segment.rempli {
+  background: linear-gradient(90deg, var(--color-primary-active), var(--color-primary));
+  border-color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-glow);
+}
+
+.pipeline-segment.encours {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.3);
+}
+
+.pipeline-flux {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    transparent 100%
+  );
+  animation: fluxEau 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+:root[data-theme='dark'] .pipeline-flux {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 146, 60, 0.9) 30%,
+    #ffffff 50%,
+    rgba(251, 146, 60, 0.9) 70%,
+    transparent 100%
+  );
+  box-shadow: 0 0 14px rgba(251, 146, 60, 0.8);
+}
+
+@keyframes fluxEau {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.pipeline-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.pipeline-label.rempli {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.pipeline-label.encours {
+  color: var(--color-accent);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(251, 146, 60, 0.25);
+}
+
+.pipeline-compact .pipeline-segment {
+  height: 6px;
+}
+
+.pipeline-arret {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.pipeline-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.pipeline-muted {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-flux { animation: none; }
+}

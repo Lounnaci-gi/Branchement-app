@@ -1,0 +1,207 @@
+/* ============================================================
+   THEME TOGGLE — Interactivité & Animations Modernes
+   ============================================================ */
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  outline: none;
+}
+
+.theme-toggle-btn:hover {
+  transform: translateY(-1px);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.96);
+}
+
+/* Sidebar variant */
+.theme-toggle-sidebar {
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.theme-toggle-sidebar:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme='dark'] .theme-toggle-sidebar {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #e2e8f0;
+}
+
+:root[data-theme='dark'] .theme-toggle-sidebar:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+}
+
+/* Floating pill / Login variant */
+.theme-toggle-pill {
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #f1f5f9;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle-pill:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme='dark'] .theme-toggle-pill {
+  background: rgba(17, 32, 46, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #e2f1fd;
+}
+
+:root[data-theme='dark'] .theme-toggle-pill:hover {
+  background: rgba(24, 46, 66, 0.95);
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+}
+
+/* Switch track & thumb */
+.theme-toggle-track {
+  width: 36px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+:root[data-theme='dark'] .theme-toggle-track {
+  background: rgba(2, 132, 199, 0.4);
+}
+
+.theme-toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(0);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.is-dark .theme-toggle-thumb {
+  transform: translateX(16px);
+  background: #0b131b;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+/* Icon & Morphing Animations */
+.theme-icon {
+  width: 12px;
+  height: 12px;
+  overflow: visible;
+  color: #f59e0b;
+  transition: color 0.3s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.is-dark .theme-icon {
+  color: #38bdf8;
+  transform: rotate(360deg);
+}
+
+/* Sun Rays animation */
+.theme-sun-rays {
+  transform-origin: 12px 12px;
+  transition: transform 0.45s ease, opacity 0.25s ease;
+  stroke: #f59e0b;
+}
+
+.is-dark .theme-sun-rays {
+  transform: scale(0) rotate(-45deg);
+  opacity: 0;
+}
+
+.is-light .theme-sun-rays {
+  transform: scale(1) rotate(0deg);
+  opacity: 1;
+}
+
+/* Stars animation */
+.theme-stars {
+  opacity: 0;
+  transition: opacity 0.3s ease 0.1s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: scale(0.5) translateY(4px);
+  color: #38bdf8;
+}
+
+.is-dark .theme-stars {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Moon cutout animation */
+.moon-mask-cutout {
+  transition: cx 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), cy 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), r 0.35s ease;
+}
+
+.is-light .moon-mask-cutout {
+  cx: 24px;
+  cy: 0px;
+  r: 0px;
+}
+
+.is-dark .moon-mask-cutout {
+  cx: 17px;
+  cy: 8px;
+  r: 6px;
+}
+
+.theme-main-circle {
+  transition: r 0.35s ease, fill 0.3s ease;
+}
+
+.is-light .theme-main-circle {
+  r: 5px;
+  fill: #f59e0b;
+}
+
+.is-dark .theme-main-circle {
+  r: 7px;
+  fill: #38bdf8;
+}
+
+.theme-toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}

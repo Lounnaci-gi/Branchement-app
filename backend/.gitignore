@@ -1,0 +1,13 @@
+# Backend — fichiers à ignorer
+
+# Variables d'environnement SENSIBLES — NE JAMAIS COMMITER
+.env
+
+# Dépendances
+node_modules/
+
+# Logs
+*.log
+
+# Uploads utilisateurs
+uploads/

@@ -1,0 +1,15 @@
+# Frontend — fichiers à ignorer
+
+# Dépendances
+node_modules/
+
+# Build
+dist/
+
+# Variables d'environnement
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
