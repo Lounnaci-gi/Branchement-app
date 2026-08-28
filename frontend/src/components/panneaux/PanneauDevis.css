@@ -1,0 +1,497 @@
+/* ============================================================
+   PANNEAU DEVIS & PAIEMENT — Styles modernes et interactifs
+   ============================================================ */
+
+.panneau-devis {
+  padding: 24px;
+}
+
+.panneau-devis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-subtle, rgba(29, 80, 107, 0.08));
+}
+
+.panneau-devis-titre-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panneau-devis-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-primary-selection, #E9F5FF);
+  color: var(--color-primary, #2599FB);
+  font-size: 18px;
+}
+
+:root[data-theme='dark'] .panneau-devis-icon {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--color-primary, #38BDF8);
+}
+
+.panneau-devis-total-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-surface-sunken, #EAF2F6);
+  font-size: 12.5px;
+  color: var(--color-text-muted, #627F92);
+  border: 1px solid var(--color-border, #DCEBF2);
+}
+
+:root[data-theme='dark'] .panneau-devis-total-badge {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--color-border, #1E3247);
+}
+
+.panneau-devis-total-valeur {
+  font-weight: 700;
+  color: var(--color-primary-dark, #1D506B);
+}
+
+:root[data-theme='dark'] .panneau-devis-total-valeur {
+  color: var(--color-primary-light, #7DD3FC);
+}
+
+/* ---------- Liste des cartes de devis ---------- */
+.devis-liste-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.devis-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: var(--color-surface-sunken, #F8FAFC);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-md, 10px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.devis-card-item:hover {
+  border-color: var(--color-primary-light, #72BCFC);
+  box-shadow: 0 4px 12px rgba(37, 153, 251, 0.08);
+  transform: translateY(-1px);
+}
+
+:root[data-theme='dark'] .devis-card-item {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--color-border, #1E3247);
+}
+
+:root[data-theme='dark'] .devis-card-item:hover {
+  background: rgba(56, 189, 248, 0.04);
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.devis-card-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.devis-type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.devis-type-tag.initial {
+  background: var(--color-primary-selection, #E9F5FF);
+  color: var(--color-primary-hover, #007CE6);
+  border: 1px solid rgba(37, 153, 251, 0.25);
+}
+
+:root[data-theme='dark'] .devis-type-tag.initial {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--color-primary, #38BDF8);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.devis-type-tag.complementaire {
+  background: var(--color-warning-bg, #FEF3C7);
+  color: var(--color-warning, #D97706);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
+:root[data-theme='dark'] .devis-type-tag.complementaire {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--color-warning, #FBBF24);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.devis-numero-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.devis-numero-libelle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted, #627F92);
+  text-transform: uppercase;
+}
+
+.devis-numero-valeur {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text, #1E384D);
+}
+
+.devis-card-montant {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.devis-montant-chiffre {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-primary-dark, #1D506B);
+}
+
+:root[data-theme='dark'] .devis-montant-chiffre {
+  color: #FFFFFF;
+}
+
+.devis-statut-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.devis-statut-pill.paye {
+  background: var(--color-success-bg, #DCFCE7);
+  color: var(--color-success, #16A34A);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+:root[data-theme='dark'] .devis-statut-pill.paye {
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--color-success, #4ADE80);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.devis-statut-pill.impaye {
+  background: var(--color-warning-bg, #FEF3C7);
+  color: var(--color-warning, #D97706);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+:root[data-theme='dark'] .devis-statut-pill.impaye {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--color-warning, #FBBF24);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.devis-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- Formulaire Devis ---------- */
+.form-devis-container {
+  margin-top: 16px;
+  padding: 22px;
+  background: var(--color-surface, #FFFFFF);
+  border: 1.5px solid var(--color-primary-light, #72BCFC);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: 0 8px 24px rgba(37, 153, 251, 0.08);
+  animation: fadeInDevis 0.25s ease-out;
+}
+
+:root[data-theme='dark'] .form-devis-container {
+  background: var(--color-surface, #111D2A);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fadeInDevis {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.form-devis-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border, #DCEBF2);
+}
+
+.form-devis-entete h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary-dark, #1D506B);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:root[data-theme='dark'] .form-devis-entete h4 {
+  color: var(--color-primary-light, #7DD3FC);
+}
+
+/* ---------- Carte interactive Toggle Règlement / Paiement ---------- */
+.paiement-toggle-card {
+  margin-top: 18px;
+  border: 1.5px solid var(--color-border, #DCEBF2);
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-surface-sunken, #F8FAFC);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.paiement-toggle-card.actif {
+  border-color: var(--color-success, #16A34A);
+  background: rgba(22, 163, 74, 0.03);
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.08);
+}
+
+:root[data-theme='dark'] .paiement-toggle-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--color-border, #1E3247);
+}
+
+:root[data-theme='dark'] .paiement-toggle-card.actif {
+  border-color: var(--color-success, #4ADE80);
+  background: rgba(74, 222, 128, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.paiement-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  gap: 14px;
+}
+
+.paiement-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.paiement-toggle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--color-surface, #FFFFFF);
+  border: 1px solid var(--color-border, #DCEBF2);
+  font-size: 18px;
+  transition: all 0.2s ease;
+}
+
+.paiement-toggle-card.actif .paiement-toggle-icon {
+  background: var(--color-success-bg, #DCFCE7);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+:root[data-theme='dark'] .paiement-toggle-icon {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-border, #1E3247);
+}
+
+:root[data-theme='dark'] .paiement-toggle-card.actif .paiement-toggle-icon {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.paiement-toggle-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.paiement-toggle-titre {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text, #1E384D);
+}
+
+.paiement-toggle-description {
+  font-size: 11.5px;
+  color: var(--color-text-muted, #627F92);
+  margin-top: 1px;
+}
+
+/* Switch iOS-style */
+.custom-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.custom-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.custom-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border, #CBD5E1);
+  transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 26px;
+}
+
+.custom-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.custom-switch input:checked + .custom-switch-slider {
+  background-color: var(--color-success, #16A34A);
+}
+
+:root[data-theme='dark'] .custom-switch input:checked + .custom-switch-slider {
+  background-color: var(--color-success, #4ADE80);
+}
+
+.custom-switch input:checked + .custom-switch-slider:before {
+  transform: translateX(20px);
+}
+
+/* Section déroulante des détails de paiement */
+.paiement-details-content {
+  padding: 16px;
+  border-top: 1px solid rgba(22, 163, 74, 0.15);
+  background: var(--color-surface, #FFFFFF);
+  animation: slideDownDevis 0.25s ease-out;
+}
+
+:root[data-theme='dark'] .paiement-details-content {
+  background: rgba(17, 29, 42, 0.95);
+  border-top-color: rgba(74, 222, 128, 0.15);
+}
+
+@keyframes slideDownDevis {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mode-paiement-badges {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mode-paiement-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--color-border, #DCEBF2);
+  background: var(--color-surface, #FFFFFF);
+  color: var(--color-text, #1E384D);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-paiement-btn:hover {
+  border-color: var(--color-primary, #2599FB);
+  background: var(--color-primary-selection, #E9F5FF);
+}
+
+.mode-paiement-btn.selectionne {
+  border-color: var(--color-primary, #2599FB);
+  background: var(--color-primary, #2599FB);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+:root[data-theme='dark'] .mode-paiement-btn {
+  background: var(--color-surface-sunken, #0B141E);
+  border-color: var(--color-border, #1E3247);
+  color: var(--color-text, #F1F5F9);
+}
+
+:root[data-theme='dark'] .mode-paiement-btn.selectionne {
+  background: var(--color-primary, #38BDF8);
+  border-color: var(--color-primary, #38BDF8);
+  color: #06111B;
+}
+
+/* Empty State */
+.devis-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  border: 1.5px dashed var(--color-border, #DCEBF2);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--color-surface-sunken, #F8FAFC);
+  margin-top: 12px;
+}
+
+:root[data-theme='dark'] .devis-empty-state {
+  background: rgba(255, 255, 255, 0.01);
+  border-color: var(--color-border, #1E3247);
+}
+
+.devis-empty-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.devis-empty-text {
+  font-size: 13.5px;
+  color: var(--color-text-muted, #627F92);
+  margin-bottom: 14px;
+}

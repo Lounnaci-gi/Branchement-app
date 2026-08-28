@@ -27,7 +27,7 @@ const TRANSITIONS = {
   ETUDE_EN_COURS: ['ETUDE_TERMINEE', 'REJETEE', 'ANNULEE'],
   ETUDE_TERMINEE: ['DEVIS_EMIS', 'REJETEE', 'ANNULEE'],
   DEVIS_EMIS: ['DEVIS_PAYE', 'ANNULEE'],
-  DEVIS_PAYE: ['TRAVAUX_EN_COURS', 'ANNULEE'],
+  DEVIS_PAYE: ['DEVIS_EMIS', 'TRAVAUX_EN_COURS', 'ANNULEE'],
   TRAVAUX_EN_COURS: ['TRAVAUX_TERMINES'],
   TRAVAUX_TERMINES: ['MISE_EN_SERVICE'],
   MISE_EN_SERVICE: [],
@@ -59,7 +59,7 @@ function coordonneesValides(demandeur) {
   const telephone = String(demandeur.telephone || '').trim();
   const telephoneSecondaire = String(demandeur.telephone_secondaire || '').trim();
   const email = String(demandeur.email || '').trim();
-  const telephoneValide = (valeur) => !valeur || /^0[5-7]\d{2} \d{2} \d{2} \d{2}$/.test(valeur);
+  const telephoneValide = (valeur) => !valeur || /^0[2-7]\d{2} \d{2} \d{2} \d{2}$/.test(valeur);
   return telephoneValide(telephone) && telephoneValide(telephoneSecondaire)
     && emailValide(email)
     && (!email || texteValide(email, { maxLength: 254 }));
@@ -249,24 +249,56 @@ async function genererNumeroDemande(pool) {
 
 async function genererNumeroDevis(pool, idDemande) {
   const annee = new Date().getFullYear();
-  const result = await pool.request()
+  const agenceRes = await pool.request()
     .input('id_demande', sql.Int, idDemande)
-    .input('debut_annee', sql.DateTime2, new Date(`${annee}-01-01T00:00:00`))
     .query(`
-      SELECT a.code_agence, COUNT(dv.id_devis) AS total
-      FROM Demandes demande_cible
-      JOIN Agences a ON a.id_agence = demande_cible.id_agence
-      LEFT JOIN Demandes demandes_agence ON demandes_agence.id_agence = a.id_agence
-      LEFT JOIN Devis dv
-        ON dv.id_demande = demandes_agence.id_demande AND dv.date_emission >= @debut_annee
-      WHERE demande_cible.id_demande = @id_demande
-      GROUP BY a.code_agence
+      SELECT a.code_agence
+      FROM Demandes d
+      JOIN Agences a ON a.id_agence = d.id_agence
+      WHERE d.id_demande = @id_demande
     `);
-  if (result.recordset.length === 0) {
+
+  if (agenceRes.recordset.length === 0) {
     throw new Error('Demande introuvable pour la numérotation du devis.');
   }
-  const compteur = result.recordset[0].total + 1;
-  return `${String(compteur).padStart(4, '0')}/${result.recordset[0].code_agence}/${annee}`;
+
+  const codeAgence = agenceRes.recordset[0].code_agence;
+  const pattern = `%/${codeAgence}/${annee}`;
+
+  const devisExistants = await pool.request()
+    .input('pattern', sql.NVarChar(50), pattern)
+    .query(`
+      SELECT numero_devis
+      FROM Devis
+      WHERE numero_devis LIKE @pattern
+    `);
+
+  let maxCompteur = 0;
+  for (const row of devisExistants.recordset) {
+    const parts = String(row.numero_devis || '').split('/');
+    if (parts.length >= 1) {
+      const num = parseInt(parts[0], 10);
+      if (!isNaN(num) && num > maxCompteur) {
+        maxCompteur = num;
+      }
+    }
+  }
+
+  let candidatCompteur = maxCompteur + 1;
+  let numeroCandidat = `${String(candidatCompteur).padStart(4, '0')}/${codeAgence}/${annee}`;
+
+  while (true) {
+    const existe = await pool.request()
+      .input('numero_devis', sql.NVarChar(30), numeroCandidat)
+      .query(`SELECT TOP 1 1 AS ex FROM Devis WHERE numero_devis = @numero_devis`);
+    if (existe.recordset.length === 0) {
+      break;
+    }
+    candidatCompteur++;
+    numeroCandidat = `${String(candidatCompteur).padStart(4, '0')}/${codeAgence}/${annee}`;
+  }
+
+  return numeroCandidat;
 }
 
 // GET /api/demandes - liste avec filtres (statut, agence, commune, recherche, pagination)
@@ -338,7 +370,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// DELETE /api/demandes/:id - supprimer une demande uniquement si le devis n'est pas payé
+// DELETE /api/demandes/:id - les demandes annulées sont supprimables si le devis n'est pas payé
 router.delete('/:id', async (req, res) => {
   const id_demande = req.params.id;
   const pool = await getPool();
@@ -348,7 +380,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const demande = await pool.request()
       .input('id_demande', sql.Int, id_demande)
-      .query(`SELECT d.id_demande, d.id_agence, dv.statut_paiement
+      .query(`SELECT d.id_demande, d.id_agence, d.statut_actuel, dv.statut_paiement
               FROM Demandes d
               LEFT JOIN Devis dv ON dv.id_demande = d.id_demande
               WHERE d.id_demande = @id_demande`);
@@ -423,7 +455,7 @@ router.get('/:id', async (req, res) => {
     const etude = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM EtudesTechniques WHERE id_demande = @id`);
     const devis = await pool.request().input('id', sql.Int, id)
-      .query(`SELECT * FROM Devis WHERE id_demande = @id`);
+      .query(`SELECT * FROM Devis WHERE id_demande = @id ORDER BY date_emission ASC`);
     const travaux = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM Travaux WHERE id_demande = @id`);
     const miseEnService = await pool.request().input('id', sql.Int, id)
@@ -435,7 +467,7 @@ router.get('/:id', async (req, res) => {
       demande: demande.recordset[0],
       historique: historique.recordset,
       etude: etude.recordset[0] || null,
-      devis: devis.recordset[0] || null,
+      devis: devis.recordset,
       travaux: travaux.recordset[0] || null,
       miseEnService: miseEnService.recordset[0] || null,
       pieces: pieces.recordset,
@@ -672,30 +704,59 @@ router.get('/:id/devis/preview', async (req, res) => {
 router.put('/:id/devis', async (req, res) => {
   try {
     const id_demande = req.params.id;
-    const { montant } = req.body;
+    const { montant, id_devis } = req.body;
+    if (montant === undefined || montant === null || String(montant).trim() === '' || isNaN(Number(montant)) || Number(montant) < 0) {
+      return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif.' });
+    }
     const pool = await getPool();
 
-    const existe = await pool.request().input('id', sql.Int, id_demande)
-      .query(`SELECT id_devis FROM Devis WHERE id_demande = @id`);
+    const existe = id_devis
+      ? await pool.request().input('id_devis', sql.Int, id_devis).input('id_demande', sql.Int, id_demande)
+        .query(`SELECT id_devis, numero_devis FROM Devis WHERE id_devis = @id_devis AND id_demande = @id_demande`)
+      : { recordset: [] };
+
+    let idDevisFinal = id_devis;
+    let numeroDevisFinal = '';
 
     if (existe.recordset.length > 0) {
+      numeroDevisFinal = existe.recordset[0].numero_devis;
       await pool.request()
-        .input('id_demande', sql.Int, id_demande)
+        .input('id_devis', sql.Int, id_devis)
         .input('montant', sql.Decimal(12, 2), montant)
-        .query(`UPDATE Devis SET montant=@montant WHERE id_demande=@id_demande`);
+        .query(`UPDATE Devis SET montant=@montant WHERE id_devis=@id_devis`);
     } else {
-      const numero_devis = await genererNumeroDevis(pool, id_demande);
-      await pool.request()
+      numeroDevisFinal = await genererNumeroDevis(pool, id_demande);
+      const insertRes = await pool.request()
         .input('id_demande', sql.Int, id_demande)
-        .input('numero_devis', sql.NVarChar, numero_devis)
+        .input('numero_devis', sql.NVarChar, numeroDevisFinal)
         .input('montant', sql.Decimal(12, 2), montant)
-        .query(`INSERT INTO Devis (id_demande, numero_devis, montant) VALUES (@id_demande, @numero_devis, @montant)`);
+        .query(`INSERT INTO Devis (id_demande, numero_devis, montant, date_emission)
+          OUTPUT INSERTED.id_devis, INSERTED.numero_devis
+          VALUES (@id_demande, @numero_devis, @montant, SYSDATETIME())`);
+      if (insertRes.recordset.length > 0) {
+        idDevisFinal = insertRes.recordset[0].id_devis;
+        numeroDevisFinal = insertRes.recordset[0].numero_devis;
+      }
     }
 
     const devis = await pool.request().input('id_demande', sql.Int, id_demande)
-      .query('SELECT numero_devis FROM Devis WHERE id_demande = @id_demande');
-    await synchroniserStatut(pool, id_demande, 'DEVIS_EMIS', req.agent.id_agent, 'Devis enregistré');
-    res.json({ message: 'Devis enregistré.', numero_devis: devis.recordset[0].numero_devis });
+      .query('SELECT id_devis, numero_devis, statut_paiement FROM Devis WHERE id_demande = @id_demande ORDER BY date_emission DESC');
+
+    const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT statut_actuel FROM Demandes WHERE id_demande = @id_demande');
+    const statutActuel = demandeRes.recordset[0]?.statut_actuel;
+
+    const tousPayes = devis.recordset.every((item) => item.statut_paiement === 'PAYE');
+    if (statutActuel === 'ETUDE_TERMINEE' || statutActuel === 'DEVIS_EMIS' || statutActuel === 'DEVIS_PAYE') {
+      const nouveauStatut = tousPayes ? 'DEVIS_PAYE' : 'DEVIS_EMIS';
+      await synchroniserStatut(pool, id_demande, nouveauStatut, req.agent.id_agent, 'Devis enregistré');
+    }
+
+    res.json({
+      message: 'Devis enregistré.',
+      id_devis: idDevisFinal,
+      numero_devis: numeroDevisFinal || devis.recordset[0]?.numero_devis
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: "Erreur lors de l'enregistrement du devis." });
@@ -706,6 +767,7 @@ router.put('/:id/devis', async (req, res) => {
 router.patch('/:id/devis/paiement', async (req, res) => {
   try {
     const id_demande = req.params.id;
+    const id_devis = req.body.id_devis ? parseInt(req.body.id_devis, 10) : 0;
     const {
       mode_paiement,
       date_paiement,
@@ -731,9 +793,20 @@ router.patch('/:id/devis/paiement', async (req, res) => {
       return res.status(400).json({ erreur: 'Le numéro de versement et la banque sont obligatoires.' });
     }
     const pool = await getPool();
+    const devisResultat = await pool.request().input('id_demande', sql.Int, id_demande).input('id_devis', sql.Int, id_devis)
+      .query('SELECT id_devis, date_emission FROM Devis WHERE id_demande = @id_demande AND (@id_devis = 0 OR id_devis = @id_devis)');
+    const devis = devisResultat.recordset[0];
+    if (!devis) {
+      return res.status(404).json({ erreur: 'Devis introuvable.' });
+    }
+    const dateEmission = new Date(devis.date_emission).toISOString().slice(0, 10);
+    if (date_paiement < dateEmission) {
+      return res.status(400).json({ erreur: 'La date de paiement doit être supérieure ou égale à la date d’émission du devis.' });
+    }
 
     await pool.request()
       .input('id_demande', sql.Int, id_demande)
+      .input('id_devis', sql.Int, devis.id_devis)
       .input('mode_paiement', sql.NVarChar, mode_paiement || null)
       .input('date_paiement', sql.DateTime2, date_paiement)
       .input('numero_recu', sql.NVarChar(50), numero_recu?.trim() || null)
@@ -742,9 +815,20 @@ router.patch('/:id/devis/paiement', async (req, res) => {
       .input('banque', sql.NVarChar(150), banque?.trim().toUpperCase() || null)
       .query(`UPDATE Devis SET statut_paiement='PAYE', date_paiement=@date_paiement, mode_paiement=@mode_paiement,
               numero_recu=@numero_recu, numero_cheque=@numero_cheque, numero_versement=@numero_versement, banque=@banque
-              WHERE id_demande=@id_demande`);
+              WHERE id_devis=@id_devis AND id_demande=@id_demande`);
 
-          await synchroniserStatut(pool, id_demande, 'DEVIS_PAYE', req.agent.id_agent, 'Paiement du devis enregistré');
+    const tousDevis = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT statut_paiement FROM Devis WHERE id_demande = @id_demande');
+    const tousPayes = tousDevis.recordset.every((item) => item.statut_paiement === 'PAYE');
+
+    const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT statut_actuel FROM Demandes WHERE id_demande = @id_demande');
+    const statutActuel = demandeRes.recordset[0]?.statut_actuel;
+
+    if (tousPayes && statutActuel === 'DEVIS_EMIS') {
+      await synchroniserStatut(pool, id_demande, 'DEVIS_PAYE', req.agent.id_agent, 'Paiement du devis enregistré');
+    }
+
     res.json({ message: 'Paiement enregistré.' });
   } catch (err) {
     console.error(err);
@@ -758,6 +842,12 @@ router.put('/:id/travaux', async (req, res) => {
     const id_demande = req.params.id;
     const { date_debut, date_fin, equipe_execution, numero_compteur, observations } = req.body;
     const pool = await getPool();
+
+    const devis = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query(`SELECT statut_paiement FROM Devis WHERE id_demande = @id_demande`);
+    if (devis.recordset.length === 0 || devis.recordset.some((item) => item.statut_paiement !== 'PAYE')) {
+      return res.status(400).json({ erreur: 'Le devis doit être payé avant de renseigner l’exécution des travaux.' });
+    }
 
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_travaux FROM Travaux WHERE id_demande = @id`);
@@ -808,6 +898,13 @@ router.put('/:id/mise-en-service', async (req, res) => {
     const id_demande = req.params.id;
     const { date_mise_service, numero_abonne, index_initial } = req.body;
     const pool = await getPool();
+
+    const travaux = await pool.request().input('id', sql.Int, id_demande)
+      .query(`SELECT id_travaux, date_fin, numero_ordre_execution FROM Travaux WHERE id_demande = @id`);
+
+    if (travaux.recordset.length === 0) {
+      return res.status(400).json({ erreur: 'L’exécution des travaux doit être renseignée avant la mise en service.' });
+    }
 
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_mise_service FROM MisesEnService WHERE id_demande = @id`);

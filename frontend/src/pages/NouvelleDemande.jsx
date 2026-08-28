@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
-import { imprimerDemande } from '../utils/impressionDemande';
-import { notifierErreur, notifierSucces } from '../utils/notifications';
+import { imprimerAccuse } from '../utils/impressionAccuse';
+import { demanderConfirmation, notifierErreur, notifierSucces } from '../utils/notifications';
 
 const VIDE = {
   est_personne_morale: false, raison_sociale: '', nom: '', prenom: '', fils_de: '', ne_le: '', type_piece_identite: '', cin: '', cin_delivre_le: '', cin_delivre_par: '', telephone: '', telephone_secondaire: '', email: '', adresse: '', id_commune_residence: '', id_commune_branchement: '',
@@ -200,8 +200,11 @@ export default function NouvelleDemande() {
       id_commune_branchement: nettoyerSaisie(form.id_commune_branchement ?? '')
     };
 
+    if (!modeEdition && !await demanderConfirmation('Voulez-vous enregistrer cette nouvelle demande ?')) {
+      return;
+    }
+
     setEnvoi(true);
-    const fenetreImpression = !modeEdition ? window.open('', '_blank', 'width=800,height=900') : null;
     try {
       const payload = {
         demandeur: {
@@ -224,11 +227,11 @@ export default function NouvelleDemande() {
         ? await client.put(`/demandes/${id}`, payload)
         : await client.post('/demandes', payload);
 
-      if (!modeEdition) {
+      if (!modeEdition && await demanderConfirmation("Voulez-vous imprimer l'accusé de réception ?")) {
         const typeSelectionne = types.find((type) => String(type.id_type) === String(form.id_type));
         const communeSelectionnee = communes.find((c) => String(c.id_commune) === String(form.id_commune_branchement));
         const communeResidence = communes.find((c) => String(c.id_commune) === String(form.id_commune_residence));
-        await imprimerDemande({
+        await imprimerAccuse({
           numero_demande: data.numero_demande,
           date_depot: data.date_depot,
           est_personne_morale: form.est_personne_morale,
@@ -251,12 +254,11 @@ export default function NouvelleDemande() {
           type_autre: form.type_autre,
           nom_commune_branchement: communeSelectionnee?.nom_commune || '',
           nom_agence: communeSelectionnee?.nom_agence || ''
-        }, fenetreImpression);
+        });
       }
       await notifierSucces(modeEdition ? 'Demande modifiée avec succès.' : 'Demande créée avec succès.');
       navigate(modeEdition ? `/demandes/${id}` : `/demandes/${data.id_demande}`);
     } catch (err) {
-      fenetreImpression?.close();
       notifierErreur(err.response?.data?.erreur || "Erreur lors de l'enregistrement.");
     } finally {
       setEnvoi(false);
@@ -476,7 +478,7 @@ export default function NouvelleDemande() {
             <select required value={form.id_commune_residence ?? ''} onChange={(e) => maj('id_commune_residence', e.target.value)}>
               <option value="">Sélectionner la commune...</option>
               {communes.map((c) => (
-                <option key={c.id_commune} value={c.id_commune}>{c.nom_commune} ({c.wilaya || 'Médéa'})</option>
+                <option key={c.id_commune} value={c.id_commune}>{c.nom_commune}</option>
               ))}
             </select>
           </div>
@@ -532,7 +534,7 @@ export default function NouvelleDemande() {
             <select required value={form.id_commune_branchement ?? ''} onChange={(e) => maj('id_commune_branchement', e.target.value)}>
               <option value="">Sélectionner la commune de raccordement...</option>
               {communes.map((c) => (
-                <option key={c.id_commune} value={c.id_commune}>{c.nom_commune} — {c.nom_agence}</option>
+                <option key={c.id_commune} value={c.id_commune}>{c.nom_commune}</option>
               ))}
             </select>
           </div>
@@ -596,7 +598,7 @@ export default function NouvelleDemande() {
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid var(--color-border)', fontSize: 11.5, color: 'var(--color-text-muted)' }}>
-              🖨 L'accusé de réception et le formulaire A4 seront générés automatiquement après soumission.
+              🖨 Après soumission, vous pourrez choisir d'imprimer l'accusé de réception et le formulaire A4.
             </div>
           </div>
         </div>

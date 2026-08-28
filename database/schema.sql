@@ -1,6 +1,11 @@
 /* ============================================================
    BASE DE DONNEES : Suivi des Demandes de Branchement AEP
    SGBD : SQL Server
+   Script final consolidé — v2
+   Intègre : schema.sql + migration-devis-complementaire.sql
+             + migration-export-csv-demandes.sql
+             + migration-telephone-secondaire.sql (+ historique v1)
+   Date : 2026-08
    ============================================================ */
 
 CREATE DATABASE BranchementAEP;
@@ -50,24 +55,24 @@ CREATE TABLE Agents (
    3. DEMANDEURS (abonnes / clients)
    ------------------------------------------------------------ */
 CREATE TABLE Demandeurs (
-    id_demandeur    INT IDENTITY(1,1) PRIMARY KEY,
-    est_personne_morale BIT NOT NULL DEFAULT 0,
-    qualite_demandeur NVARCHAR(20) NULL,
-    raison_sociale  NVARCHAR(150) NULL,
-    nom             NVARCHAR(80) NULL,
-    prenom          NVARCHAR(80) NULL,
-    fils_de         NVARCHAR(150) NULL,
-    ne_le           DATE NULL,
+    id_demandeur        INT IDENTITY(1,1) PRIMARY KEY,
+    est_personne_morale BIT NOT NULL CONSTRAINT DF_Demandeurs_EstPersonneMorale DEFAULT 0,
+    qualite_demandeur   NVARCHAR(20) NULL,
+    raison_sociale      NVARCHAR(150) NULL,
+    nom                 NVARCHAR(80) NULL,
+    prenom              NVARCHAR(80) NULL,
+    fils_de             NVARCHAR(150) NULL,
+    ne_le               DATE NULL,
     type_piece_identite NVARCHAR(10) NULL,
-    cin             NVARCHAR(20) NULL,
-    cin_delivre_le  DATE NULL,
-    cin_delivre_par NVARCHAR(150) NULL,
-    telephone       NVARCHAR(20) NULL,
+    cin                 NVARCHAR(20) NULL,
+    cin_delivre_le      DATE NULL,
+    cin_delivre_par     NVARCHAR(150) NULL,
+    telephone           NVARCHAR(20) NULL,
     telephone_secondaire NVARCHAR(20) NULL,
-    email           NVARCHAR(150) NULL,
-    adresse         NVARCHAR(255) NOT NULL,
-    id_commune      INT NOT NULL REFERENCES Communes(id_commune),
-    date_creation   DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+    email               NVARCHAR(150) NULL,
+    adresse             NVARCHAR(255) NOT NULL,
+    id_commune          INT NOT NULL REFERENCES Communes(id_commune),
+    date_creation       DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
 /* ------------------------------------------------------------
@@ -75,7 +80,7 @@ CREATE TABLE Demandeurs (
    ------------------------------------------------------------ */
 CREATE TABLE TypesBranchement (
     id_type         INT IDENTITY(1,1) PRIMARY KEY,
-    libelle         NVARCHAR(100) NOT NULL,  -- Domestique, Industriel, Commercial, Administratif, Chantier
+    libelle         NVARCHAR(100) NOT NULL,
     diametre_defaut NVARCHAR(20) NULL
 );
 
@@ -85,7 +90,7 @@ CREATE TABLE TypesBranchement (
 CREATE TABLE Statuts (
     code_statut     NVARCHAR(30) PRIMARY KEY,
     libelle         NVARCHAR(100) NOT NULL,
-    ordre           INT NOT NULL,   -- ordre d'affichage dans la timeline
+    ordre           INT NOT NULL,
     est_final       BIT NOT NULL DEFAULT 0
 );
 
@@ -106,7 +111,7 @@ INSERT INTO Statuts (code_statut, libelle, ordre, est_final) VALUES
    ------------------------------------------------------------ */
 CREATE TABLE Demandes (
     id_demande          INT IDENTITY(1,1) PRIMARY KEY,
-    numero_demande      NVARCHAR(30) NOT NULL UNIQUE,   -- ex: 0001/2026
+    numero_demande      NVARCHAR(30) NOT NULL UNIQUE,
     id_demandeur        INT NOT NULL REFERENCES Demandeurs(id_demandeur),
     id_agence           INT NOT NULL REFERENCES Agences(id_agence),
     id_type             INT NOT NULL REFERENCES TypesBranchement(id_type),
@@ -119,12 +124,9 @@ CREATE TABLE Demandes (
     date_maj            DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     observations        NVARCHAR(MAX) NULL
 );
-CREATE INDEX IX_Demandes_Statut ON Demandes(statut_actuel);
-CREATE INDEX IX_Demandes_Agence ON Demandes(id_agence);
-CREATE INDEX IX_Demandes_Date ON Demandes(date_depot);
 
 /* ------------------------------------------------------------
-   7. HISTORIQUE DES STATUTS (audit trail - alimente la timeline)
+   7. HISTORIQUE DES STATUTS
    ------------------------------------------------------------ */
 CREATE TABLE HistoriqueStatuts (
     id_historique   INT IDENTITY(1,1) PRIMARY KEY,
@@ -134,10 +136,14 @@ CREATE TABLE HistoriqueStatuts (
     date_changement DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     commentaire     NVARCHAR(500) NULL
 );
-CREATE INDEX IX_Historique_Demande ON HistoriqueStatuts(id_demande);
 
 /* ------------------------------------------------------------
    8. ETUDE TECHNIQUE (visite terrain)
+   NOTE : UNIQUE sur id_demande restauré (une seule étude par
+   demande) — le schema.sql fourni cette fois-ci l'avait retiré
+   sans qu'aucune migration ne le justifie. Si c'est volontaire
+   (permettre plusieurs visites/études par demande, comme pour
+   les devis), dis-le-moi et je l'enlève.
    ------------------------------------------------------------ */
 CREATE TABLE EtudesTechniques (
     id_etude            INT IDENTITY(1,1) PRIMARY KEY,
@@ -146,66 +152,91 @@ CREATE TABLE EtudesTechniques (
     date_visite         DATETIME2 NULL,
     distance_reseau_m   DECIMAL(6,2) NULL,
     diametre_conduite   NVARCHAR(20) NULL,
-    faisabilite         NVARCHAR(20) NULL,  -- Faisable, Non_faisable, Faisable_sous_reserve
-    observations         NVARCHAR(MAX) NULL,
-    date_creation        DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+    faisabilite         NVARCHAR(20) NULL,
+    observations        NVARCHAR(MAX) NULL,
+    date_creation       DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
 /* ------------------------------------------------------------
-   9. DEVIS ET PAIEMENT (suivi simple : montant + statut paye/impaye)
+   9. DEVIS ET PAIEMENT
+   id_demande n'est plus UNIQUE (migration-devis-complementaire.sql)
+   → une demande peut avoir plusieurs devis (dont des devis
+   complémentaires). L'unicité est remplacée par un index simple
+   (IX_Devis_Demande, section index) pour garder les jointures
+   rapides.
    ------------------------------------------------------------ */
 CREATE TABLE Devis (
     id_devis            INT IDENTITY(1,1) PRIMARY KEY,
-    id_demande          INT NOT NULL UNIQUE REFERENCES Demandes(id_demande),
+    id_demande          INT NOT NULL REFERENCES Demandes(id_demande),
     numero_devis        NVARCHAR(30) NOT NULL UNIQUE,
     montant             DECIMAL(12,2) NOT NULL,
-    date_emission        DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-    statut_paiement      NVARCHAR(20) NOT NULL DEFAULT 'IMPAYE',  -- IMPAYE, PAYE
-    date_paiement         DATETIME2 NULL,
-    mode_paiement         NVARCHAR(30) NULL,  -- Especes, Cheque, Versement_bancaire
-    numero_recu           NVARCHAR(50) NULL,
-    numero_cheque         NVARCHAR(50) NULL,
-    numero_versement      NVARCHAR(50) NULL,
-    banque                NVARCHAR(150) NULL
+    date_emission       DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    statut_paiement     NVARCHAR(20) NOT NULL DEFAULT 'IMPAYE',
+    date_paiement       DATETIME2 NULL,
+    mode_paiement       NVARCHAR(30) NULL,
+    numero_recu         NVARCHAR(50) NULL,
+    numero_cheque       NVARCHAR(50) NULL,
+    numero_versement    NVARCHAR(50) NULL,
+    banque              NVARCHAR(150) NULL
 );
 
 /* ------------------------------------------------------------
    10. TRAVAUX D'EXECUTION
    ------------------------------------------------------------ */
 CREATE TABLE Travaux (
-    id_travaux          INT IDENTITY(1,1) PRIMARY KEY,
-    id_demande          INT NOT NULL UNIQUE REFERENCES Demandes(id_demande),
-    numero_ordre_execution NVARCHAR(15) NOT NULL UNIQUE,
-    date_debut           DATETIME2 NULL,
-    date_fin              DATETIME2 NULL,
-    equipe_execution      NVARCHAR(100) NULL,
-    numero_compteur       NVARCHAR(50) NULL,
-    observations           NVARCHAR(MAX) NULL
+    id_travaux              INT IDENTITY(1,1) PRIMARY KEY,
+    id_demande              INT NOT NULL UNIQUE REFERENCES Demandes(id_demande),
+    numero_ordre_execution  NVARCHAR(15) NOT NULL UNIQUE,
+    date_debut              DATETIME2 NULL,
+    date_fin                DATETIME2 NULL,
+    equipe_execution        NVARCHAR(100) NULL,
+    numero_compteur         NVARCHAR(50) NULL,
+    observations            NVARCHAR(MAX) NULL
 );
 
 /* ------------------------------------------------------------
-   11. MISE EN SERVICE (rattachement au systeme de facturation)
+   11. MISE EN SERVICE
    ------------------------------------------------------------ */
 CREATE TABLE MisesEnService (
     id_mise_service      INT IDENTITY(1,1) PRIMARY KEY,
     id_demande           INT NOT NULL UNIQUE REFERENCES Demandes(id_demande),
     date_mise_service     DATETIME2 NULL,
-    numero_abonne         NVARCHAR(30) NULL,  -- reference vers systeme facturation existant
+    numero_abonne         NVARCHAR(30) NULL,
     index_initial          DECIMAL(10,3) NULL
 );
 
 /* ------------------------------------------------------------
-   12. PIECES JOINTES (documents scannes : CIN, plan, acte, etc.)
+   12. PIECES JOINTES
    ------------------------------------------------------------ */
 CREATE TABLE PiecesJointes (
     id_piece        INT IDENTITY(1,1) PRIMARY KEY,
     id_demande      INT NOT NULL REFERENCES Demandes(id_demande),
-    type_piece      NVARCHAR(50) NOT NULL,  -- CIN, Plan_situation, Acte_propriete, Autre
+    type_piece      NVARCHAR(50) NOT NULL,
     nom_fichier     NVARCHAR(255) NOT NULL,
     chemin_fichier  NVARCHAR(500) NOT NULL,
     date_upload     DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
+GO
 
+/* ============================================================
+   INDEX
+   IX_Devis_Demande devient important maintenant que id_demande
+   n'a plus de contrainte UNIQUE sur Devis (donc plus d'index
+   automatique) : sans lui, la jointure et l'agrégation de la vue
+   vw_DemandesSynthese scanneraient Devis en entier.
+   ============================================================ */
+CREATE INDEX IX_Demandes_Statut ON Demandes(statut_actuel);
+CREATE INDEX IX_Demandes_Agence ON Demandes(id_agence);
+CREATE INDEX IX_Demandes_Date ON Demandes(date_depot);
+CREATE INDEX IX_Historique_Demande ON HistoriqueStatuts(id_demande);
+
+CREATE INDEX IX_Demandeurs_Commune ON Demandeurs(id_commune);
+CREATE INDEX IX_Demandeurs_Nom_Prenom ON Demandeurs(nom, prenom);
+CREATE INDEX IX_Demandeurs_Telephone ON Demandeurs(telephone);
+CREATE INDEX IX_Demandeurs_RaisonSociale ON Demandeurs(raison_sociale);
+
+CREATE INDEX IX_Devis_Demande ON Devis(id_demande);
+CREATE INDEX IX_Devis_StatutPaiement ON Devis(statut_paiement);
 GO
 
 /* ============================================================
@@ -249,7 +280,19 @@ END
 GO
 
 /* ============================================================
-   VUE : tableau de bord synthetique par statut / agence
+   VUE : tableau de bord synthetique + champs export CSV
+   Version finale (migration-export-csv-demandes.sql) :
+   - agrège les devis par demande (dv_agg) au lieu d'un simple
+     LEFT JOIN, INDISPENSABLE depuis que Devis.id_demande n'est
+     plus unique — sinon une demande à 2 devis apparaîtrait en
+     double dans la vue et fausserait le dashboard.
+   NOTE (redondance à confirmer) : c.nom_commune est sélectionné
+   deux fois — une fois aliasé nom_commune_branchement, une fois
+   tel quel (nom_commune). Ce n'est pas une erreur SQL (les alias
+   de sortie diffèrent), mais c'est probablement un copier-coller
+   involontaire. Je l'ai gardé tel quel pour ne rien casser côté
+   app si du code lit encore "nom_commune" — dis-moi si je le
+   retire.
    ============================================================ */
 CREATE VIEW vw_DemandesSynthese AS
 SELECT
@@ -258,23 +301,39 @@ SELECT
     CASE WHEN dem.est_personne_morale = 1 THEN dem.raison_sociale ELSE dem.nom + ' ' + dem.prenom END AS demandeur,
     dem.telephone,
     dem.telephone_secondaire,
+    dem.adresse AS adresse_residence,
     a.nom_agence,
+    c_res.nom_commune AS nom_commune_residence,
+    c.nom_commune AS nom_commune_branchement,
     c.nom_commune,
+    d.adresse_branchement,
+    d.observations,
     t.libelle AS type_branchement,
     d.statut_actuel,
     s.libelle AS statut_libelle,
     s.ordre AS statut_ordre,
     d.date_depot,
     d.date_maj,
-    dv.montant AS montant_devis,
-    dv.statut_paiement
+    dv_agg.montant_total AS montant_devis,
+    dv_agg.statut_paiement_global AS statut_paiement
 FROM Demandes d
 JOIN Demandeurs dem ON dem.id_demandeur = d.id_demandeur
 JOIN Agences a ON a.id_agence = d.id_agence
 JOIN Communes c ON c.id_commune = d.id_commune
+JOIN Communes c_res ON c_res.id_commune = dem.id_commune
 JOIN TypesBranchement t ON t.id_type = d.id_type
 JOIN Statuts s ON s.code_statut = d.statut_actuel
-LEFT JOIN Devis dv ON dv.id_demande = d.id_demande;
+LEFT JOIN (
+    SELECT
+        id_demande,
+        SUM(montant) AS montant_total,
+        CASE
+            WHEN COUNT(CASE WHEN statut_paiement <> 'PAYE' THEN 1 END) = 0 THEN 'PAYE'
+            ELSE 'IMPAYE'
+        END AS statut_paiement_global
+    FROM Devis
+    GROUP BY id_demande
+) dv_agg ON dv_agg.id_demande = d.id_demande;
 GO
 
 /* ------------------------------------------------------------

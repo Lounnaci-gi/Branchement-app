@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
+import { notifierErreur } from '../../utils/notifications';
 
-export default function PanneauTravaux({ idDemande, travaux, onEnregistre }) {
+export default function PanneauTravaux({ idDemande, travaux, devis, onEnregistre }) {
+  const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
+  const devisPaye = devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE');
   const [ouvert, setOuvert] = useState(false);
   const [form, setForm] = useState({
     date_debut: travaux?.date_debut?.slice(0, 10) || '',
@@ -24,6 +27,10 @@ export default function PanneauTravaux({ idDemande, travaux, onEnregistre }) {
 
   async function enregistrer(e) {
     e.preventDefault();
+    if (!devisPaye) {
+      await notifierErreur('Le devis doit être payé avant de renseigner l’exécution des travaux.');
+      return;
+    }
     setEnvoi(true);
     try {
       await client.put(`/demandes/${idDemande}/travaux`, form);
@@ -38,11 +45,12 @@ export default function PanneauTravaux({ idDemande, travaux, onEnregistre }) {
     <div className="card" style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3>Exécution des travaux</h3>
-        <button className="btn btn-secondary" onClick={() => setOuvert((o) => !o)}>
+        <button className="btn btn-secondary" disabled={!devisPaye} onClick={() => setOuvert((o) => !o)} title={!devisPaye ? 'Le devis doit être payé avant de renseigner les travaux.' : undefined}>
           {travaux ? 'Modifier' : 'Renseigner'}
         </button>
       </div>
 
+      {!devisPaye && <p style={{ color: 'var(--color-text-muted)', marginTop: 12 }}>Le devis doit être payé avant de renseigner l’exécution des travaux.</p>}
       {!ouvert && travaux && (
         <div className="grille-info" style={{ marginTop: 16 }}>
           <div><span className="info-label">Ordre d'exécution</span><div className="mono">{travaux.numero_ordre_execution || '—'}</div></div>

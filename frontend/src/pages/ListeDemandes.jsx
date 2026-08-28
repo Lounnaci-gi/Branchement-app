@@ -122,16 +122,28 @@ export default function ListeDemandes() {
     setSearchParams({});
   }
 
+  function demandeSupprimable(demande) {
+    return demande.statut_actuel === 'ANNULEE' || demande.statut_paiement !== 'PAYE';
+  }
+
   // Export CSV
   function exporterCSV() {
     if (demandesTriees.length === 0) return;
-    const entetes = ['N° Demande', 'Demandeur', 'Téléphone', 'Commune', 'Type', 'Statut', 'Date de dépôt'];
+    const entetes = [
+      'N° Demande', 'Demandeur', 'Téléphone principal', 'Adresse de résidence du demandeur',
+      'Commune de résidence', 'Adresse exacte du futur branchement', 'Commune du branchement',
+      'Type', 'Observations & Notes complémentaires', 'Statut', 'Date de dépôt'
+    ];
     const lignes = demandesTriees.map((d) => [
       `"${d.numero_demande}"`,
       `"${d.demandeur}"`,
-      `"${[d.telephone, d.telephone_secondaire].filter(Boolean).join(' / ')}"`,
-      `"${d.nom_commune || ''}"`,
+      `"${d.telephone || ''}"`,
+      `"${d.adresse_residence || ''}"`,
+      `"${d.nom_commune_residence || ''}"`,
+      `"${d.adresse_branchement || ''}"`,
+      `"${d.nom_commune_branchement || d.nom_commune || ''}"`,
       `"${d.type_branchement || ''}"`,
+      `"${d.observations || ''}"`,
       `"${d.statut_actuel || ''}"`,
       `"${new Date(d.date_depot).toLocaleDateString('fr-FR')}"`
     ]);
@@ -382,7 +394,7 @@ export default function ListeDemandes() {
                     >
                       ✎
                     </Link>
-                    {d.statut_paiement !== 'PAYE' && (
+                    {demandeSupprimable(d) && (
                       <button
                         type="button"
                         className="btn btn-danger"

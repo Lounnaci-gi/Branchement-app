@@ -8,7 +8,8 @@ async function runMigration() {
   const pool = await getPool();
   console.log('Connecté. Lecture du script de migration...');
   
-  const scriptPath = path.resolve(__dirname, '../../database/migration-indexes.sql');
+  const fichierMigration = process.argv[2] || 'database/migration-indexes.sql';
+  const scriptPath = path.resolve(process.cwd(), fichierMigration);
   const sqlContent = fs.readFileSync(scriptPath, 'utf8');
   
   // Séparer les blocs par "GO"

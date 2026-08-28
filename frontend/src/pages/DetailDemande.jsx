@@ -280,10 +280,10 @@ export default function DetailDemande() {
             <PanneauDevis idDemande={id} devis={devis} onEnregistre={recharger} />
           </div>
           <div id="panneau-travaux">
-            <PanneauTravaux idDemande={id} travaux={travaux} onEnregistre={recharger} />
+            <PanneauTravaux idDemande={id} travaux={travaux} devis={devis} onEnregistre={recharger} />
           </div>
           <div id="panneau-mes">
-            <PanneauMiseEnService idDemande={id} miseEnService={miseEnService} onEnregistre={recharger} />
+            <PanneauMiseEnService idDemande={id} miseEnService={miseEnService} travaux={travaux} onEnregistre={recharger} />
           </div>
 
         </div>
