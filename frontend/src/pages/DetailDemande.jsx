@@ -12,6 +12,7 @@ import PanneauMiseEnService from '../components/panneaux/PanneauMiseEnService';
 import { imprimerAccuse } from '../utils/impressionAccuse';
 import { imprimerDemande } from '../utils/impressionDemande';
 import { imprimerDevis } from '../utils/impressionDevis';
+import { imprimerOrdreExecution } from '../utils/impressionOrdreExecution';
 import { notifierErreur, notifierSucces } from '../utils/notifications';
 
 function nettoyerTexte(valeur, defaut = '') {
@@ -108,6 +109,13 @@ export default function DetailDemande() {
     || Boolean(etude?.date_visite || etude?.faisabilite)
     || Boolean(historique?.some((h) => h.code_statut === 'ETUDE_TERMINEE'));
 
+  const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
+  const estDevisPayeOuTravaux = Boolean(
+    travaux ||
+    ['DEVIS_PAYE', 'TRAVAUX_EN_COURS', 'TRAVAUX_TERMINES', 'MISE_EN_SERVICE'].includes(demande.statut_actuel) ||
+    (devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE'))
+  );
+
   function handleImprimerDevis() {
     if (!estEtudeTerminee) {
       notifierErreur("L'étude technique doit être terminée avant de pouvoir imprimer la demande d'établissement de devis.");
@@ -119,6 +127,20 @@ export default function DetailDemande() {
       || (demande.statut_actuel === 'ETUDE_TERMINEE' ? demande.date_maj : null)
       || new Date();
     imprimerDevis({ ...demande, date_etude_terminee: dateEtude, etude, historique }, null, dateEtude);
+  }
+
+  function handleImprimerOrdreExecution() {
+    if (!estDevisPayeOuTravaux) {
+      notifierErreur("Le devis doit être payé avant de pouvoir imprimer l'ordre d'exécution.");
+      return;
+    }
+    imprimerOrdreExecution({
+      ...demande,
+      travaux,
+      devis,
+      etude,
+      miseEnService
+    });
   }
 
   return (
@@ -179,6 +201,15 @@ export default function DetailDemande() {
             title={estEtudeTerminee ? "Imprimer la demande d'établissement de devis" : "L'étude technique doit être terminée pour imprimer la demande de devis"}
           >
             <span>{estEtudeTerminee ? '🖨' : '🔒'}</span> Demande devis
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleImprimerOrdreExecution}
+            style={{ opacity: estDevisPayeOuTravaux ? 1 : 0.6 }}
+            title={estDevisPayeOuTravaux ? "Imprimer l'ordre d'exécution des travaux" : "Le devis doit être payé pour imprimer l'ordre d'exécution"}
+          >
+            <span>{estDevisPayeOuTravaux ? '🖨' : '🔒'}</span> Ordre d'exécution
           </button>
           <Link to={`/demandes/${id}/modifier`} className="btn btn-secondary">
             <span>✎</span> Modifier
@@ -280,7 +311,15 @@ export default function DetailDemande() {
             <PanneauDevis idDemande={id} devis={devis} onEnregistre={recharger} />
           </div>
           <div id="panneau-travaux">
-            <PanneauTravaux idDemande={id} travaux={travaux} devis={devis} onEnregistre={recharger} />
+            <PanneauTravaux
+              idDemande={id}
+              demande={demande}
+              travaux={travaux}
+              devis={devis}
+              etude={etude}
+              miseEnService={miseEnService}
+              onEnregistre={recharger}
+            />
           </div>
           <div id="panneau-mes">
             <PanneauMiseEnService idDemande={id} miseEnService={miseEnService} travaux={travaux} onEnregistre={recharger} />

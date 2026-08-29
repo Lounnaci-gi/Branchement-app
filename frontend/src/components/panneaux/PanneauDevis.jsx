@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
+import { imprimerDevis } from '../../utils/impressionDevis';
+import InputDate from '../InputDate';
 import './PanneauDevis.css';
 
 export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
@@ -359,12 +361,11 @@ export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
                   <div className="champ" style={{ margin: 0 }}>
                     <label>DATE DU PAIEMENT *</label>
-                    <input
-                      type="date"
+                    <InputDate
                       required
                       min={devisActuel?.date_emission?.slice(0, 10)}
                       value={paiement.date_paiement}
-                      onChange={(e) => setPaiement({ ...paiement, date_paiement: e.target.value })}
+                      onChange={(val) => setPaiement({ ...paiement, date_paiement: val })}
                     />
                   </div>
 

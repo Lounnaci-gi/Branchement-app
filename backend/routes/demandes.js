@@ -83,8 +83,19 @@ async function genererNumeroOrdreExecution(pool) {
   const annee = new Date().getFullYear();
   const result = await pool.request()
     .input('suffixe', sql.NVarChar(10), `/${annee}`)
-    .query(`SELECT COUNT(*) AS total FROM Travaux WHERE numero_ordre_execution LIKE '%' + @suffixe`);
-  return `${String(result.recordset[0].total + 1).padStart(4, '0')}/${annee}`;
+    .query(`SELECT numero_ordre_execution FROM Travaux WHERE numero_ordre_execution LIKE '%' + @suffixe`);
+
+  let maxCompteur = 0;
+  for (const row of result.recordset) {
+    const parts = String(row.numero_ordre_execution || '').split('/');
+    if (parts.length >= 1) {
+      const num = parseInt(parts[0], 10);
+      if (!isNaN(num) && num > maxCompteur) {
+        maxCompteur = num;
+      }
+    }
+  }
+  return `${String(maxCompteur + 1).padStart(4, '0')}/${annee}`;
 }
 
 // GET /api/demandes/demandeurs/recherche - demandes existantes d'un demandeur
@@ -840,13 +851,37 @@ router.patch('/:id/devis/paiement', async (req, res) => {
 router.put('/:id/travaux', async (req, res) => {
   try {
     const id_demande = req.params.id;
-    const { date_debut, date_fin, equipe_execution, numero_compteur, observations } = req.body;
+    const { date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations } = req.body;
     const pool = await getPool();
 
-    const devis = await pool.request().input('id_demande', sql.Int, id_demande)
-      .query(`SELECT statut_paiement FROM Devis WHERE id_demande = @id_demande`);
-    if (devis.recordset.length === 0 || devis.recordset.some((item) => item.statut_paiement !== 'PAYE')) {
-      return res.status(400).json({ erreur: 'Le devis doit être payé avant de renseigner l’exécution des travaux.' });
+    const devisResult = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query(`SELECT statut_paiement, date_paiement FROM Devis WHERE id_demande = @id_demande`);
+    if (devisResult.recordset.length === 0 || devisResult.recordset.some((item) => item.statut_paiement !== 'PAYE')) {
+      return res.status(400).json({ erreur: 'Le devis doit être payé avant de renseigner l\'exécution des travaux.' });
+    }
+
+    // Validation des dates
+    const dateFr = (iso) => { if (!iso) return ''; const [y, m, d] = iso.slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+    if (date_debut) {
+      const datesPaiement = devisResult.recordset
+        .filter((d) => d.date_paiement)
+        .map((d) => {
+          if (typeof d.date_paiement === 'string') return d.date_paiement.slice(0, 10);
+          const dt = new Date(d.date_paiement);
+          const y = dt.getFullYear();
+          const m = String(dt.getMonth() + 1).padStart(2, '0');
+          const day = String(dt.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        });
+      if (datesPaiement.length > 0) {
+        const dateMaxPaiement = datesPaiement.sort().at(-1);
+        if (date_debut < dateMaxPaiement) {
+          return res.status(400).json({ erreur: `La date de début (${dateFr(date_debut)}) ne peut pas être antérieure à la date de paiement du devis (${dateFr(dateMaxPaiement)}).` });
+        }
+      }
+    }
+    if (date_fin && date_debut && date_fin < date_debut) {
+      return res.status(400).json({ erreur: `La date de fin (${dateFr(date_fin)}) doit être supérieure ou égale à la date de début (${dateFr(date_debut)}).` });
     }
 
     const existe = await pool.request().input('id', sql.Int, id_demande)
@@ -859,9 +894,13 @@ router.put('/:id/travaux', async (req, res) => {
         .input('date_fin', sql.DateTime2, date_fin)
         .input('equipe_execution', sql.NVarChar, equipe_execution)
         .input('numero_compteur', sql.NVarChar, numero_compteur)
+        .input('marque_compteur', sql.NVarChar(50), marque_compteur || null)
+        .input('type_compteur', sql.NVarChar(50), type_compteur || null)
+        .input('diametre_compteur', sql.NVarChar(20), diametre_compteur || null)
         .input('observations', sql.NVarChar, observations)
         .query(`UPDATE Travaux SET date_debut=@date_debut, date_fin=@date_fin, equipe_execution=@equipe_execution,
-                numero_compteur=@numero_compteur, observations=@observations WHERE id_demande=@id_demande`);
+                numero_compteur=@numero_compteur, marque_compteur=@marque_compteur, type_compteur=@type_compteur,
+                diametre_compteur=@diametre_compteur, observations=@observations WHERE id_demande=@id_demande`);
     } else {
       const numero_ordre_execution = await genererNumeroOrdreExecution(pool);
       await pool.request()
@@ -871,9 +910,12 @@ router.put('/:id/travaux', async (req, res) => {
         .input('date_fin', sql.DateTime2, date_fin)
         .input('equipe_execution', sql.NVarChar, equipe_execution)
         .input('numero_compteur', sql.NVarChar, numero_compteur)
+        .input('marque_compteur', sql.NVarChar(50), marque_compteur || null)
+        .input('type_compteur', sql.NVarChar(50), type_compteur || null)
+        .input('diametre_compteur', sql.NVarChar(20), diametre_compteur || null)
         .input('observations', sql.NVarChar, observations)
-        .query(`INSERT INTO Travaux (id_demande, numero_ordre_execution, date_debut, date_fin, equipe_execution, numero_compteur, observations)
-          VALUES (@id_demande, @numero_ordre_execution, @date_debut, @date_fin, @equipe_execution, @numero_compteur, @observations)`);
+        .query(`INSERT INTO Travaux (id_demande, numero_ordre_execution, date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations)
+          VALUES (@id_demande, @numero_ordre_execution, @date_debut, @date_fin, @equipe_execution, @numero_compteur, @marque_compteur, @type_compteur, @diametre_compteur, @observations)`);
     }
 
     await synchroniserStatut(

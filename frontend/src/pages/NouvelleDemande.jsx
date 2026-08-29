@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
+import InputDate from '../components/InputDate';
 import { imprimerAccuse } from '../utils/impressionAccuse';
 import { demanderConfirmation, notifierErreur, notifierSucces } from '../utils/notifications';
 
@@ -376,7 +377,7 @@ export default function NouvelleDemande() {
                 </div>
                 <div className="champ">
                   <label>Né le</label>
-                  <input type="date" value={form.ne_le ?? ''} onChange={(e) => maj('ne_le', e.target.value)} />
+                  <InputDate value={form.ne_le ?? ''} onChange={(val) => maj('ne_le', val)} />
                 </div>
                 <div className="champ">
                   <label>Type de pièce d’identité</label>
@@ -404,7 +405,7 @@ export default function NouvelleDemande() {
                 </div>
                 <div className="champ">
                   <label>Délivré le</label>
-                  <input type="date" value={form.cin_delivre_le ?? ''} onChange={(e) => maj('cin_delivre_le', e.target.value)} />
+                  <InputDate value={form.cin_delivre_le ?? ''} onChange={(val) => maj('cin_delivre_le', val)} />
                 </div>
                 <div className="champ">
                   <label>Délivré par</label>

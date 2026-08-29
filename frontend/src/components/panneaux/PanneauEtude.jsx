@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { imprimerDevis } from '../../utils/impressionDevis';
+import { notifierErreur, notifierSucces } from '../../utils/notifications';
+import InputDate from '../InputDate';
 
 export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }) {
   const [ouvert, setOuvert] = useState(false);
@@ -65,7 +67,10 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="champ">
               <label>Date de visite</label>
-              <input type="date" value={form.date_visite} onChange={(e) => setForm({ ...form, date_visite: e.target.value })} />
+              <InputDate
+                value={form.date_visite}
+                onChange={(val) => setForm({ ...form, date_visite: val })}
+              />
             </div>
             <div className="champ">
               <label>Faisabilité</label>

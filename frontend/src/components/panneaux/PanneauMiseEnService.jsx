@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
+import InputDate from '../InputDate';
 
 export default function PanneauMiseEnService({ idDemande, miseEnService, travaux, onEnregistre }) {
   const travauxRenseignes = Boolean(travaux && (travaux.id_travaux || travaux.numero_ordre_execution));
@@ -75,7 +76,11 @@ export default function PanneauMiseEnService({ idDemande, miseEnService, travaux
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="champ">
               <label>Date de mise en service</label>
-              <input type="date" required value={form.date_mise_service} onChange={(e) => setForm({ ...form, date_mise_service: e.target.value })} />
+              <InputDate
+                required
+                value={form.date_mise_service}
+                onChange={(val) => setForm({ ...form, date_mise_service: val })}
+              />
             </div>
             <div className="champ">
               <label>N° abonné (système facturation)</label>
