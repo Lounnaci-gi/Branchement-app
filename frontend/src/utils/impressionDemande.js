@@ -31,6 +31,17 @@ export function genererHtmlDemande(demande) {
   const nom = estMorale ? (demande.raison_sociale || '') : (demande.demandeur_nom || demande.nom || '');
   const prenom = estMorale ? '' : (demande.demandeur_prenom || demande.prenom || '');
   const communeResidence = demande.nom_commune_residence || demande.nom_commune || '';
+  const communeBranchement = demande.nom_commune_branchement || demande.nom_commune || '';
+  const adresseBranchementBrute = (demande.adresse_branchement || '').trim();
+  const communeBranchementBrute = (communeBranchement || '').trim();
+  let adresseBranchement = adresseBranchementBrute;
+  if (communeBranchementBrute) {
+    if (!adresseBranchementBrute) {
+      adresseBranchement = communeBranchementBrute;
+    } else if (!adresseBranchementBrute.toLowerCase().includes(communeBranchementBrute.toLowerCase())) {
+      adresseBranchement = `${adresseBranchementBrute} - ${communeBranchementBrute}`;
+    }
+  }
   const type = demande.type_branchement || demande.libelle_type || '';
   const categorie = categorieBesoin(type);
   const adresse = demande.demandeur_adresse || demande.adresse || '';
@@ -64,7 +75,7 @@ export function genererHtmlDemande(demande) {
     .section { position: absolute; top: 56mm; left: 0; width: 100%; margin: 0; }
     .ligne { display: flex; align-items: baseline; gap: 1.5mm; margin: 0; min-height: 6mm; }
     .label { white-space: nowrap; }
-    .valeur { flex: 1; min-height: 4mm; border-bottom: 1px solid #000; padding: 0 1mm; text-align: center; }
+    .valeur { flex: 1; min-height: 4.5mm; border-bottom: 1px solid #000; padding: 0 1.5mm; text-align: center; font-size: 10.5pt; font-weight: 600; }
     .grille { display: grid; grid-template-columns: 1fr 1fr; column-gap: 7mm; }
     .texte { text-align: justify; margin: 0; }
     .section + .texte { position: absolute; top: 103mm; left: 0; width: 100%; }
@@ -73,7 +84,7 @@ export function genererHtmlDemande(demande) {
     .choix span { display: block; min-height: 5mm; }
     .choix .sous-ligne { margin-left: 10mm; }
     .choix > span:last-child { display: flex; align-items: baseline; }
-    .autre-ligne { flex: 1; min-height: 4mm; margin-left: 2mm; border-bottom: 1px solid #000; text-align: center; }
+    .autre-ligne { flex: 1; min-height: 4.5mm; margin-left: 2mm; border-bottom: 1px solid #000; text-align: center; font-size: 10.5pt; font-weight: 600; }
     .branchement { position: absolute; top: 165mm; left: 0; width: 100%; margin: 0; }
     .branchement .ligne { min-height: 7mm; }
     .branchement + .texte { position: absolute; top: 181mm; left: 0; width: 100%; }
@@ -86,7 +97,7 @@ export function genererHtmlDemande(demande) {
     .fait { width: 60%; }
     .signature-zone { width: 32%; text-align: center; }
     .signature-ligne { display: none; }
-    .reserve { position: absolute; top: 254mm; left: 0; width: 100%; margin: 0; padding-top: 1.5mm; font-size: 8.5pt; }
+    .reserve { position: absolute; top: 252mm; left: 0; width: 100%; margin: 0; padding-top: 2mm; font-size: 8.5pt; border-top: 1.5px solid #000; }
     .reserve .ligne { margin: 1mm 0; }
     @media screen { body { background: #eef2f5; padding: 15px; } .document { background: #fff; padding: 12mm 16mm; box-shadow: 0 2px 12px #bbb; } }
   </style>
@@ -118,7 +129,7 @@ export function genererHtmlDemande(demande) {
     <div class="choix"><span>${caseCochee(categorie === 'domestique')} Domestiques: Maison individuelle</span><span class="sous-ligne">Immeuble collectif nombre de logements / locaux commerciaux : __________________</span><span>${caseCochee(categorie === 'commercial')} Commerciaux (Artisans, commerçants)</span><span>${caseCochee(categorie === 'industriel')} Industrie ou tourisme</span><span>${caseCochee(categorie === 'chantier')} Les besoins de chantier</span><span>${caseCochee(categorie === 'incendie')} Borne d’incendie</span><span>${caseCochee(categorie === 'autre')} Autres (à préciser)&nbsp;:<span class="autre-ligne">${echapperHtml(demande.type_autre || '')}</span></span></div>
 
     <section class="branchement">
-      <div class="ligne"><span class="label">Adresse de branchement&nbsp;:</span><span class="valeur">${echapperHtml(demande.adresse_branchement)}</span></div>
+      <div class="ligne"><span class="label">Adresse de branchement&nbsp;:</span><span class="valeur">${echapperHtml(adresseBranchement)}</span></div>
     </section>
 
     <section class="infos-techniques">
