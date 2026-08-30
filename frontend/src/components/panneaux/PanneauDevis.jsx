@@ -109,6 +109,10 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
       await notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
       return;
     }
+    if (devisActuel?.statut_paiement === 'PAYE' && Number(form.montant) !== Number(devisActuel.montant)) {
+      await notifierErreur('Le montant d’un devis réglé ne peut pas être modifié.');
+      return;
+    }
     if (enregistrerPaiement && devisActuel?.date_emission && paiement.date_paiement < devisActuel.date_emission?.slice(0, 10)) {
       await notifierErreur('La date de paiement doit être supérieure ou égale à la date d’émission du devis.');
       return;
@@ -330,7 +334,9 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
                 placeholder="ex: 45 000.00"
                 value={form.montant}
                 onChange={(e) => setForm({ ...form, montant: e.target.value })}
-                style={{ fontSize: 15, fontWeight: 600 }}
+                disabled={devisActuel?.statut_paiement === 'PAYE'}
+                title={devisActuel?.statut_paiement === 'PAYE' ? 'Le montant d’un devis réglé ne peut pas être modifié.' : undefined}
+                style={{ fontSize: 15, fontWeight: 600, opacity: devisActuel?.statut_paiement === 'PAYE' ? 0.7 : 1 }}
               />
             </div>
           </div>
@@ -370,28 +376,34 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
             {enregistrerPaiement && (
               <div className="paiement-details-content">
                 <div className="champ">
-                  <label>MODE DE RÈGLEMENT *</label>
-                  <div className="mode-paiement-badges">
+                  <label id="mode-paiement-label">MODE DE RÈGLEMENT *</label>
+                  <div className="mode-paiement-badges" role="radiogroup" aria-labelledby="mode-paiement-label">
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={paiement.mode_paiement === 'Especes'}
                       className={`mode-paiement-btn ${paiement.mode_paiement === 'Especes' ? 'selectionne' : ''}`}
                       onClick={() => setPaiement({ ...paiement, mode_paiement: 'Especes' })}
                     >
-                      <span>💵</span> Espèces
+                      <span aria-hidden="true">💵</span> Espèces
                     </button>
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={paiement.mode_paiement === 'Cheque'}
                       className={`mode-paiement-btn ${paiement.mode_paiement === 'Cheque' ? 'selectionne' : ''}`}
                       onClick={() => setPaiement({ ...paiement, mode_paiement: 'Cheque' })}
                     >
-                      <span>🧾</span> Chèque
+                      <span aria-hidden="true">🧾</span> Chèque
                     </button>
                     <button
                       type="button"
+                      role="radio"
+                      aria-checked={paiement.mode_paiement === 'Versement_bancaire'}
                       className={`mode-paiement-btn ${paiement.mode_paiement === 'Versement_bancaire' ? 'selectionne' : ''}`}
                       onClick={() => setPaiement({ ...paiement, mode_paiement: 'Versement_bancaire' })}
                     >
-                      <span>🏦</span> Versement bancaire
+                      <span aria-hidden="true">🏦</span> Versement bancaire
                     </button>
                   </div>
                 </div>

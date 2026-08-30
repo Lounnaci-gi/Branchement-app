@@ -31,10 +31,10 @@ function genererCasesDate(dateVal) {
   return `<div class="date-groupe">
     <span class="case-chiffre">${echapperHtml(j1)}</span>
     <span class="case-chiffre">${echapperHtml(j2)}</span>
-    <span class="sep-date">!</span>
+    <span class="sep-date"> </span>
     <span class="case-chiffre">${echapperHtml(m1)}</span>
     <span class="case-chiffre">${echapperHtml(m2)}</span>
-    <span class="sep-date">!</span>
+    <span class="sep-date"> </span>
     <span class="case-chiffre">${echapperHtml(a1)}</span>
     <span class="case-chiffre">${echapperHtml(a2)}</span>
   </div>`;
@@ -44,15 +44,19 @@ function genererCasesDate(dateVal) {
  * Génère des cases de saisie pour un numéro / index (par défaut 8 cases: 4 ! 4)
  */
 function genererCasesChiffres(valeur = '', nbTotal = 8, separation = 4) {
-  const str = String(valeur || '').replace(/\D/g, '').slice(0, nbTotal).padStart(valeur ? nbTotal : 0, ' ');
+  const raw = valeur === null || valeur === undefined ? '' : String(valeur).trim();
+  const hasRealValue = raw !== '' && Number(raw) !== 0;
+  const digits = hasRealValue ? raw.replace(/\D/g, '').slice(0, nbTotal) : '0'.repeat(nbTotal);
+  const str = digits.padEnd(nbTotal, ' ');
   const chars = Array.from({ length: nbTotal }, (_, i) => str[i] || '');
 
-  const groupe1 = chars.slice(0, separation);
-  const groupe2 = chars.slice(separation);
+  const groupe1 = chars.slice(0, separation > 0 ? separation : nbTotal);
+  const groupe2 = separation > 0 ? chars.slice(separation) : [];
+  const separateur = separation > 0 && separation < nbTotal ? '<span class="sep-date"> </span>' : '';
 
   return `<div class="date-groupe">
     ${groupe1.map((c) => `<span class="case-chiffre">${echapperHtml(c.trim())}</span>`).join('')}
-    <span class="sep-date">!</span>
+    ${separateur}
     ${groupe2.map((c) => `<span class="case-chiffre">${echapperHtml(c.trim())}</span>`).join('')}
   </div>`;
 }
@@ -206,7 +210,6 @@ export function genererHtmlOrdreExecution(donnees) {
     }
     .header-right .agence-valeur {
       font-weight: bold;
-      border-bottom: 1px solid #000;
       padding: 0 4px;
       display: inline-block;
       min-width: 120px;
@@ -238,7 +241,7 @@ export function genererHtmlOrdreExecution(donnees) {
     }
     .barre-noire {
       background: #000;
-      height: 9px;
+      height: 14px;
       width: 100%;
       margin-top: 4px;
       margin-bottom: 10px;
@@ -266,6 +269,7 @@ export function genererHtmlOrdreExecution(donnees) {
       align-items: center;
       justify-content: center;
       border: 1px solid #000;
+      font-family: 'Poppins', Arial, sans-serif;
       font-size: 11px;
       font-weight: bold;
       background: #fff;
@@ -278,8 +282,8 @@ export function genererHtmlOrdreExecution(donnees) {
 
     /* Travaux à effectuer */
     .ligne-travaux-titre {
-      font-weight: bold;
-      font-size: 12px;
+      font-weight: 400;
+      font-size: 14px;
       margin-bottom: 4px;
     }
     .ligne-pleine {
@@ -290,8 +294,8 @@ export function genererHtmlOrdreExecution(donnees) {
       align-items: flex-end;
       justify-content: center;
       text-align: center;
-      font-size: 11.5px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       margin-bottom: 8px;
     }
 
@@ -299,26 +303,46 @@ export function genererHtmlOrdreExecution(donnees) {
       display: flex;
       align-items: flex-end;
       gap: 8px;
+      width: 70%;
       margin-bottom: 6px;
+      font-family: 'Poppins', Arial, sans-serif;
       font-size: 11.5px;
+    }
+    .ligne-devis-reglement .valeur-soulignee,
+    .ligne-devis-reglement > span:last-child,
+    .ligne-devis-reglement > span:nth-child(2) {
+      font-family: 'Poppins', Arial, sans-serif;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .ligne-devis-reglement > span:first-child,
+    .ligne-devis-reglement > span:nth-child(3) {
+      font-family: 'Poppins', Arial, sans-serif;
+      font-size: 11.5px;
+      font-weight: 500;
     }
     .champ-ligne {
       display: flex;
       align-items: flex-end;
       margin-bottom: 6px;
+      font-family: 'Poppins', Arial, sans-serif;
       font-size: 11.5px;
     }
     .champ-ligne label {
       white-space: nowrap;
       margin-right: 6px;
+      font-family: 'Poppins', Arial, sans-serif;
+      font-size: 11.5px;
     }
     .champ-ligne .valeur-soulignee {
       flex-grow: 1;
       border-bottom: 1px solid #000;
       min-height: 17px;
       padding: 0 6px;
-      font-weight: 500;
+      font-family: 'Poppins', Arial, sans-serif;
+      font-weight: 600;
       text-align: center;
+      font-size: 11.5px;
     }
 
     .section-titre-souligne {
@@ -330,10 +354,10 @@ export function genererHtmlOrdreExecution(donnees) {
 
     /* Tableaux Visas */
     table.tableau-visas {
-      width: 100%;
+      width: 70%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin: 12px 0;
+      margin: 12px auto;
     }
     table.tableau-visas th, table.tableau-visas td {
       border: 1.5px solid #000;
@@ -388,10 +412,10 @@ export function genererHtmlOrdreExecution(donnees) {
 
     /* Tableau bas */
     table.tableau-bas {
-      width: 100%;
+      width: 95%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin: 12px 0 8px 0;
+      margin: 12px auto 8px auto;
     }
     table.tableau-bas th, table.tableau-bas td {
       border: 1.5px solid #000;
@@ -471,11 +495,11 @@ export function genererHtmlOrdreExecution(donnees) {
       <div class="ligne-pleine">${echapperHtml(natureTravaux)}</div>
 
       <div class="ligne-devis-reglement">
-        <span>Selon devis n°</span>
-        <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px; font-weight: 500;">${echapperHtml(numerosDevisTexte)}</span>
-        <span style="margin-left: 12px;">Du</span>
-        <span style="border-bottom: 1px solid #000; min-width: 110px; text-align: center; font-weight: 500;">${echapperHtml(datesDevisTexte)}</span>
-        <span style="margin-left: 6px; font-size: 10.5px;">(Ci-joint)</span>
+        <span style="font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 400;">Selon devis n°</span>
+        <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 600;">${echapperHtml(numerosDevisTexte)}</span>
+        <span style="margin-left: 12px; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 400;">Du</span>
+        <span style="border-bottom: 1px solid #000; min-width: 110px; text-align: center; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 600;">${echapperHtml(datesDevisTexte)}</span>
+        <span style="margin-left: 6px; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 400;">(Ci-joint)</span>
       </div>
 
       <div class="champ-ligne" style="margin-top: 4px;">
@@ -556,7 +580,7 @@ export function genererHtmlOrdreExecution(donnees) {
           </div>
           <div class="champ-ligne">
             <label>Marque :</label>
-            <div class="valeur-soulignee">${echapperHtml(travaux.marque_compteur || '')}</div>
+            <div class="valeur-soulignee">${echapperHtml(travaux.marque_compteur || 'Sensus')}</div>
           </div>
           <div class="champ-ligne">
             <label>Type :</label>
@@ -566,11 +590,11 @@ export function genererHtmlOrdreExecution(donnees) {
           </div>
           <div class="ligne-inline-date">
             <span>N° de Série</span>
-            ${genererCasesChiffres(travaux.numero_compteur || '', 8, 4)}
+            ${genererCasesChiffres(travaux.numero_compteur || '', 10, 0)}
           </div>
           <div class="ligne-inline-date" style="margin-top: 3px;">
             <span>Index de pose</span>
-            ${genererCasesChiffres(miseEnService.index_initial !== undefined && miseEnService.index_initial !== null ? String(miseEnService.index_initial) : '', 8, 4)}
+            ${genererCasesChiffres(miseEnService.index_initial !== undefined && miseEnService.index_initial !== null ? String(miseEnService.index_initial) : '', 4, 0)}
           </div>
         </div>
       </div>

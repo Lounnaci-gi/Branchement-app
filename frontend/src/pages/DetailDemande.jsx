@@ -72,10 +72,13 @@ export default function DetailDemande() {
 
   if (chargement) {
     return (
-      <div className="page">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '40px 0', color: 'var(--color-text-muted)' }}>
-          <div className="login-spinner" style={{ borderTopColor: 'var(--color-primary)' }} />
-          <span>Chargement du dossier...</span>
+      <div className="page" aria-busy="true" aria-label="Chargement du dossier">
+        <div className="squelette squelette-titre" style={{ marginBottom: 8 }} />
+        <div className="squelette squelette-sous-titre" style={{ marginBottom: 24 }} />
+        <div className="card pipeline-carte squelette" style={{ height: 80, marginBottom: 20 }} />
+        <div className="grille-detail">
+          <div className="card squelette" style={{ height: 280 }} />
+          <div className="card squelette" style={{ height: 200 }} />
         </div>
       </div>
     );
@@ -186,7 +189,7 @@ export default function DetailDemande() {
         </div>
 
         {/* Boutons d'actions et d'impression */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="page-actions">
           <button
             type="button"
             className="btn btn-secondary"
@@ -228,22 +231,26 @@ export default function DetailDemande() {
       </header>
 
       {/* Pipeline interactif */}
-      <div className="card" style={{ padding: 24, marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            AVANCEMENT DANS LE PIPELINE D'EXÉCUTION
+      <div className="card pipeline-carte">
+        <div className="pipeline-carte-entete">
+          <div className="pipeline-carte-titre">
+            Avancement dans le pipeline d'exécution
           </div>
-          <div style={{ display: 'flex', gap: 12, fontSize: 12 }}>
+          <nav className="pipeline-nav" aria-label="Accès rapide aux panneaux du dossier">
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-etude')}>Étude ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-devis')}>Devis ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-travaux')}>Travaux ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-mes')}>Mise en service ↓</button>
-          </div>
+          </nav>
         </div>
-        <Pipeline statutActuel={demande.statut_actuel} />
+        <Pipeline statutActuel={demande.statut_actuel} showLegend />
+        <div className="pipeline-statut-actuel">
+          <StatutBadge code={demande.statut_actuel} />
+          <span>— {LIBELLES_STATUT[demande.statut_actuel]}</span>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, alignItems: 'start' }}>
+      <div className="grille-detail">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Informations générales */}
@@ -343,14 +350,23 @@ export default function DetailDemande() {
           {transitionsPossibles?.length > 0 && (
             <div className="card" style={{ padding: 22 }}>
               <h3 style={{ marginBottom: 12, fontSize: 15 }}>Faire progresser le statut</h3>
-              <textarea
-                rows={2}
-                placeholder="Motif / Commentaire (obligatoire pour un rejet)..."
-                required={transitionsPossibles.includes('REJETEE') || demande.statut_actuel === 'REJETEE'}
-                value={commentaire}
-                onChange={(e) => setCommentaire(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--color-border)', borderRadius: 8, marginBottom: 10 }}
-              />
+              <div className="champ" style={{ marginBottom: 10 }}>
+                <label htmlFor="commentaire-transition">Motif / commentaire</label>
+                <textarea
+                  id="commentaire-transition"
+                  rows={2}
+                  placeholder="Obligatoire pour un rejet…"
+                  required={transitionsPossibles.includes('REJETEE') || demande.statut_actuel === 'REJETEE'}
+                  value={commentaire}
+                  onChange={(e) => setCommentaire(e.target.value)}
+                  aria-describedby="aide-commentaire-transition"
+                />
+                <span id="aide-commentaire-transition" className="champ-aide">
+                  {transitionsPossibles.includes('REJETEE')
+                    ? 'Un motif est obligatoire pour rejeter la demande.'
+                    : 'Optionnel pour les autres transitions.'}
+                </span>
+              </div>
 
               {/* Raccourcis motifs de rejet rapides si rejet possible */}
               {transitionsPossibles.includes('REJETEE') && (
@@ -377,11 +393,13 @@ export default function DetailDemande() {
                 {transitionsPossibles.map((code) => (
                   <button
                     key={code}
+                    type="button"
                     className={`btn ${code === 'REJETEE' || code === 'ANNULEE' ? 'btn-danger' : 'btn-primary'}`}
                     onClick={() => changerStatut(code)}
                     disabled={enTransition || ((code === 'REJETEE' || demande.statut_actuel === 'REJETEE') && !commentaire.trim())}
+                    aria-busy={enTransition}
                   >
-                    → {LIBELLES_STATUT[code]}
+                    {enTransition ? '…' : '→'} {LIBELLES_STATUT[code]}
                   </button>
                 ))}
               </div>

@@ -812,6 +812,15 @@ router.put('/:id/devis', async (req, res) => {
 
     if (existe.recordset.length > 0) {
       numeroDevisFinal = existe.recordset[0].numero_devis;
+      const devisActuel = await pool.request()
+        .input('id_devis', sql.Int, idDevisValide)
+        .input('id_demande', sql.Int, id_demande)
+        .query(`SELECT id_devis, montant, statut_paiement FROM Devis WHERE id_devis=@id_devis AND id_demande=@id_demande`);
+
+      if (devisActuel.recordset[0]?.statut_paiement === 'PAYE' && Number(montant) !== Number(devisActuel.recordset[0].montant)) {
+        return res.status(400).json({ erreur: 'Le montant d’un devis réglé ne peut pas être modifié.' });
+      }
+
       await pool.request()
         .input('id_devis', sql.Int, idDevisValide)
         .input('montant', sql.Decimal(12, 2), Number(montant))
@@ -1079,7 +1088,7 @@ router.put('/:id/mise-en-service', async (req, res) => {
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_mise_service FROM MisesEnService WHERE id_demande = @id`);
 
-    const indexFinal = (index_initial !== undefined && index_initial !== null && index_initial !== '') ? Number(index_initial) : 0;
+    const indexFinal = (index_initial !== undefined && index_initial !== null && index_initial !== '') ? Number(index_initial) : null;
 
     if (existe.recordset.length > 0) {
       await pool.request()

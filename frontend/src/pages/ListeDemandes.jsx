@@ -28,6 +28,7 @@ export default function ListeDemandes() {
   const [statutFiltre, setStatutFiltre] = useState(() => searchParams.get('statut') || '');
   const [recherche, setRecherche] = useState(() => searchParams.get('q') || '');
   const [chargement, setChargement] = useState(true);
+  const [erreurChargement, setErreurChargement] = useState(false);
   const [triColonne, setTriColonne] = useState('date_depot');
   const [triOrdre, setTriOrdre] = useState('desc'); // 'asc' | 'desc'
 
@@ -56,6 +57,7 @@ export default function ListeDemandes() {
 
   useEffect(() => {
     setChargement(true);
+    setErreurChargement(false);
     const params = {};
     if (statutFiltre && statutFiltre !== 'EN_COURS') {
       params.statut = statutFiltre;
@@ -74,7 +76,10 @@ export default function ListeDemandes() {
           setDemandes(list);
           setTotal(res.data.total);
         })
-        .catch(() => notifierErreur('Impossible de charger les demandes.'))
+        .catch(() => {
+          setErreurChargement(true);
+          notifierErreur('Impossible de charger les demandes.');
+        })
         .finally(() => setChargement(false));
     }, 250);
 
@@ -107,6 +112,20 @@ export default function ListeDemandes() {
     } else {
       setTriColonne(colonne);
       setTriOrdre('asc');
+    }
+  }
+
+  function gererTriClavier(e, colonne) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      changerTri(colonne);
+    }
+  }
+
+  function gererLigneClavier(e, idDemande) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      ouvrirDemande(idDemande);
     }
   }
 
@@ -260,42 +279,84 @@ export default function ListeDemandes() {
       </div>
 
       {/* Tableau des demandes avec tri interactif */}
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card tableau-responsive" style={{ overflow: 'hidden' }}>
         <table className="tableau">
           <thead>
             <tr>
-              <th className="col-triable" onClick={() => changerTri('numero_demande')}>
+              <th
+                className="col-triable"
+                onClick={() => changerTri('numero_demande')}
+                onKeyDown={(e) => gererTriClavier(e, 'numero_demande')}
+                tabIndex={0}
+                role="columnheader"
+                aria-sort={triColonne === 'numero_demande' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>N° Demande</span>
                   {triColonne === 'numero_demande' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                 </div>
               </th>
-              <th className="col-triable" onClick={() => changerTri('demandeur')}>
+              <th
+                className="col-triable"
+                onClick={() => changerTri('demandeur')}
+                onKeyDown={(e) => gererTriClavier(e, 'demandeur')}
+                tabIndex={0}
+                role="columnheader"
+                aria-sort={triColonne === 'demandeur' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Demandeur</span>
                   {triColonne === 'demandeur' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                 </div>
               </th>
-              <th className="col-triable" onClick={() => changerTri('nom_commune')}>
+              <th
+                className="col-triable"
+                onClick={() => changerTri('nom_commune')}
+                onKeyDown={(e) => gererTriClavier(e, 'nom_commune')}
+                tabIndex={0}
+                role="columnheader"
+                aria-sort={triColonne === 'nom_commune' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Commune</span>
                   {triColonne === 'nom_commune' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                 </div>
               </th>
-              <th className="col-triable" onClick={() => changerTri('type_branchement')}>
+              <th
+                className="col-triable"
+                onClick={() => changerTri('type_branchement')}
+                onKeyDown={(e) => gererTriClavier(e, 'type_branchement')}
+                tabIndex={0}
+                role="columnheader"
+                aria-sort={triColonne === 'type_branchement' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Type</span>
                   {triColonne === 'type_branchement' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                 </div>
               </th>
               <th>Progression</th>
-              <th className="col-triable" onClick={() => changerTri('statut_actuel')}>
+              <th
+                className="col-triable"
+                onClick={() => changerTri('statut_actuel')}
+                onKeyDown={(e) => gererTriClavier(e, 'statut_actuel')}
+                tabIndex={0}
+                role="columnheader"
+                aria-sort={triColonne === 'statut_actuel' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Statut</span>
                   {triColonne === 'statut_actuel' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                 </div>
               </th>
-              <th className="col-triable" onClick={() => changerTri('date_depot')}>
+              <th
+                className="col-triable"
+                onClick={() => changerTri('date_depot')}
+                onKeyDown={(e) => gererTriClavier(e, 'date_depot')}
+                tabIndex={0}
+                role="columnheader"
+                aria-sort={triColonne === 'date_depot' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Déposée le</span>
                   {triColonne === 'date_depot' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
@@ -305,50 +366,85 @@ export default function ListeDemandes() {
             </tr>
           </thead>
           <tbody>
-            {chargement && (
+            {erreurChargement && !chargement && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 36 }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: 'var(--color-text-muted)' }}>
-                    <div className="login-spinner" style={{ width: 18, height: 18, borderTopColor: 'var(--color-primary)' }} />
-                    <span>Chargement des demandes en cours...</span>
-                  </div>
-                </td>
-              </tr>
-            )}
-
-            {!chargement && demandesTriees.length === 0 && (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 48 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 32 }}>📂</span>
-                    <strong style={{ fontSize: 16 }}>Aucune demande ne correspond à vos critères</strong>
-                    <p style={{ color: 'var(--color-text-muted)', fontSize: 13, margin: 0 }}>
-                      Essayez de modifier votre recherche ou vos filtres de statut.
+                <td colSpan={8}>
+                  <div className="etat-vide" role="alert">
+                    <span className="etat-vide-icone" aria-hidden="true">⚠️</span>
+                    <strong className="etat-vide-titre">Échec du chargement</strong>
+                    <p className="etat-vide-texte">
+                      Impossible de récupérer la liste des demandes. Vérifiez votre connexion et réessayez.
                     </p>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      onClick={reinitialiserFiltres}
-                      style={{ marginTop: 6 }}
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setErreurChargement(false);
+                        setChargement(true);
+                        const params = {};
+                        if (statutFiltre && statutFiltre !== 'EN_COURS') params.statut = statutFiltre;
+                        if (recherche.trim()) params.recherche = recherche.trim();
+                        client.get('/demandes', { params })
+                          .then((res) => {
+                            let list = res.data.demandes || [];
+                            if (statutFiltre === 'EN_COURS') {
+                              list = list.filter((d) => !['REJETEE', 'ANNULEE', 'MISE_EN_SERVICE'].includes(d.statut_actuel));
+                            }
+                            setDemandes(list);
+                            setTotal(res.data.total);
+                          })
+                          .catch(() => setErreurChargement(true))
+                          .finally(() => setChargement(false));
+                      }}
                     >
-                      Réinitialiser les filtres
+                      Réessayer
                     </button>
                   </div>
                 </td>
               </tr>
             )}
 
-            {demandesTriees.map((d) => (
+            {chargement && (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 36 }}>
+                  <div className="etat-chargement-inline">
+                    <div className="spinner" aria-hidden="true" />
+                    <span>Chargement des demandes en cours…</span>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!chargement && !erreurChargement && demandesTriees.length === 0 && (
+              <tr>
+                <td colSpan={8}>
+                  <div className="etat-vide">
+                    <span className="etat-vide-icone" aria-hidden="true">📂</span>
+                    <strong className="etat-vide-titre">Aucune demande ne correspond à vos critères</strong>
+                    <p className="etat-vide-texte">
+                      Essayez de modifier votre recherche ou vos filtres de statut.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={reinitialiserFiltres}
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                    <Link to="/demandes/nouvelle" className="btn btn-primary">
+                      Créer une demande
+                    </Link>
+                  </div>
+                </td>
+              </tr>
+            )}
+
+            {!chargement && !erreurChargement && demandesTriees.map((d) => (
               <tr
                 key={d.id_demande}
                 className="ligne-demande"
                 onClick={() => ouvrirDemande(d.id_demande)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    ouvrirDemande(d.id_demande);
-                  }
-                }}
+                onKeyDown={(e) => gererLigneClavier(e, d.id_demande)}
                 tabIndex={0}
                 role="link"
                 aria-label={`Afficher les détails de la demande ${d.numero_demande}`}
@@ -385,8 +481,7 @@ export default function ListeDemandes() {
                   <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
                     <Link
                       to={`/demandes/${d.id_demande}/modifier`}
-                      className="btn btn-secondary"
-                      style={{ width: 32, height: 32, padding: 0, justifyContent: 'center', fontSize: 15 }}
+                      className="btn btn-secondary btn-icon"
                       title="Modifier la demande"
                       aria-label={`Modifier la demande ${d.numero_demande}`}
                     >
@@ -395,9 +490,8 @@ export default function ListeDemandes() {
                     {demandeSupprimable(d) && (
                       <button
                         type="button"
-                        className="btn btn-danger"
+                        className="btn btn-danger btn-icon"
                         onClick={() => supprimerDemande(d)}
-                        style={{ width: 32, height: 32, padding: 0, justifyContent: 'center', fontSize: 15 }}
                         title="Supprimer la demande"
                         aria-label={`Supprimer la demande ${d.numero_demande}`}
                       >

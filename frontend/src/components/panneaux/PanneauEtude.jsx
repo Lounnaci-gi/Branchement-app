@@ -52,9 +52,15 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
 
   return (
     <div className="card" style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="panneau-entete">
         <h3>Étude technique</h3>
-        <button className="btn btn-secondary" onClick={() => setOuvert((o) => !o)}>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setOuvert((o) => !o)}
+          aria-expanded={ouvert}
+          aria-controls="panneau-etude-form"
+        >
           {etude ? 'Modifier' : 'Renseigner'}
         </button>
       </div>
@@ -70,8 +76,8 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
       {!ouvert && !etude && <p style={{ color: 'var(--color-text-muted)', marginTop: 12 }}>Aucune étude renseignée.</p>}
 
       {ouvert && (
-        <form onSubmit={enregistrer} style={{ marginTop: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <form id="panneau-etude-form" onSubmit={enregistrer} style={{ marginTop: 16 }}>
+          <div className="form-grille-2">
             <div className="champ">
               <label>Date de visite</label>
               <InputDate

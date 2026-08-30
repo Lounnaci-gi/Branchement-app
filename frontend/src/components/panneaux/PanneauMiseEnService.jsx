@@ -9,7 +9,7 @@ export default function PanneauMiseEnService({ idDemande, miseEnService, travaux
   const [form, setForm] = useState({
     date_mise_service: miseEnService?.date_mise_service?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     numero_abonne: miseEnService?.numero_abonne || '',
-    index_initial: miseEnService?.index_initial ?? 0
+    index_initial: miseEnService?.index_initial ?? ''
   });
   const [envoi, setEnvoi] = useState(false);
 
@@ -17,7 +17,7 @@ export default function PanneauMiseEnService({ idDemande, miseEnService, travaux
     setForm({
       date_mise_service: miseEnService?.date_mise_service?.slice(0, 10) || new Date().toISOString().slice(0, 10),
       numero_abonne: miseEnService?.numero_abonne || '',
-      index_initial: miseEnService?.index_initial ?? 0
+      index_initial: miseEnService?.index_initial ?? ''
     });
   }, [miseEnService]);
 
@@ -42,12 +42,15 @@ export default function PanneauMiseEnService({ idDemande, miseEnService, travaux
 
   return (
     <div className="card" style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="panneau-entete">
         <h3>Mise en service</h3>
         <button
+          type="button"
           className="btn btn-secondary"
           disabled={!travauxRenseignes}
           onClick={() => setOuvert((o) => !o)}
+          aria-expanded={ouvert}
+          aria-controls="panneau-mes-form"
           title={!travauxRenseignes ? 'L’exécution des travaux doit être renseignée avant de renseigner la mise en service.' : undefined}
         >
           {ouvert ? 'Fermer' : miseEnService ? 'Modifier' : 'Renseigner'}
@@ -72,8 +75,8 @@ export default function PanneauMiseEnService({ idDemande, miseEnService, travaux
       )}
 
       {ouvert && travauxRenseignes && (
-        <form onSubmit={enregistrer} style={{ marginTop: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <form id="panneau-mes-form" onSubmit={enregistrer} style={{ marginTop: 16 }}>
+          <div className="form-grille-2">
             <div className="champ">
               <label>Date de mise en service</label>
               <InputDate

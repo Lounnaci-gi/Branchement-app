@@ -435,7 +435,8 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 10px 10px;
+  min-height: var(--touch-min, 44px);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
@@ -449,6 +450,11 @@
 .mode-paiement-btn:hover {
   border-color: var(--color-primary, #2599FB);
   background: var(--color-primary-selection, #E9F5FF);
+}
+
+.mode-paiement-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .mode-paiement-btn.selectionne {

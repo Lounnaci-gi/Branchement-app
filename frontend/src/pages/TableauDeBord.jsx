@@ -56,6 +56,13 @@ export default function TableauDeBord() {
     setTentative((v) => v + 1);
   }
 
+  function activerClavier(e, action) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      action();
+    }
+  }
+
   if (chargement && !donnees) {
     return (
       <div className="page">
@@ -129,6 +136,7 @@ export default function TableauDeBord() {
         <div
           className="card kpi kpi-interactive"
           onClick={() => navigate('/demandes')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes'))}
           role="button"
           tabIndex={0}
           title="Voir toutes les demandes actives"
@@ -143,6 +151,7 @@ export default function TableauDeBord() {
         <div
           className="card kpi kpi-interactive"
           onClick={() => navigate('/demandes?statut=MISE_EN_SERVICE')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=MISE_EN_SERVICE'))}
           role="button"
           tabIndex={0}
           title="Voir les demandes achevées et mises en service"
@@ -157,6 +166,7 @@ export default function TableauDeBord() {
         <div
           className="card kpi kpi-interactive"
           onClick={() => navigate('/demandes')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes'))}
           role="button"
           tabIndex={0}
           title="Voir les demandes de ce mois"
@@ -171,6 +181,7 @@ export default function TableauDeBord() {
         <div
           className="card kpi kpi-interactive"
           onClick={() => navigate('/demandes?statut=DEVIS_EMIS')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=DEVIS_EMIS'))}
           role="button"
           tabIndex={0}
           title="Voir les devis en attente de paiement"
@@ -187,6 +198,7 @@ export default function TableauDeBord() {
         <div
           className="card kpi kpi-interactive"
           onClick={() => navigate('/demandes?statut=MISE_EN_SERVICE')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=MISE_EN_SERVICE'))}
           role="button"
           tabIndex={0}
           title="Délai moyen constaté de réalisation"
@@ -220,6 +232,7 @@ export default function TableauDeBord() {
                   key={s.code_statut}
                   className="repartition-ligne repartition-interactive"
                   onClick={() => navigate(`/demandes?statut=${s.code_statut}`)}
+                  onKeyDown={(e) => activerClavier(e, () => navigate(`/demandes?statut=${s.code_statut}`))}
                   title={`Filtrer par ${s.libelle} (${s.total} demande${s.total > 1 ? 's' : ''})`}
                   role="button"
                   tabIndex={0}
@@ -249,6 +262,7 @@ export default function TableauDeBord() {
                 key={s.code_statut}
                 className="badge-terminal-clickable"
                 onClick={() => navigate(`/demandes?statut=${s.code_statut}`)}
+                onKeyDown={(e) => activerClavier(e, () => navigate(`/demandes?statut=${s.code_statut}`))}
                 role="button"
                 tabIndex={0}
                 title={`Voir les demandes ${s.libelle.toLowerCase()}`}

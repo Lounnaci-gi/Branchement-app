@@ -351,7 +351,7 @@ export default function NouvelleDemande() {
       )}
 
       {/* Grille principale : Formulaire (gauche) + Prévisualisation en direct (droite) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 0.9fr)', gap: 24, alignItems: 'start' }}>
+      <div className="grille-formulaire">
         
         {/* Formulaire */}
         <form onSubmit={soumettre} className="card" style={{ padding: 28 }}>
@@ -371,7 +371,7 @@ export default function NouvelleDemande() {
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="form-grille-2">
             {form.est_personne_morale ? (
               <div className="champ" style={{ gridColumn: '1 / -1' }}>
                 <label htmlFor="raison-sociale">Raison sociale *</label>
@@ -538,7 +538,7 @@ export default function NouvelleDemande() {
             <span>📍</span> Emplacement & Spécifications du branchement
           </h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="form-grille-2">
             <div className="champ">
               <label>Nature des travaux *</label>
               <select required value={form.nature_travaux ?? ''} onChange={(e) => maj('nature_travaux', e.target.value)}>

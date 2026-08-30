@@ -25,7 +25,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
     date_fin: travaux?.date_fin?.slice(0, 10) || '',
     equipe_execution: travaux?.equipe_execution || '',
     numero_compteur: travaux?.numero_compteur || '',
-    marque_compteur: travaux?.marque_compteur || '',
+    marque_compteur: travaux?.marque_compteur || 'Sensus',
     type_compteur: travaux?.type_compteur || '',
     diametre_compteur: travaux?.diametre_compteur || '',
     observations: travaux?.observations || ''
@@ -38,7 +38,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       date_fin: travaux?.date_fin?.slice(0, 10) || '',
       equipe_execution: travaux?.equipe_execution || '',
       numero_compteur: travaux?.numero_compteur || '',
-      marque_compteur: travaux?.marque_compteur || '',
+      marque_compteur: travaux?.marque_compteur || 'Sensus',
       type_compteur: travaux?.type_compteur || '',
       diametre_compteur: travaux?.diametre_compteur || '',
       observations: travaux?.observations || ''
@@ -89,8 +89,6 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       setOuvert(false);
       notifierSucces('Exécution des travaux enregistrée.');
       onEnregistre();
-      // Impression automatique immédiate de l'ordre d'exécution
-      handleImprimer(updatedTravaux);
     } catch (err) {
       notifierErreur(err.response?.data?.erreur || "Erreur lors de l'enregistrement des travaux.");
     } finally {
@@ -101,14 +99,13 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
 
   return (
     <div className="card" style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+      <div className="panneau-entete">
         <h3>Exécution des travaux</h3>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(travaux || devisPaye) && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {!ouvert && travaux && (
             <button
               type="button"
               className="btn btn-secondary"
-              disabled={!devisPaye}
               onClick={() => handleImprimer(travaux || form)}
               title="Imprimer l'ordre d'exécution"
             >
@@ -120,6 +117,8 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             className="btn btn-secondary"
             disabled={!devisPaye}
             onClick={() => setOuvert((o) => !o)}
+            aria-expanded={ouvert}
+            aria-controls="panneau-travaux-form"
             title={!devisPaye ? 'Le devis doit être payé avant de renseigner les travaux.' : undefined}
           >
             {travaux ? 'Modifier' : 'Renseigner'}
@@ -143,8 +142,8 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       {!ouvert && !travaux && <p style={{ color: 'var(--color-text-muted)', marginTop: 12 }}>Travaux non encore renseignés.</p>}
 
       {ouvert && (
-        <form onSubmit={enregistrer} style={{ marginTop: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <form id="panneau-travaux-form" onSubmit={enregistrer} style={{ marginTop: 16 }}>
+          <div className="form-grille-2">
             <div className="champ">
               <label>
                 Date de début

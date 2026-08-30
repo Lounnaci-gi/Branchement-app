@@ -49,6 +49,23 @@
   --radius-lg: 14px;
   --shadow-card: 0 1px 3px rgba(29, 80, 107, 0.04), 0 10px 28px rgba(29, 80, 107, 0.06);
   --shadow-elevated: 0 16px 34px rgba(29, 80, 107, 0.14);
+
+  /* Espacements */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Bordures sémantiques (badges, états) */
+  --color-border-success: rgba(22, 163, 74, 0.25);
+  --color-border-warning: rgba(217, 119, 6, 0.25);
+  --color-border-danger: rgba(220, 38, 38, 0.25);
+  --color-border-accent: rgba(240, 120, 87, 0.25);
+  --color-border-primary: rgba(37, 153, 251, 0.25);
+
+  /* Cibles tactiles minimales (WCAG 2.5.5) */
+  --touch-min: 44px;
 }
 
 :root[data-theme='dark'] {
@@ -336,4 +353,52 @@ input, select, textarea {
   height: 6px;
   border-radius: 50%;
   box-shadow: 0 0 6px currentColor;
+}
+
+/* ---------- Messages d'erreur de champ ---------- */
+.champ-erreur {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+.champ input[aria-invalid="true"],
+.champ select[aria-invalid="true"],
+.champ textarea[aria-invalid="true"] {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.champ-aide {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Boutons icône (zone tactile minimale) ---------- */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+}
+
+/* ---------- Spinner partagé ---------- */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: rotation-spinner 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes rotation-spinner {
+  to { transform: rotate(360deg); }
 }

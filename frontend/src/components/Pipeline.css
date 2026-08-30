@@ -2,9 +2,13 @@
    PIPELINE — Conduite d'eau & Visualisation interactive
    ============================================================ */
 
+.pipeline-wrap {
+  width: 100%;
+}
+
 .pipeline {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
   gap: 4px;
 }
@@ -14,16 +18,17 @@
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  min-width: 0;
 }
 
 .pipeline-segment {
-  height: 12px;
+  height: 14px;
   background: var(--color-surface-sunken);
   border: 1px solid var(--color-border);
   position: relative;
   overflow: hidden;
   border-radius: 4px;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .pipeline-segment-groupe:first-child .pipeline-segment {
@@ -42,7 +47,29 @@
 .pipeline-segment.encours {
   background: var(--color-accent-light);
   border-color: var(--color-accent);
-  box-shadow: 0 0 12px rgba(251, 146, 60, 0.3);
+  box-shadow: 0 0 12px rgba(240, 120, 87, 0.35);
+}
+
+.pipeline-etape-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pipeline-segment.rempli .pipeline-etape-num {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pipeline-segment.encours .pipeline-etape-num {
+  color: var(--color-accent);
+  font-weight: 800;
 }
 
 .pipeline-flux {
@@ -83,6 +110,7 @@
   text-overflow: ellipsis;
   font-weight: 500;
   transition: color 0.2s ease;
+  line-height: 1.2;
 }
 
 .pipeline-label.rempli {
@@ -93,11 +121,51 @@
 .pipeline-label.encours {
   color: var(--color-accent);
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(251, 146, 60, 0.25);
+}
+
+/* Légende sous le pipeline (vue détail) */
+.pipeline-legende {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.pipeline-legende-etape {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  padding: 3px 8px;
+  background: var(--color-surface-sunken);
+  border-radius: 4px;
+}
+
+.pipeline-legende-libelle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+/* Progressbar cachée visuellement, lue par les lecteurs d'écran */
+.pipeline-progression-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .pipeline-compact .pipeline-segment {
-  height: 6px;
+  height: 8px;
 }
 
 .pipeline-arret {
@@ -113,7 +181,7 @@
 .pipeline-danger {
   background: var(--color-danger-bg);
   color: var(--color-danger);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  border: 1px solid var(--color-border-danger);
 }
 
 .pipeline-muted {
@@ -122,6 +190,45 @@
   border: 1px solid var(--color-border);
 }
 
+/* Focus clavier sur les segments (navigation Tab) */
+.pipeline-segment-groupe:focus-within .pipeline-segment {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Mobile : défilement horizontal avec repères visibles */
+@media (max-width: 640px) {
+  .pipeline-wrap:not(.pipeline-wrap-compact) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    margin: 0 -4px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .pipeline-wrap:not(.pipeline-wrap-compact) .pipeline {
+    min-width: 520px;
+  }
+
+  .pipeline-segment {
+    height: 16px;
+  }
+
+  .pipeline-label {
+    font-size: 10px;
+  }
+
+  .pipeline-legende {
+    min-width: 0;
+  }
+
+  .pipeline-legende-libelle {
+    font-size: 13px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pipeline-flux { animation: none; }
+  .pipeline-segment { transition: none; }
 }
