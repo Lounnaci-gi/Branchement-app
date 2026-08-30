@@ -4,7 +4,10 @@ import { imprimerDevis } from '../../utils/impressionDevis';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import InputDate from '../InputDate';
 
+const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
+
 export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }) {
+  const dateDepot = demande?.date_depot?.slice(0, 10) || '';
   const [ouvert, setOuvert] = useState(false);
   const [form, setForm] = useState({
     date_visite: etude?.date_visite?.slice(0, 10) || '',
@@ -27,6 +30,10 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
 
   async function enregistrer(e) {
     e.preventDefault();
+    if (form.date_visite && dateDepot && form.date_visite < dateDepot) {
+      notifierErreur('La date de visite doit être supérieure ou égale à la date de dépôt de la demande.');
+      return;
+    }
     setEnvoi(true);
     const fenetre = window.open('', '_blank', 'width=900,height=1000');
     let imprime = false;
@@ -69,6 +76,7 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
               <label>Date de visite</label>
               <InputDate
                 value={form.date_visite}
+                min={dateDepot}
                 onChange={(val) => setForm({ ...form, date_visite: val })}
               />
             </div>
@@ -86,7 +94,17 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
             </div>
             <div className="champ">
               <label>Diamètre conduite</label>
-              <input value={form.diametre_conduite} onChange={(e) => setForm({ ...form, diametre_conduite: e.target.value })} placeholder="ex: 110mm" />
+              <input
+                list="diametres-standard"
+                value={form.diametre_conduite}
+                onChange={(e) => setForm({ ...form, diametre_conduite: e.target.value })}
+                placeholder="ex: 110mm"
+              />
+              <datalist id="diametres-standard">
+                {DIAMETRES_STANDARD.map((diametre) => (
+                  <option key={diametre} value={diametre} />
+                ))}
+              </datalist>
             </div>
           </div>
           <div className="champ">

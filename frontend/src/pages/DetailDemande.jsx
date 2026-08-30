@@ -92,6 +92,16 @@ export default function DetailDemande() {
   }
 
   const { demande, historique, etude, devis, travaux, miseEnService, transitionsPossibles } = fiche;
+  const typeBranchementAffiche = (() => {
+    const brut = (demande.type_autre || demande.type_branchement || '').trim();
+    if (!brut) return 'Branchement d\'eau potable';
+    if (brut.startsWith('Branchement d\'eau potable')) return 'Branchement d\'eau potable';
+    if (brut.startsWith('Extension réseau AEP') || /extension/i.test(brut)) return 'Extension réseau AEP';
+    if (brut.startsWith('Rénovation de branchement') || /rénovation/i.test(brut)) return 'Rénovation de branchement';
+    if (brut.startsWith('Travaux de résiliation') || /résiliation/i.test(brut)) return 'Travaux de résiliation';
+    if (brut.startsWith('Autres') || /autres/i.test(brut)) return 'Autres';
+    return brut;
+  })();
   const nomDemandeur = demande.est_personne_morale
     ? demande.raison_sociale
     : `${demande.demandeur_nom} ${demande.demandeur_prenom}`;
@@ -108,6 +118,16 @@ export default function DetailDemande() {
   const estEtudeTerminee = STATUTS_AVEC_ETUDE.has(demande.statut_actuel)
     || Boolean(etude?.date_visite || etude?.faisabilite)
     || Boolean(historique?.some((h) => h.code_statut === 'ETUDE_TERMINEE'));
+
+  const etudeRenseignee = Boolean(
+    etude && (
+      etude.date_visite ||
+      etude.faisabilite ||
+      etude.distance_reseau_m !== null && etude.distance_reseau_m !== undefined ||
+      etude.diametre_conduite ||
+      etude.observations
+    )
+  );
 
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const estDevisPayeOuTravaux = Boolean(
@@ -242,7 +262,7 @@ export default function DetailDemande() {
             <div className="grille-info">
               <div>
                 <span className="info-label">Type de branchement</span>
-                <div style={{ fontWeight: 600 }}>{demande.type_branchement}</div>
+                <div style={{ fontWeight: 600 }}>{typeBranchementAffiche}</div>
               </div>
               <div>
                 <span className="info-label">Agence de rattachement</span>
@@ -308,7 +328,7 @@ export default function DetailDemande() {
             <PanneauEtude idDemande={id} demande={demande} etude={etude} onEnregistre={recharger} />
           </div>
           <div id="panneau-devis">
-            <PanneauDevis idDemande={id} devis={devis} onEnregistre={recharger} />
+            <PanneauDevis idDemande={id} devis={devis} etude={etude} onEnregistre={recharger} />
           </div>
           <div id="panneau-travaux">
             <PanneauTravaux

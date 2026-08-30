@@ -345,6 +345,7 @@ INSERT INTO TypesBranchement (libelle, diametre_defaut) VALUES
 (N'Industriel', N'25mm'),
 (N'Administratif', N'20mm'),
 (N'Chantier', N'15mm'),
+(N'Borne d\'incendie', NULL),
 (N'Extension de réseau AEP', NULL),
 (N'Autre', NULL);
 GO

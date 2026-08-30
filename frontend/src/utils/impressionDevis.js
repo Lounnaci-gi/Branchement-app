@@ -28,13 +28,23 @@ export function genererHtmlDevis(demande, dateEmission = null) {
   const prenom = estMorale ? '' : (demande.demandeur_prenom || '');
   const adresseDemandeur = demande.demandeur_adresse || demande.adresse || '';
   const agenceBrute = demande.nom_agence || '';
-  const agence = agenceBrute.replace(/^agence(?:\s+de)?\s*:?\s*/i, '');
+  const agence = agenceBrute.replace(/^agence(?:\s+de)?\s*:?\s*/i, '').toUpperCase();
   const communeBranchement = demande.nom_commune || '';
   const communeResidence = demande.nom_commune_residence || '';
   const typeBranchement = demande.type_branchement || demande.libelle_type || '';
-  const natureTravaux = demande.type_autre && /autre/i.test(typeBranchement)
-    ? `${typeBranchement} : ${demande.type_autre}`
-    : typeBranchement;
+  const natureTravauxBrute = String(demande.type_autre || '').trim();
+  const natureTravaux = (() => {
+    if (!natureTravauxBrute) {
+      return 'Branchement d\'eau potable';
+    }
+    if (natureTravauxBrute.startsWith('Branchement d\'eau potable')) return 'Branchement d\'eau potable';
+    if (natureTravauxBrute.startsWith('Extension réseau AEP')) return 'Extension réseau AEP';
+    if (natureTravauxBrute.startsWith('Rénovation de branchement')) return 'Rénovation de branchement';
+    if (natureTravauxBrute.startsWith('Travaux de résiliation')) return 'Travaux de résiliation';
+    if (natureTravauxBrute.startsWith('Autres')) return 'Autres';
+    return natureTravauxBrute;
+  })();
+  const natureTravauxAffichee = [natureTravaux, typeBranchement].filter(Boolean).join(' - ');
   const numeroAffiche = valeurNumero(demande);
 
   // Date de l'étude technique terminée
@@ -70,22 +80,22 @@ export function genererHtmlDevis(demande, dateEmission = null) {
   .adresse-ade { font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; justify-content: center; text-align: center; }
   .header-left img { width: 78px; height: auto; display: block; align-self: center; margin-left: 90px; }
   .header-right { font-size: 13px; margin-top: 6px; white-space: nowrap; }
-  .agence-line { border-bottom: 1px solid #000; display: inline-block; min-width: 160px; }
-  .titre { font-weight: bold; font-size: 17px; text-transform: uppercase; margin: 30px 0 0 40px; }
-  .titre-bar { background: #000; height: 10px; width: 100%; margin: 8px 0 22px 0; }
+  .agence-line { display: inline-block; min-width: 160px; border-bottom: none; text-decoration: none; }
+  .titre { font-weight: bold; font-size: 17px; text-transform: uppercase; margin: 18px 0 0 40px; }
+  .titre-bar { background: #000; height: 10px; width: 100%; margin: 6px 0 18px 0; }
   .enreg-date { display: flex; align-items: center; justify-content: space-between; gap: 30px; margin-bottom: 22px; font-size: 14px; flex-wrap: nowrap; letter-spacing: .5px; }
   .cases { display: inline-flex; vertical-align: middle; gap: 2px; margin-left: 4px; letter-spacing: 0; }
   .case { display: inline-flex; width: 16px; height: 18px; align-items: center; justify-content: center; border: 1px solid #000; font-size: 12px; line-height: 1; }
   .consigne { font-weight: bold; margin-bottom: 14px; }
-  .field { margin-bottom: 6px; display: flex; align-items: flex-end; white-space: nowrap; }
-  .field label { flex-shrink: 0; margin-right: 4px; }
-  .field .line { flex-grow: 1; border-bottom: 1px solid #000; height: 1.1em; text-align: center; }
-  .section-title { text-decoration: underline; margin: 16px 0 4px 0; }
-  .full-line { border-bottom: 1px solid #000; height: 1.4em; margin-top: 4px; text-align: center; }
+  .field { margin-bottom: 8px; display: flex; align-items: flex-end; white-space: nowrap; }
+  .field label { flex-shrink: 0; margin-right: 4px; font-size: 14px; }
+  .field .line { flex-grow: 1; border-bottom: 1px solid #000; height: 1.4em; text-align: center; font-size: 14px; }
+  .section-title { text-decoration: underline; margin: 16px 0 4px 0; font-size: 14px; }
+  .full-line { border-bottom: 1px solid #000; height: 1.6em; margin-top: 4px; text-align: center; font-size: 14px; }
   .nature-block { margin-top: 16px; }
   .nature-lines .full-line { margin-bottom: 14px; }
   table.visas { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 40px; }
-  table.visas caption { background: #a6a6a6; color: #000; font-weight: bold; padding: 5px; caption-side: top; border: 1px solid #000; }
+  table.visas caption { background: #5a5a5a; color: #fff; font-weight: bold; padding: 5px; caption-side: top; border: 1px solid #000; }
   table.visas th, table.visas td { border: 1px solid #000; text-align: center; padding: 6px; }
   table.visas th { font-weight: bold; }
   table.visas td { height: 90px; vertical-align: top; }
@@ -126,7 +136,7 @@ export function genererHtmlDevis(demande, dateEmission = null) {
   <div class="nature-block">
     <div class="section-title">Nature des travaux demandés :</div>
     <div class="nature-lines">
-      <div class="full-line">${echapperHtml(natureTravaux)}</div>
+      <div class="full-line">${echapperHtml(natureTravauxAffichee)}</div>
       <div class="full-line"></div>
     </div>
   </div>

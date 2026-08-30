@@ -21,3 +21,10 @@ BEGIN
     (1, N'Berrouaghia', N'Medea');
 END
 GO
+
+IF NOT EXISTS (SELECT 1 FROM TypesBranchement WHERE libelle = N'Borne d''incendie')
+BEGIN
+    INSERT INTO TypesBranchement (libelle, diametre_defaut) VALUES
+    (N'Borne d''incendie', NULL);
+END
+GO

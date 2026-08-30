@@ -4,6 +4,8 @@ import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import { imprimerOrdreExecution } from '../../utils/impressionOrdreExecution';
 import InputDate from '../InputDate';
 
+const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
+
 export default function PanneauTravaux({ idDemande, demande, travaux, devis, etude, miseEnService, onEnregistre }) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const devisPaye = devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE');
@@ -191,10 +193,16 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             <div className="champ">
               <label>Diamètre compteur</label>
               <input
+                list="diametres-standard"
                 value={form.diametre_compteur}
                 onChange={(e) => setForm({ ...form, diametre_compteur: e.target.value })}
-                placeholder="ex: DN 20, 15 mm…"
+                placeholder="ex: 20mm"
               />
+              <datalist id="diametres-standard">
+                {DIAMETRES_STANDARD.map((diametre) => (
+                  <option key={diametre} value={diametre} />
+                ))}
+              </datalist>
             </div>
           </div>
           <div className="champ">

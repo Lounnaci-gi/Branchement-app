@@ -6,16 +6,44 @@ import InputDate from '../components/InputDate';
 import { imprimerAccuse } from '../utils/impressionAccuse';
 import { demanderConfirmation, notifierErreur, notifierSucces } from '../utils/notifications';
 
+const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
+
 const VIDE = {
   est_personne_morale: false, raison_sociale: '', nom: '', prenom: '', fils_de: '', ne_le: '', type_piece_identite: '', cin: '', cin_delivre_le: '', cin_delivre_par: '', telephone: '', telephone_secondaire: '', email: '', adresse: '', id_commune_residence: '', id_commune_branchement: '',
-  qualite_demandeur: '', id_type: '', type_autre: '', adresse_branchement: '', observations: ''
+  qualite_demandeur: '', id_type: '', nature_travaux: 'Branchement d\'eau potable', type_autre: '', dn_compteur: '', adresse_branchement: '', observations: ''
 };
 
 const CHAMPS_TEXTE = new Set([
   'raison_sociale', 'nom', 'prenom', 'fils_de', 'adresse', 'cin_delivre_par',
   'type_autre', 'adresse_branchement', 'observations'
 ]);
-const ORDRE_TYPES_BRANCHEMENT = ['Domestique', 'Administratif', 'Commercial', 'Industriel', 'Chantier', 'Extension de réseau AEP', 'Autre'];
+const ORDRE_TYPES_BRANCHEMENT = ['Domestique', 'Administratif', 'Commercial', 'Industriel', 'Chantier', 'Borne d\'incendie', 'Autre'];
+const OPTIONS_NATURE_TRAVAUX = [
+  'Branchement d\'eau potable',
+  'Extension réseau AEP',
+  'Rénovation de branchement',
+  'Travaux de résiliation',
+  'Autres'
+];
+
+const TYPES_PAR_NATURE = {
+  'Branchement d\'eau potable': ['Domestique', 'Administratif', 'Commercial', 'Industriel', 'Chantier', 'Borne d\'incendie'],
+  'Extension réseau AEP': ['Extension de réseau AEP'],
+  'Rénovation de branchement': ['Autre'],
+  'Travaux de résiliation': ['Autre'],
+  'Autres': ['Autre']
+};
+
+function normaliserNatureTravaux(valeur) {
+  const texte = String(valeur ?? '').trim();
+  if (!texte) return '';
+  if (texte.startsWith('Autres')) return 'Autres';
+  if (texte.startsWith('Branchement d\'eau potable')) return 'Branchement d\'eau potable';
+  if (texte.startsWith('Extension réseau AEP')) return 'Extension réseau AEP';
+  if (texte.startsWith('Rénovation de branchement')) return 'Rénovation de branchement';
+  if (texte.startsWith('Travaux de résiliation')) return 'Travaux de résiliation';
+  return texte;
+}
 const EMAIL_REGEX = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/;
 
 function libelleTypeBranchement(libelle) {
@@ -23,6 +51,7 @@ function libelleTypeBranchement(libelle) {
     Domestique: 'Ménage Individuel',
     Administratif: 'Administration',
     Commercial: 'Commerce',
+    'Borne d\'incendie': 'Borne d\'incendie',
     'Extension de réseau AEP': 'Extension de réseau AEP'
   }[libelle] || libelle;
 }
@@ -67,6 +96,7 @@ export default function NouvelleDemande() {
       if (modeEdition) {
         const response = await client.get(`/demandes/${id}`);
         const demande = response.data.demande;
+        const natureTravaux = normaliserNatureTravaux(demande.type_autre || '') || 'Branchement d\'eau potable';
         setForm({
           est_personne_morale: Boolean(demande.est_personne_morale),
           raison_sociale: demande.raison_sociale || '',
@@ -86,10 +116,13 @@ export default function NouvelleDemande() {
           id_commune_residence: String(demande.id_commune_residence || ''),
           id_commune_branchement: String(demande.id_commune || ''),
           id_type: String(demande.id_type || ''),
+          nature_travaux: natureTravaux,
           type_autre: demande.type_autre || '',
           adresse_branchement: demande.adresse_branchement || '',
           observations: demande.observations || ''
         });
+      } else {
+        setForm(VIDE);
       }
     }
 
@@ -99,7 +132,14 @@ export default function NouvelleDemande() {
   function maj(champ, valeur) {
     const valeurBrute = typeof valeur === 'string' ? nettoyerSaisie(valeur) : valeur;
     const valeurFormatee = CHAMPS_TEXTE.has(champ) ? capitaliserMots(valeurBrute) : valeurBrute;
-    setForm((f) => ({ ...f, [champ]: valeurFormatee }));
+    setForm((f) => {
+      if (champ === 'nature_travaux') {
+        const typesAutorises = TYPES_PAR_NATURE[valeurFormatee] || [];
+        const idTypeValide = !typesAutorises.length || !f.id_type || types.some((type) => typesAutorises.includes(type.libelle) && String(type.id_type) === String(f.id_type));
+        return { ...f, nature_travaux: valeurFormatee, id_type: idTypeValide ? f.id_type : '' };
+      }
+      return { ...f, [champ]: valeurFormatee };
+    });
     if (['nom', 'prenom', 'raison_sociale', 'adresse', 'adresse_branchement'].includes(champ)) {
       setChampRecherche(champ);
       rechercherDemandeurs(valeurFormatee, champ);
@@ -207,6 +247,10 @@ export default function NouvelleDemande() {
 
     setEnvoi(true);
     try {
+      const natureTravaux = donneesFormulaire.nature_travaux || donneesFormulaire.type_autre || '';
+      const typeAutrePayload = natureTravaux === 'Autres' && donneesFormulaire.type_autre && donneesFormulaire.type_autre.trim() !== 'Autres'
+        ? `Autres - ${donneesFormulaire.type_autre.trim()}`
+        : normaliserNatureTravaux(natureTravaux || donneesFormulaire.type_autre || '');
       const payload = {
         demandeur: {
           est_personne_morale: donneesFormulaire.est_personne_morale,
@@ -219,7 +263,7 @@ export default function NouvelleDemande() {
           telephone_secondaire: donneesFormulaire.telephone_secondaire
         },
         id_type: donneesFormulaire.id_type,
-        type_autre: donneesFormulaire.type_autre,
+        type_autre: typeAutrePayload,
         adresse_branchement: donneesFormulaire.adresse_branchement,
         id_commune: donneesFormulaire.id_commune_branchement,
         observations: donneesFormulaire.observations
@@ -266,6 +310,13 @@ export default function NouvelleDemande() {
     }
   }
 
+  const typesAffichables = types.filter((type) => !['Extension de réseau AEP', 'Autre'].includes(type.libelle));
+  const typesAutorises = (() => {
+    const typesNature = TYPES_PAR_NATURE[form.nature_travaux] || null;
+    if (!typesNature) return typesAffichables;
+    return typesAffichables.filter((type) => typesNature.includes(type.libelle));
+  })();
+  const typesAutorisesSet = new Set((typesAutorises || []).map((type) => String(type.id_type)));
   const typeSelectionne = types.find((t) => String(t.id_type) === String(form.id_type));
   const communeBranchement = communes.find((c) => String(c.id_commune) === String(form.id_commune_branchement));
   const communeResidence = communes.find((c) => String(c.id_commune) === String(form.id_commune_residence));
@@ -282,7 +333,7 @@ export default function NouvelleDemande() {
 
       <header className="page-header">
         <div>
-          <h1>{modeEdition ? 'Modifier la demande' : 'Nouvelle demande de branchement'}</h1>
+          <h1>{modeEdition ? 'Modifier la demande' : 'Nouvelle demande'}</h1>
           <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>
             {modeEdition ? 'Mise à jour des informations du dossier' : 'Enregistrement d’un nouveau raccordement au réseau AEP'}
           </p>
@@ -490,18 +541,52 @@ export default function NouvelleDemande() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="champ">
-              <label>Type de branchement *</label>
-              <select required value={form.id_type ?? ''} onChange={(e) => maj('id_type', e.target.value)}>
-                <option value="">Sélectionner le type...</option>
-                {[...types]
-                  .sort((a, b) => ORDRE_TYPES_BRANCHEMENT.indexOf(a.libelle) - ORDRE_TYPES_BRANCHEMENT.indexOf(b.libelle))
-                  .map((t) => (
-                    <option key={t.id_type} value={t.id_type}>{libelleTypeBranchement(t.libelle)}</option>
-                  ))}
+              <label>Nature des travaux *</label>
+              <select required value={form.nature_travaux ?? ''} onChange={(e) => maj('nature_travaux', e.target.value)}>
+                <option value="">Sélectionner...</option>
+                {OPTIONS_NATURE_TRAVAUX.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
               </select>
             </div>
+            {form.nature_travaux === 'Branchement d\'eau potable' && (
+              <div className="champ" style={{ maxWidth: '100%' }}>
+                <label>Type de branchement *</label>
+                <select required value={form.id_type ?? ''} onChange={(e) => maj('id_type', e.target.value)} style={{ width: '100%' }}>
+                  <option value="">Sélectionner le type...</option>
+                  {[...typesAffichables]
+                    .sort((a, b) => ORDRE_TYPES_BRANCHEMENT.indexOf(a.libelle) - ORDRE_TYPES_BRANCHEMENT.indexOf(b.libelle))
+                    .map((t) => {
+                      const estAutorise = typesAutorisesSet.has(String(t.id_type));
+                      return (
+                        <option key={t.id_type} value={t.id_type} disabled={!estAutorise}>
+                          {libelleTypeBranchement(t.libelle)}
+                          {!estAutorise && form.nature_travaux ? ' (non compatible)' : ''}
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+            )}
+            {form.nature_travaux === 'Branchement d\'eau potable' && (
+              <div className="champ" style={{ gridColumn: '1 / -1', maxWidth: '50%' }}>
+                <label>DN compteur</label>
+                <input
+                  list="dn-compteur-standard"
+                  value={form.dn_compteur ?? ''}
+                  onChange={(e) => maj('dn_compteur', e.target.value)}
+                  placeholder="ex: 20mm"
+                  style={{ width: '100%' }}
+                />
+                <datalist id="dn-compteur-standard">
+                  {DIAMETRES_STANDARD.map((diametre) => (
+                    <option key={diametre} value={diametre} />
+                  ))}
+                </datalist>
+              </div>
+            )}
             {types.find((t) => String(t.id_type) === String(form.id_type))?.libelle === 'Autre' && (
-              <div className="champ">
+              <div className="champ" style={{ gridColumn: '1 / -1' }}>
                 <label htmlFor="type-autre">Préciser le type *</label>
                 <input
                   id="type-autre"
@@ -509,6 +594,18 @@ export default function NouvelleDemande() {
                   value={form.type_autre ?? ''}
                   onChange={(e) => maj('type_autre', e.target.value)}
                   placeholder="Précisez la catégorie exacte"
+                />
+              </div>
+            )}
+            {form.nature_travaux === 'Autres' && (
+              <div className="champ" style={{ gridColumn: '1 / -1' }}>
+                <label htmlFor="nature-autre">Préciser la nature des travaux *</label>
+                <input
+                  id="nature-autre"
+                  required
+                  value={form.type_autre ?? ''}
+                  onChange={(e) => maj('type_autre', e.target.value)}
+                  placeholder="Décrivez précisément la nature des travaux"
                 />
               </div>
             )}

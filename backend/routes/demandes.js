@@ -663,6 +663,18 @@ router.put('/:id/etude', async (req, res) => {
     const { date_visite, distance_reseau_m, diametre_conduite, faisabilite, observations } = req.body;
     const pool = await getPool();
 
+    const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT date_depot FROM Demandes WHERE id_demande = @id_demande');
+
+    if (demandeRes.recordset.length === 0) {
+      return res.status(404).json({ erreur: 'Demande introuvable.' });
+    }
+
+    const dateDepot = demandeRes.recordset[0].date_depot ? new Date(demandeRes.recordset[0].date_depot).toISOString().slice(0, 10) : null;
+    if (date_visite && dateDepot && date_visite < dateDepot) {
+      return res.status(400).json({ erreur: 'La date de visite doit être supérieure ou égale à la date de dépôt de la demande.' });
+    }
+
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_etude FROM EtudesTechniques WHERE id_demande = @id`);
 
@@ -720,6 +732,13 @@ router.put('/:id/devis', async (req, res) => {
       return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif.' });
     }
     const pool = await getPool();
+
+    const etudeExiste = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT id_etude FROM EtudesTechniques WHERE id_demande = @id_demande');
+
+    if (etudeExiste.recordset.length === 0) {
+      return res.status(400).json({ erreur: "L'étude technique doit être renseignée avant d'émettre un devis." });
+    }
 
     const existe = id_devis
       ? await pool.request().input('id_devis', sql.Int, id_devis).input('id_demande', sql.Int, id_demande)

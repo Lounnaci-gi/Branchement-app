@@ -15,6 +15,19 @@ function echapperHtml(valeur) {
   })[c]);
 }
 
+function normaliserNatureTravaux(valeur) {
+  const texte = String(valeur ?? '').trim();
+  if (!texte) return 'Branchement d\'eau potable';
+
+  const normalise = texte.replace(/^Autres\s*[-:]\s*/i, 'Autres').trim();
+  if (normalise.startsWith('Branchement d\'eau potable')) return 'Branchement d\'eau potable';
+  if (normalise.startsWith('Extension réseau AEP') || /extension/i.test(normalise)) return 'Extension réseau AEP';
+  if (normalise.startsWith('Rénovation de branchement') || /rénovation/i.test(normalise)) return 'Rénovation de branchement';
+  if (normalise.startsWith('Travaux de résiliation') || /résiliation/i.test(normalise)) return 'Travaux de résiliation';
+  if (normalise.startsWith('Autres') || /autres/i.test(normalise)) return 'Autres';
+  return normalise;
+}
+
 export async function genererHtmlAccuse(demande) {
   const estMorale = Boolean(demande.est_personne_morale);
   const nom = estMorale ? (demande.raison_sociale || '') : (demande.demandeur_nom || demande.nom || '');
@@ -23,15 +36,8 @@ export async function genererHtmlAccuse(demande) {
   const adresse = demande.demandeur_adresse || demande.adresse || demande.adresse_branchement || '';
   
   const typeLibelle = demande.type_branchement || demande.libelle_type || '';
-  const typeAutre = demande.type_autre ? ` : ${demande.type_autre}` : '';
-  const libelleComplet = `${typeLibelle}${typeAutre}`.trim() || 'Branchement standard';
-  
-  let natureDoleance = "Branchement d'eau Potable";
-  if (libelleComplet.toLowerCase().includes('extension')) {
-    natureDoleance = 'Extension de réseau AEP';
-  } else if (libelleComplet) {
-    natureDoleance = `Branchement d'eau Potable ${libelleComplet}`;
-  }
+  const libelleComplet = `${typeLibelle}${demande.type_autre ? ` : ${demande.type_autre}` : ''}`.trim() || 'Branchement standard';
+  const natureDoleance = normaliserNatureTravaux(demande.type_autre || typeLibelle || libelleComplet);
 
   const dateDepot = demande.date_depot
     ? new Date(demande.date_depot).toLocaleDateString('fr-FR')

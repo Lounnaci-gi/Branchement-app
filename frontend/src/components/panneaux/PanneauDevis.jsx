@@ -5,8 +5,17 @@ import { imprimerDevis } from '../../utils/impressionDevis';
 import InputDate from '../InputDate';
 import './PanneauDevis.css';
 
-export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
+export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
+  const etudeRenseignee = Boolean(
+    etude && (
+      etude.date_visite ||
+      etude.faisabilite ||
+      (etude.distance_reseau_m !== null && etude.distance_reseau_m !== undefined) ||
+      etude.diametre_conduite ||
+      etude.observations
+    )
+  );
   const [devisSelectionne, setDevisSelectionne] = useState(null);
   const [ouvert, setOuvert] = useState(false);
   const [form, setForm] = useState({
@@ -80,6 +89,10 @@ export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
   }, [devisActuel, ouvert]);
 
   function ouvrirAjoutDevisComplementaire() {
+    if (!etudeRenseignee) {
+      notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
+      return;
+    }
     setDevisSelectionne(null);
     setForm({ montant: '' });
     setEnregistrerPaiement(false);
@@ -93,6 +106,10 @@ export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
 
   async function enregistrer(e) {
     e.preventDefault();
+    if (!devisActuel && !etudeRenseignee) {
+      await notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
+      return;
+    }
     if (enregistrerPaiement && devisActuel?.date_emission && paiement.date_paiement < devisActuel.date_emission?.slice(0, 10)) {
       await notifierErreur('La date de paiement doit être supérieure ou égale à la date d’émission du devis.');
       return;
@@ -155,7 +172,20 @@ export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
             </button>
           )}
           {devisListe.length === 0 && !ouvert && (
-            <button type="button" className="btn btn-primary" onClick={() => { setDevisSelectionne(null); setOuvert(true); }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={!etudeRenseignee}
+              style={{ opacity: etudeRenseignee ? 1 : 0.6 }}
+              onClick={() => {
+                if (!etudeRenseignee) {
+                  notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
+                  return;
+                }
+                setDevisSelectionne(null);
+                setOuvert(true);
+              }}
+            >
               <span>✎</span> Émettre un devis
             </button>
           )}
@@ -230,7 +260,16 @@ export default function PanneauDevis({ idDemande, devis, onEnregistre }) {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => { setDevisSelectionne(null); setOuvert(true); }}
+                disabled={!etudeRenseignee}
+                style={{ opacity: etudeRenseignee ? 1 : 0.6 }}
+                onClick={() => {
+                  if (!etudeRenseignee) {
+                    notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
+                    return;
+                  }
+                  setDevisSelectionne(null);
+                  setOuvert(true);
+                }}
               >
                 + Émettre le premier devis
               </button>

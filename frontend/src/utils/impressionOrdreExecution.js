@@ -88,16 +88,18 @@ export function genererHtmlOrdreExecution(donnees) {
 
   const typeBranchement = (demande.type_branchement || demande.libelle_type || '').trim();
   const typeAutre = (demande.type_autre || '').trim();
-  const lowerType = typeBranchement.toLowerCase();
 
-  let natureTravaux = "Branchement d'eau Potable";
-  if (lowerType.includes('extension')) {
-    natureTravaux = typeAutre ? `Extension de réseau AEP : ${typeAutre}` : (typeBranchement || 'Extension de réseau AEP');
-  } else if (lowerType === 'autre' || lowerType.startsWith('autre')) {
-    natureTravaux = typeAutre ? `Autre : ${typeAutre}` : (typeAutre || 'Autre');
-  } else if (typeBranchement) {
-    natureTravaux = `Branchement d'eau Potable - ${typeBranchement}${typeAutre ? ` (${typeAutre})` : ''}`;
-  }
+  const natureTravaux = (() => {
+    const source = typeAutre || typeBranchement || 'Branchement d\'eau potable';
+    const texte = String(source).trim();
+    if (!texte) return 'Branchement d\'eau potable';
+    if (texte.startsWith('Branchement d\'eau potable')) return 'Branchement d\'eau potable';
+    if (texte.startsWith('Extension réseau AEP') || /extension/i.test(texte)) return 'Extension réseau AEP';
+    if (texte.startsWith('Rénovation de branchement') || /rénovation/i.test(texte)) return 'Rénovation de branchement';
+    if (texte.startsWith('Travaux de résiliation') || /résiliation/i.test(texte)) return 'Travaux de résiliation';
+    if (texte.startsWith('Autres') || /autres/i.test(texte)) return 'Autres';
+    return texte;
+  })();
 
   // Devis multiples : numéros et dates
   const numerosDevisTexte = devisListe.map((d) => d.numero_devis || '—').filter(Boolean).join(' / ') || devisPaye.numero_devis || '';
