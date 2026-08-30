@@ -42,12 +42,11 @@ export default function CommandPalette({ isOpen, onClose }) {
     const timeout = setTimeout(async () => {
       try {
         const { data } = await client.get('/demandes', {
-          params: { recherche: query.trim(), limit: 8 }
+          params: { recherche: query.trim(), taille: 8 }
         });
         setResults(data.demandes || []);
         setSelectedIndex(0);
-      } catch (err) {
-        console.error('Erreur recherche palette:', err);
+      } catch {
         setResults([]);
       } finally {
         setLoading(false);
@@ -62,7 +61,7 @@ export default function CommandPalette({ isOpen, onClose }) {
         type: 'demande',
         id: d.id_demande,
         title: d.numero_demande,
-        subtitle: `${d.est_personne_morale ? d.raison_sociale : `${d.demandeur_nom} ${d.demandeur_prenom}`} · ${d.nom_commune}`,
+        subtitle: `${d.demandeur || [d.demandeur_nom, d.demandeur_prenom].filter(Boolean).join(' ') || 'Demandeur'} · ${d.nom_commune || ''}`,
         statut: d.statut_actuel,
         path: `/demandes/${d.id_demande}`
       }))

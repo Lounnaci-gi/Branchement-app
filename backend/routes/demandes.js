@@ -79,6 +79,20 @@ async function synchroniserStatut(pool, idDemande, nouveauStatut, idAgent, comme
     .execute('sp_ChangerStatutDemande');
 }
 
+async function verifierAccesDemande(pool, idDemande, agent) {
+  const result = await pool.request()
+    .input('id_demande', sql.Int, idDemande)
+    .query('SELECT id_demande, id_agence, statut_actuel FROM Demandes WHERE id_demande = @id_demande');
+  const demande = result.recordset[0];
+  if (!demande) {
+    return { code: 404, erreur: 'Demande introuvable.' };
+  }
+  if (agent.role !== 'admin' && demande.id_agence !== agent.id_agence) {
+    return { code: 403, erreur: 'Accès refusé pour cette demande.' };
+  }
+  return { demande };
+}
+
 async function genererNumeroOrdreExecution(pool) {
   const annee = new Date().getFullYear();
   const result = await pool.request()
@@ -152,6 +166,11 @@ router.get('/demandeurs/recherche', async (req, res) => {
 // PUT /api/demandes/:id - modifier les informations d'une demande
 router.put('/:id', async (req, res) => {
   const pool = await getPool();
+  const acces = await verifierAccesDemande(pool, req.params.id, req.agent);
+  if (acces.erreur) {
+    return res.status(acces.code).json({ erreur: acces.erreur });
+  }
+
   const transaction = new sql.Transaction(pool);
   try {
     const { demandeur, id_type, type_autre, adresse_branchement, id_commune, observations } = req.body;
@@ -433,6 +452,11 @@ router.get('/:id', async (req, res) => {
     const pool = await getPool();
     const id = req.params.id;
 
+    const acces = await verifierAccesDemande(pool, id, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
     const demande = await pool.request().input('id', sql.Int, id).query(`
             SELECT d.*, dem.nom AS demandeur_nom, dem.prenom AS demandeur_prenom,
               dem.est_personne_morale, dem.raison_sociale, dem.qualite_demandeur,
@@ -619,6 +643,10 @@ router.patch('/:id/statut', async (req, res) => {
     }
 
     const pool = await getPool();
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
 
     const actuel = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT statut_actuel FROM Demandes WHERE id_demande = @id`);
@@ -663,6 +691,28 @@ router.put('/:id/etude', async (req, res) => {
     const { date_visite, distance_reseau_m, diametre_conduite, faisabilite, observations } = req.body;
     const pool = await getPool();
 
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
+    const faisabilitesValides = ['Faisable', 'Faisable_sous_reserve', 'Non_faisable'];
+    if (faisabilite && !faisabilitesValides.includes(faisabilite)) {
+      return res.status(400).json({ erreur: 'Valeur de faisabilité non valide.' });
+    }
+    if (distance_reseau_m !== undefined && distance_reseau_m !== null && distance_reseau_m !== '') {
+      const distNum = Number(distance_reseau_m);
+      if (isNaN(distNum) || distNum < 0 || distNum > 9999.99) {
+        return res.status(400).json({ erreur: 'La distance au réseau doit être un nombre positif valide (max 9999.99m).' });
+      }
+    }
+    if (diametre_conduite && !texteValide(diametre_conduite, { maxLength: 50 })) {
+      return res.status(400).json({ erreur: 'Le diamètre de conduite contient des caractères invalides.' });
+    }
+    if (observations && !texteValide(observations, { maxLength: 1000 })) {
+      return res.status(400).json({ erreur: 'Les observations contiennent des caractères invalides.' });
+    }
+
     const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
       .query('SELECT date_depot FROM Demandes WHERE id_demande = @id_demande');
 
@@ -678,14 +728,16 @@ router.put('/:id/etude', async (req, res) => {
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_etude FROM EtudesTechniques WHERE id_demande = @id`);
 
+    const distanceFinale = (distance_reseau_m !== undefined && distance_reseau_m !== null && distance_reseau_m !== '') ? Number(distance_reseau_m) : null;
+
     if (existe.recordset.length > 0) {
       await pool.request()
         .input('id_demande', sql.Int, id_demande)
-        .input('date_visite', sql.DateTime2, date_visite)
-        .input('distance_reseau_m', sql.Decimal(6, 2), distance_reseau_m)
-        .input('diametre_conduite', sql.NVarChar, diametre_conduite)
-        .input('faisabilite', sql.NVarChar, faisabilite)
-        .input('observations', sql.NVarChar, observations)
+        .input('date_visite', sql.DateTime2, date_visite || null)
+        .input('distance_reseau_m', sql.Decimal(6, 2), distanceFinale)
+        .input('diametre_conduite', sql.NVarChar(50), diametre_conduite?.trim() || null)
+        .input('faisabilite', sql.NVarChar(30), faisabilite || 'Faisable')
+        .input('observations', sql.NVarChar, observations || null)
         .query(`UPDATE EtudesTechniques SET date_visite=@date_visite, distance_reseau_m=@distance_reseau_m,
                 diametre_conduite=@diametre_conduite, faisabilite=@faisabilite, observations=@observations
                 WHERE id_demande=@id_demande`);
@@ -693,11 +745,11 @@ router.put('/:id/etude', async (req, res) => {
       await pool.request()
         .input('id_demande', sql.Int, id_demande)
         .input('id_agent_technique', sql.Int, req.agent.id_agent)
-        .input('date_visite', sql.DateTime2, date_visite)
-        .input('distance_reseau_m', sql.Decimal(6, 2), distance_reseau_m)
-        .input('diametre_conduite', sql.NVarChar, diametre_conduite)
-        .input('faisabilite', sql.NVarChar, faisabilite)
-        .input('observations', sql.NVarChar, observations)
+        .input('date_visite', sql.DateTime2, date_visite || null)
+        .input('distance_reseau_m', sql.Decimal(6, 2), distanceFinale)
+        .input('diametre_conduite', sql.NVarChar(50), diametre_conduite?.trim() || null)
+        .input('faisabilite', sql.NVarChar(30), faisabilite || 'Faisable')
+        .input('observations', sql.NVarChar, observations || null)
         .query(`INSERT INTO EtudesTechniques
                 (id_demande, id_agent_technique, date_visite, distance_reseau_m, diametre_conduite, faisabilite, observations)
                 VALUES (@id_demande, @id_agent_technique, @date_visite, @distance_reseau_m, @diametre_conduite, @faisabilite, @observations)`);
@@ -715,6 +767,11 @@ router.put('/:id/etude', async (req, res) => {
 router.get('/:id/devis/preview', async (req, res) => {
   try {
     const pool = await getPool();
+    const acces = await verifierAccesDemande(pool, req.params.id, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
     const numero_devis = await genererNumeroDevis(pool, req.params.id);
     res.json({ numero_devis });
   } catch (err) {
@@ -728,10 +785,14 @@ router.put('/:id/devis', async (req, res) => {
   try {
     const id_demande = req.params.id;
     const { montant, id_devis } = req.body;
-    if (montant === undefined || montant === null || String(montant).trim() === '' || isNaN(Number(montant)) || Number(montant) < 0) {
-      return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif.' });
+    if (montant === undefined || montant === null || String(montant).trim() === '' || isNaN(Number(montant)) || Number(montant) < 0 || Number(montant) > 999999999.99) {
+      return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif valide (max 999 999 999.99).' });
     }
     const pool = await getPool();
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
 
     const etudeExiste = await pool.request().input('id_demande', sql.Int, id_demande)
       .query('SELECT id_etude FROM EtudesTechniques WHERE id_demande = @id_demande');
@@ -740,26 +801,27 @@ router.put('/:id/devis', async (req, res) => {
       return res.status(400).json({ erreur: "L'étude technique doit être renseignée avant d'émettre un devis." });
     }
 
-    const existe = id_devis
-      ? await pool.request().input('id_devis', sql.Int, id_devis).input('id_demande', sql.Int, id_demande)
+    const idDevisValide = id_devis ? entierPositif(id_devis) : null;
+    const existe = idDevisValide
+      ? await pool.request().input('id_devis', sql.Int, idDevisValide).input('id_demande', sql.Int, id_demande)
         .query(`SELECT id_devis, numero_devis FROM Devis WHERE id_devis = @id_devis AND id_demande = @id_demande`)
       : { recordset: [] };
 
-    let idDevisFinal = id_devis;
+    let idDevisFinal = idDevisValide;
     let numeroDevisFinal = '';
 
     if (existe.recordset.length > 0) {
       numeroDevisFinal = existe.recordset[0].numero_devis;
       await pool.request()
-        .input('id_devis', sql.Int, id_devis)
-        .input('montant', sql.Decimal(12, 2), montant)
+        .input('id_devis', sql.Int, idDevisValide)
+        .input('montant', sql.Decimal(12, 2), Number(montant))
         .query(`UPDATE Devis SET montant=@montant WHERE id_devis=@id_devis`);
     } else {
       numeroDevisFinal = await genererNumeroDevis(pool, id_demande);
       const insertRes = await pool.request()
         .input('id_demande', sql.Int, id_demande)
-        .input('numero_devis', sql.NVarChar, numeroDevisFinal)
-        .input('montant', sql.Decimal(12, 2), montant)
+        .input('numero_devis', sql.NVarChar(30), numeroDevisFinal)
+        .input('montant', sql.Decimal(12, 2), Number(montant))
         .query(`INSERT INTO Devis (id_demande, numero_devis, montant, date_emission)
           OUTPUT INSERTED.id_devis, INSERTED.numero_devis
           VALUES (@id_demande, @numero_devis, @montant, SYSDATETIME())`);
@@ -813,16 +875,21 @@ router.patch('/:id/devis/paiement', async (req, res) => {
     if (!date_paiement) {
       return res.status(400).json({ erreur: 'La date de paiement est obligatoire.' });
     }
-    if (mode_paiement === 'Especes' && !numero_recu?.trim()) {
-      return res.status(400).json({ erreur: 'Le numéro de reçu est obligatoire pour un paiement en espèces.' });
+    if (mode_paiement === 'Especes' && (!numero_recu?.trim() || !texteValide(numero_recu, { maxLength: 50 }))) {
+      return res.status(400).json({ erreur: 'Le numéro de reçu valide est obligatoire pour un paiement en espèces.' });
     }
-    if (mode_paiement === 'Cheque' && (!numero_cheque?.trim() || !banque?.trim())) {
-      return res.status(400).json({ erreur: 'Le numéro de chèque et la banque sont obligatoires.' });
+    if (mode_paiement === 'Cheque' && (!numero_cheque?.trim() || !texteValide(numero_cheque, { maxLength: 50 }) || !banque?.trim() || !texteValide(banque, { maxLength: 150 }))) {
+      return res.status(400).json({ erreur: 'Le numéro de chèque et la banque valides sont obligatoires.' });
     }
-    if (['Versement_bancaire', 'Virement'].includes(mode_paiement) && (!numero_versement?.trim() || !banque?.trim())) {
-      return res.status(400).json({ erreur: 'Le numéro de versement et la banque sont obligatoires.' });
+    if (['Versement_bancaire', 'Virement'].includes(mode_paiement) && (!numero_versement?.trim() || !texteValide(numero_versement, { maxLength: 50 }) || !banque?.trim() || !texteValide(banque, { maxLength: 150 }))) {
+      return res.status(400).json({ erreur: 'Le numéro de versement et la banque valides sont obligatoires.' });
     }
     const pool = await getPool();
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
     const devisResultat = await pool.request().input('id_demande', sql.Int, id_demande).input('id_devis', sql.Int, id_devis)
       .query('SELECT id_devis, date_emission FROM Devis WHERE id_demande = @id_demande AND (@id_devis = 0 OR id_devis = @id_devis)');
     const devis = devisResultat.recordset[0];
@@ -837,7 +904,7 @@ router.patch('/:id/devis/paiement', async (req, res) => {
     await pool.request()
       .input('id_demande', sql.Int, id_demande)
       .input('id_devis', sql.Int, devis.id_devis)
-      .input('mode_paiement', sql.NVarChar, mode_paiement || null)
+      .input('mode_paiement', sql.NVarChar(30), mode_paiement || null)
       .input('date_paiement', sql.DateTime2, date_paiement)
       .input('numero_recu', sql.NVarChar(50), numero_recu?.trim() || null)
       .input('numero_cheque', sql.NVarChar(50), numero_cheque?.trim() || null)
@@ -872,6 +939,30 @@ router.put('/:id/travaux', async (req, res) => {
     const id_demande = req.params.id;
     const { date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations } = req.body;
     const pool = await getPool();
+
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
+    if (equipe_execution && !texteValide(equipe_execution, { maxLength: 100 })) {
+      return res.status(400).json({ erreur: 'L’équipe d’exécution contient des caractères non valides.' });
+    }
+    if (numero_compteur && !texteValide(numero_compteur, { maxLength: 50 })) {
+      return res.status(400).json({ erreur: 'Le numéro de compteur contient des caractères non valides.' });
+    }
+    if (marque_compteur && !texteValide(marque_compteur, { maxLength: 50 })) {
+      return res.status(400).json({ erreur: 'La marque du compteur contient des caractères non valides.' });
+    }
+    if (type_compteur && !texteValide(type_compteur, { maxLength: 50 })) {
+      return res.status(400).json({ erreur: 'Le type de compteur contient des caractères non valides.' });
+    }
+    if (diametre_compteur && !texteValide(diametre_compteur, { maxLength: 20 })) {
+      return res.status(400).json({ erreur: 'Le diamètre du compteur contient des caractères non valides.' });
+    }
+    if (observations && !texteValide(observations, { maxLength: 1000 })) {
+      return res.status(400).json({ erreur: 'Les observations contiennent des caractères non valides.' });
+    }
 
     const devisResult = await pool.request().input('id_demande', sql.Int, id_demande)
       .query(`SELECT statut_paiement, date_paiement FROM Devis WHERE id_demande = @id_demande`);
@@ -909,14 +1000,14 @@ router.put('/:id/travaux', async (req, res) => {
     if (existe.recordset.length > 0) {
       await pool.request()
         .input('id_demande', sql.Int, id_demande)
-        .input('date_debut', sql.DateTime2, date_debut)
-        .input('date_fin', sql.DateTime2, date_fin)
-        .input('equipe_execution', sql.NVarChar, equipe_execution)
-        .input('numero_compteur', sql.NVarChar, numero_compteur)
-        .input('marque_compteur', sql.NVarChar(50), marque_compteur || null)
-        .input('type_compteur', sql.NVarChar(50), type_compteur || null)
-        .input('diametre_compteur', sql.NVarChar(20), diametre_compteur || null)
-        .input('observations', sql.NVarChar, observations)
+        .input('date_debut', sql.DateTime2, date_debut || null)
+        .input('date_fin', sql.DateTime2, date_fin || null)
+        .input('equipe_execution', sql.NVarChar(100), equipe_execution?.trim() || null)
+        .input('numero_compteur', sql.NVarChar(50), numero_compteur?.trim() || null)
+        .input('marque_compteur', sql.NVarChar(50), marque_compteur?.trim() || null)
+        .input('type_compteur', sql.NVarChar(50), type_compteur?.trim() || null)
+        .input('diametre_compteur', sql.NVarChar(20), diametre_compteur?.trim() || null)
+        .input('observations', sql.NVarChar, observations || null)
         .query(`UPDATE Travaux SET date_debut=@date_debut, date_fin=@date_fin, equipe_execution=@equipe_execution,
                 numero_compteur=@numero_compteur, marque_compteur=@marque_compteur, type_compteur=@type_compteur,
                 diametre_compteur=@diametre_compteur, observations=@observations WHERE id_demande=@id_demande`);
@@ -925,14 +1016,14 @@ router.put('/:id/travaux', async (req, res) => {
       await pool.request()
         .input('id_demande', sql.Int, id_demande)
         .input('numero_ordre_execution', sql.NVarChar(15), numero_ordre_execution)
-        .input('date_debut', sql.DateTime2, date_debut)
-        .input('date_fin', sql.DateTime2, date_fin)
-        .input('equipe_execution', sql.NVarChar, equipe_execution)
-        .input('numero_compteur', sql.NVarChar, numero_compteur)
-        .input('marque_compteur', sql.NVarChar(50), marque_compteur || null)
-        .input('type_compteur', sql.NVarChar(50), type_compteur || null)
-        .input('diametre_compteur', sql.NVarChar(20), diametre_compteur || null)
-        .input('observations', sql.NVarChar, observations)
+        .input('date_debut', sql.DateTime2, date_debut || null)
+        .input('date_fin', sql.DateTime2, date_fin || null)
+        .input('equipe_execution', sql.NVarChar(100), equipe_execution?.trim() || null)
+        .input('numero_compteur', sql.NVarChar(50), numero_compteur?.trim() || null)
+        .input('marque_compteur', sql.NVarChar(50), marque_compteur?.trim() || null)
+        .input('type_compteur', sql.NVarChar(50), type_compteur?.trim() || null)
+        .input('diametre_compteur', sql.NVarChar(20), diametre_compteur?.trim() || null)
+        .input('observations', sql.NVarChar, observations || null)
         .query(`INSERT INTO Travaux (id_demande, numero_ordre_execution, date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations)
           VALUES (@id_demande, @numero_ordre_execution, @date_debut, @date_fin, @equipe_execution, @numero_compteur, @marque_compteur, @type_compteur, @diametre_compteur, @observations)`);
     }
@@ -960,6 +1051,24 @@ router.put('/:id/mise-en-service', async (req, res) => {
     const { date_mise_service, numero_abonne, index_initial } = req.body;
     const pool = await getPool();
 
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
+    if (!date_mise_service) {
+      return res.status(400).json({ erreur: 'La date de mise en service est obligatoire.' });
+    }
+    if (numero_abonne && !texteValide(numero_abonne, { maxLength: 50 })) {
+      return res.status(400).json({ erreur: 'Le numéro d’abonné contient des caractères non valides.' });
+    }
+    if (index_initial !== undefined && index_initial !== null && index_initial !== '') {
+      const idx = Number(index_initial);
+      if (isNaN(idx) || idx < 0 || idx > 9999999.999) {
+        return res.status(400).json({ erreur: 'L’index initial doit être un nombre positif (max 9999999.999).' });
+      }
+    }
+
     const travaux = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_travaux, date_fin, numero_ordre_execution FROM Travaux WHERE id_demande = @id`);
 
@@ -970,12 +1079,14 @@ router.put('/:id/mise-en-service', async (req, res) => {
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_mise_service FROM MisesEnService WHERE id_demande = @id`);
 
+    const indexFinal = (index_initial !== undefined && index_initial !== null && index_initial !== '') ? Number(index_initial) : 0;
+
     if (existe.recordset.length > 0) {
       await pool.request()
         .input('id_demande', sql.Int, id_demande)
         .input('date_mise_service', sql.DateTime2, date_mise_service)
-        .input('numero_abonne', sql.NVarChar, numero_abonne)
-        .input('index_initial', sql.Decimal(10, 3), index_initial)
+        .input('numero_abonne', sql.NVarChar(50), numero_abonne?.trim() || null)
+        .input('index_initial', sql.Decimal(10, 3), indexFinal)
         .query(`UPDATE MisesEnService SET date_mise_service=@date_mise_service,
                 numero_abonne=@numero_abonne, index_initial=@index_initial
                 WHERE id_demande=@id_demande`);
@@ -983,8 +1094,8 @@ router.put('/:id/mise-en-service', async (req, res) => {
       await pool.request()
         .input('id_demande', sql.Int, id_demande)
         .input('date_mise_service', sql.DateTime2, date_mise_service)
-        .input('numero_abonne', sql.NVarChar, numero_abonne)
-        .input('index_initial', sql.Decimal(10, 3), index_initial)
+        .input('numero_abonne', sql.NVarChar(50), numero_abonne?.trim() || null)
+        .input('index_initial', sql.Decimal(10, 3), indexFinal)
         .query(`INSERT INTO MisesEnService (id_demande, date_mise_service, numero_abonne, index_initial)
                 VALUES (@id_demande, @date_mise_service, @numero_abonne, @index_initial)`);
     }

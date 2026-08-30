@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { imprimerDevis } from '../../utils/impressionDevis';
-import { notifierErreur, notifierSucces } from '../../utils/notifications';
+import { notifierErreur } from '../../utils/notifications';
 import InputDate from '../InputDate';
 
 const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];

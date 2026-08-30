@@ -119,16 +119,6 @@ export default function DetailDemande() {
     || Boolean(etude?.date_visite || etude?.faisabilite)
     || Boolean(historique?.some((h) => h.code_statut === 'ETUDE_TERMINEE'));
 
-  const etudeRenseignee = Boolean(
-    etude && (
-      etude.date_visite ||
-      etude.faisabilite ||
-      etude.distance_reseau_m !== null && etude.distance_reseau_m !== undefined ||
-      etude.diametre_conduite ||
-      etude.observations
-    )
-  );
-
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const estDevisPayeOuTravaux = Boolean(
     travaux ||

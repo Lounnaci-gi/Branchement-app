@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
-import { imprimerDevis } from '../../utils/impressionDevis';
 import InputDate from '../InputDate';
 import './PanneauDevis.css';
 

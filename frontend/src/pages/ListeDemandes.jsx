@@ -30,8 +30,6 @@ export default function ListeDemandes() {
   const [chargement, setChargement] = useState(true);
   const [triColonne, setTriColonne] = useState('date_depot');
   const [triOrdre, setTriOrdre] = useState('desc'); // 'asc' | 'desc'
-  const [page, setPage] = useState(1);
-  const elementsParPage = 20;
 
   const navigate = useNavigate();
 

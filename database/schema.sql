@@ -44,7 +44,7 @@ CREATE TABLE Agents (
     prenom          NVARCHAR(80) NULL,
     email           NVARCHAR(150) NOT NULL UNIQUE,
     mot_de_passe    NVARCHAR(255) NOT NULL,  -- hash bcrypt
-    role            NVARCHAR(30) NOT NULL DEFAULT 'agent_guichet',
+    role            NVARCHAR(30) NOT NULL DEFAULT 'agent_guichet' CONSTRAINT CK_Agents_Role CHECK (role IN ('agent_guichet', 'agent_technique', 'chef_agence', 'admin')),
         -- valeurs : agent_guichet, agent_technique, chef_agence, admin
     id_agence       INT NOT NULL REFERENCES Agences(id_agence),
     actif           BIT NOT NULL DEFAULT 1,
@@ -57,13 +57,13 @@ CREATE TABLE Agents (
 CREATE TABLE Demandeurs (
     id_demandeur        INT IDENTITY(1,1) PRIMARY KEY,
     est_personne_morale BIT NOT NULL CONSTRAINT DF_Demandeurs_EstPersonneMorale DEFAULT 0,
-    qualite_demandeur   NVARCHAR(20) NULL,
+    qualite_demandeur   NVARCHAR(20) NULL CONSTRAINT CK_Demandeurs_Qualite CHECK (qualite_demandeur IS NULL OR qualite_demandeur IN ('PROPRIETAIRE', 'LOCATAIRE', 'MANDATAIRE')),
     raison_sociale      NVARCHAR(150) NULL,
     nom                 NVARCHAR(80) NULL,
     prenom              NVARCHAR(80) NULL,
     fils_de             NVARCHAR(150) NULL,
     ne_le               DATE NULL,
-    type_piece_identite NVARCHAR(10) NULL,
+    type_piece_identite NVARCHAR(10) NULL CONSTRAINT CK_Demandeurs_TypePiece CHECK (type_piece_identite IS NULL OR type_piece_identite IN ('CIN', 'PC')),
     cin                 NVARCHAR(20) NULL,
     cin_delivre_le      DATE NULL,
     cin_delivre_par     NVARCHAR(150) NULL,
@@ -139,11 +139,6 @@ CREATE TABLE HistoriqueStatuts (
 
 /* ------------------------------------------------------------
    8. ETUDE TECHNIQUE (visite terrain)
-   NOTE : UNIQUE sur id_demande restauré (une seule étude par
-   demande) — le schema.sql fourni cette fois-ci l'avait retiré
-   sans qu'aucune migration ne le justifie. Si c'est volontaire
-   (permettre plusieurs visites/études par demande, comme pour
-   les devis), dis-le-moi et je l'enlève.
    ------------------------------------------------------------ */
 CREATE TABLE EtudesTechniques (
     id_etude            INT IDENTITY(1,1) PRIMARY KEY,
@@ -152,18 +147,13 @@ CREATE TABLE EtudesTechniques (
     date_visite         DATETIME2 NULL,
     distance_reseau_m   DECIMAL(6,2) NULL,
     diametre_conduite   NVARCHAR(20) NULL,
-    faisabilite         NVARCHAR(20) NULL,
+    faisabilite         NVARCHAR(30) NULL CONSTRAINT CK_Etudes_Faisabilite CHECK (faisabilite IS NULL OR faisabilite IN ('Faisable', 'Faisable_sous_reserve', 'Non_faisable')),
     observations        NVARCHAR(MAX) NULL,
     date_creation       DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
 /* ------------------------------------------------------------
    9. DEVIS ET PAIEMENT
-   id_demande n'est plus UNIQUE (migration-devis-complementaire.sql)
-   → une demande peut avoir plusieurs devis (dont des devis
-   complémentaires). L'unicité est remplacée par un index simple
-   (IX_Devis_Demande, section index) pour garder les jointures
-   rapides.
    ------------------------------------------------------------ */
 CREATE TABLE Devis (
     id_devis            INT IDENTITY(1,1) PRIMARY KEY,
@@ -171,9 +161,9 @@ CREATE TABLE Devis (
     numero_devis        NVARCHAR(30) NOT NULL UNIQUE,
     montant             DECIMAL(12,2) NOT NULL,
     date_emission       DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-    statut_paiement     NVARCHAR(20) NOT NULL DEFAULT 'IMPAYE',
+    statut_paiement     NVARCHAR(20) NOT NULL DEFAULT 'IMPAYE' CONSTRAINT CK_Devis_StatutPaiement CHECK (statut_paiement IN ('IMPAYE', 'PAYE')),
     date_paiement       DATETIME2 NULL,
-    mode_paiement       NVARCHAR(30) NULL,
+    mode_paiement       NVARCHAR(30) NULL CONSTRAINT CK_Devis_ModePaiement CHECK (mode_paiement IS NULL OR mode_paiement IN ('Especes', 'Cheque', 'Versement_bancaire', 'Virement')),
     numero_recu         NVARCHAR(50) NULL,
     numero_cheque       NVARCHAR(50) NULL,
     numero_versement    NVARCHAR(50) NULL,
@@ -220,23 +210,29 @@ GO
 
 /* ============================================================
    INDEX
-   IX_Devis_Demande devient important maintenant que id_demande
-   n'a plus de contrainte UNIQUE sur Devis (donc plus d'index
-   automatique) : sans lui, la jointure et l'agrégation de la vue
-   vw_DemandesSynthese scanneraient Devis en entier.
    ============================================================ */
 CREATE INDEX IX_Demandes_Statut ON Demandes(statut_actuel);
 CREATE INDEX IX_Demandes_Agence ON Demandes(id_agence);
+CREATE INDEX IX_Demandes_Demandeur ON Demandes(id_demandeur);
+CREATE INDEX IX_Demandes_Commune ON Demandes(id_commune);
+CREATE INDEX IX_Demandes_Type ON Demandes(id_type);
 CREATE INDEX IX_Demandes_Date ON Demandes(date_depot);
+
 CREATE INDEX IX_Historique_Demande ON HistoriqueStatuts(id_demande);
+CREATE INDEX IX_Historique_Agent ON HistoriqueStatuts(id_agent);
 
 CREATE INDEX IX_Demandeurs_Commune ON Demandeurs(id_commune);
 CREATE INDEX IX_Demandeurs_Nom_Prenom ON Demandeurs(nom, prenom);
 CREATE INDEX IX_Demandeurs_Telephone ON Demandeurs(telephone);
+CREATE INDEX IX_Demandeurs_TelephoneSecondaire ON Demandeurs(telephone_secondaire);
 CREATE INDEX IX_Demandeurs_RaisonSociale ON Demandeurs(raison_sociale);
+CREATE INDEX IX_Demandeurs_CIN ON Demandeurs(cin);
 
 CREATE INDEX IX_Devis_Demande ON Devis(id_demande);
 CREATE INDEX IX_Devis_StatutPaiement ON Devis(statut_paiement);
+
+CREATE INDEX IX_Travaux_NumeroCompteur ON Travaux(numero_compteur);
+CREATE INDEX IX_MisesEnService_NumeroAbonne ON MisesEnService(numero_abonne);
 GO
 
 /* ============================================================

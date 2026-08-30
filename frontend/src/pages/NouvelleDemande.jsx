@@ -81,7 +81,6 @@ export default function NouvelleDemande() {
   const [suggestions, setSuggestions] = useState([]);
   const [champRecherche, setChampRecherche] = useState('');
   const [autofillSource, setAutofillSource] = useState(null);
-  const [etapeActive, setEtapeActive] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {

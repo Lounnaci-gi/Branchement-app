@@ -104,7 +104,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <h3>Exécution des travaux</h3>
         <div style={{ display: 'flex', gap: 8 }}>
-          {(travaux || devPayeOuvert()) && (
+          {(travaux || devisPaye) && (
             <button
               type="button"
               className="btn btn-secondary"
@@ -214,9 +214,5 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       )}
     </div>
   );
-
-  function devPayeOuvert() {
-    return devisPaye;
-  }
 }
 
