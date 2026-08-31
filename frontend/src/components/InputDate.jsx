@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 /**
  * Composant de saisie de date en format jj/mm/aaaa (dd/mm/yyyy).

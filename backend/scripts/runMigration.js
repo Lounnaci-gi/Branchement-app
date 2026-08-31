@@ -8,15 +8,19 @@ async function runMigration() {
   const pool = await getPool();
   console.log('Connecté. Lecture du script de migration...');
   
-  const fichierMigration = process.argv[2] || 'database/migration-indexes.sql';
+  const fichierMigration = process.argv[2] || 'database/schema.sql';
   const scriptPath = path.resolve(process.cwd(), fichierMigration);
+  if (!fs.existsSync(scriptPath)) {
+    console.error(`❌ Fichier de migration introuvable : ${scriptPath}`);
+    process.exit(1);
+  }
   const sqlContent = fs.readFileSync(scriptPath, 'utf8');
   
   // Séparer les blocs par "GO"
   const batches = sqlContent
     .split(/^\s*GO\s*$/gim)
     .map(b => b.trim())
-    .filter(b => b.length > 0 && !b.startsWith('USE '));
+    .filter(b => b.length > 0 && !b.startsWith('USE ') && !b.startsWith('CREATE DATABASE '));
 
   for (let i = 0; i < batches.length; i++) {
     const batch = batches[i];
@@ -24,7 +28,7 @@ async function runMigration() {
     await pool.request().query(batch);
   }
 
-  console.log('✅ Tous les index ont été créés avec succès sur SQL Server !');
+  console.log('✅ Migration exécutée avec succès sur SQL Server !');
   process.exit(0);
 }
 

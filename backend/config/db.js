@@ -51,11 +51,25 @@ async function verifierEtMigrerBase(pool) {
     `;
     await pool.request().query(migrationDevisSQL);
 
+    const migrationTravauxSQL = `
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Travaux') AND name = 'marque_compteur')
+        ALTER TABLE Travaux ADD marque_compteur NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Travaux') AND name = 'type_compteur')
+        ALTER TABLE Travaux ADD type_compteur NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Travaux') AND name = 'diametre_compteur')
+        ALTER TABLE Travaux ADD diametre_compteur NVARCHAR(20) NULL;
+    `;
+    await pool.request().query(migrationTravauxSQL);
+
     const updateViewSQL = `
       CREATE OR ALTER VIEW vw_DemandesSynthese AS
       SELECT
           d.id_demande,
           d.numero_demande,
+          d.id_agence,
+          d.id_commune,
+          d.id_type,
+          d.id_demandeur,
           CASE WHEN dem.est_personne_morale = 1 THEN dem.raison_sociale ELSE dem.nom + ' ' + dem.prenom END AS demandeur,
           dem.telephone,
           dem.telephone_secondaire,

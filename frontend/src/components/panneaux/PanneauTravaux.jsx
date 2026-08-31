@@ -32,18 +32,27 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
   });
   const [envoi, setEnvoi] = useState(false);
 
-  useEffect(() => {
+  function initialiserFormulaire(source = travaux) {
     setForm({
-      date_debut: travaux?.date_debut?.slice(0, 10) || '',
-      date_fin: travaux?.date_fin?.slice(0, 10) || '',
-      equipe_execution: travaux?.equipe_execution || '',
-      numero_compteur: travaux?.numero_compteur || '',
-      marque_compteur: travaux?.marque_compteur || 'Sensus',
-      type_compteur: travaux?.type_compteur || '',
-      diametre_compteur: travaux?.diametre_compteur || '',
-      observations: travaux?.observations || ''
+      date_debut: source?.date_debut?.slice(0, 10) || '',
+      date_fin: source?.date_fin?.slice(0, 10) || '',
+      equipe_execution: source?.equipe_execution || '',
+      numero_compteur: source?.numero_compteur || '',
+      marque_compteur: source?.marque_compteur || 'Sensus',
+      type_compteur: source?.type_compteur || '',
+      diametre_compteur: source?.diametre_compteur || '',
+      observations: source?.observations || ''
     });
+  }
+
+  useEffect(() => {
+    initialiserFormulaire();
   }, [travaux]);
+
+  function ouvrirEdition() {
+    initialiserFormulaire();
+    setOuvert(true);
+  }
 
   function handleImprimer(travauxData = travaux) {
     imprimerOrdreExecution({
@@ -80,12 +89,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
     }
     setEnvoi(true);
     try {
-      const res = await client.put(`/demandes/${idDemande}/travaux`, form);
-      const updatedTravaux = {
-        ...travaux,
-        ...form,
-        numero_ordre_execution: res.data?.numero_ordre_execution || travaux?.numero_ordre_execution
-      };
+      await client.put(`/demandes/${idDemande}/travaux`, form);
       setOuvert(false);
       notifierSucces('Exécution des travaux enregistrée.');
       onEnregistre();
@@ -116,7 +120,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             type="button"
             className="btn btn-secondary"
             disabled={!devisPaye}
-            onClick={() => setOuvert((o) => !o)}
+            onClick={ouvrirEdition}
             aria-expanded={ouvert}
             aria-controls="panneau-travaux-form"
             title={!devisPaye ? 'Le devis doit être payé avant de renseigner les travaux.' : undefined}

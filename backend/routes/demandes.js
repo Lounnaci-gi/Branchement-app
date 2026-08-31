@@ -272,9 +272,34 @@ async function genererNumeroDemande(pool) {
   const annee = new Date().getFullYear();
   const result = await pool.request()
     .input('suffixe', sql.NVarChar(10), `/${annee}`)
-    .query(`SELECT COUNT(*) AS total FROM Demandes WHERE numero_demande LIKE '%' + @suffixe`);
-  const compteur = result.recordset[0].total + 1;
-  return `${String(compteur).padStart(4, '0')}/${annee}`;
+    .query(`SELECT numero_demande FROM Demandes WHERE numero_demande LIKE '%' + @suffixe`);
+
+  let maxCompteur = 0;
+  for (const row of result.recordset) {
+    const parts = String(row.numero_demande || '').split('/');
+    if (parts.length >= 1) {
+      const num = parseInt(parts[0], 10);
+      if (!isNaN(num) && num > maxCompteur) {
+        maxCompteur = num;
+      }
+    }
+  }
+
+  let candidat = maxCompteur + 1;
+  let numeroCandidat = `${String(candidat).padStart(4, '0')}/${annee}`;
+
+  while (true) {
+    const existe = await pool.request()
+      .input('numero_demande', sql.NVarChar(30), numeroCandidat)
+      .query(`SELECT TOP 1 1 AS ex FROM Demandes WHERE numero_demande = @numero_demande`);
+    if (existe.recordset.length === 0) {
+      break;
+    }
+    candidat++;
+    numeroCandidat = `${String(candidat).padStart(4, '0')}/${annee}`;
+  }
+
+  return numeroCandidat;
 }
 
 async function genererNumeroDevis(pool, idDemande) {
@@ -422,8 +447,8 @@ router.delete('/:id', async (req, res) => {
     if (req.agent.role !== 'admin' && demandeCible.id_agence !== req.agent.id_agence) {
       return res.status(403).json({ erreur: 'Vous ne pouvez pas supprimer cette demande.' });
     }
-    if (demandeCible.statut_paiement === 'PAYE') {
-      return res.status(400).json({ erreur: 'Cette demande ne peut pas être supprimée car le devis est payé.' });
+    if (demande.recordset.some((item) => item.statut_paiement === 'PAYE')) {
+      return res.status(400).json({ erreur: 'Cette demande ne peut pas être supprimée car un devis est payé.' });
     }
 
     await transaction.begin();

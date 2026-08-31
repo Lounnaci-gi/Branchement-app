@@ -150,7 +150,7 @@ export function genererHtmlOrdreExecution(donnees) {
   <style>
     @page {
       size: A4 portrait;
-      margin: 8mm 12mm 8mm 12mm;
+      margin: 5mm 8mm 5mm 8mm;
     }
     * {
       box-sizing: border-box;
@@ -161,7 +161,7 @@ export function genererHtmlOrdreExecution(donnees) {
       margin: 0;
       padding: 0;
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11.5px;
+      font-size: 13.5px;
       color: #000;
       background: #fff;
       line-height: 1.25;
@@ -173,40 +173,42 @@ export function genererHtmlOrdreExecution(donnees) {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 275mm;
+      min-height: 268mm;
     }
 
     /* En-tête */
     .header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
+      align-items: flex-start;
+      margin-bottom: 6px;
     }
     .header-left {
       text-align: center;
-      font-size: 11px;
+      font-size: 15px;
       line-height: 1.35;
       width: 38%;
+      padding-top: 4px;
     }
     .header-left .titre-org {
-      font-weight: bold;
-      font-size: 12px;
+      font-weight: normal;
+      font-size: 16px;
     }
     .header-center {
       width: 24%;
       text-align: center;
     }
     .header-center img {
-      width: 70px;
+      width: 104.5px;
       height: auto;
       object-fit: contain;
     }
     .header-right {
       width: 38%;
       text-align: right;
-      font-size: 12px;
+      font-size: 15px;
       font-weight: 500;
+      padding-top: 13px;
     }
     .header-right .agence-valeur {
       font-weight: bold;
@@ -220,11 +222,11 @@ export function genererHtmlOrdreExecution(donnees) {
     .titre-section {
       position: relative;
       text-align: center;
-      margin: 6px 0 2px 0;
+      margin: 4px 0 1px 0;
       min-height: 24px;
     }
     .titre-principal {
-      font-size: 17px;
+      font-size: 19px;
       font-weight: bold;
       letter-spacing: 0.8px;
       text-transform: uppercase;
@@ -234,7 +236,7 @@ export function genererHtmlOrdreExecution(donnees) {
       position: absolute;
       right: 0;
       bottom: 2px;
-      font-size: 8.5pt;
+      font-size: 10.5pt;
       font-weight: bold;
       color: #000;
       letter-spacing: 0;
@@ -243,8 +245,8 @@ export function genererHtmlOrdreExecution(donnees) {
       background: #000;
       height: 14px;
       width: 100%;
-      margin-top: 4px;
-      margin-bottom: 10px;
+      margin-top: 3px;
+      margin-bottom: 8px;
     }
 
     /* Date haut droite */
@@ -254,7 +256,7 @@ export function genererHtmlOrdreExecution(donnees) {
       align-items: center;
       gap: 12px;
       margin-bottom: 10px;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 500;
     }
     .date-groupe {
@@ -264,26 +266,26 @@ export function genererHtmlOrdreExecution(donnees) {
     }
     .case-chiffre {
       display: inline-flex;
-      width: 15px;
-      height: 17px;
+      width: 17px;
+      height: 19px;
       align-items: center;
       justify-content: center;
       border: 1px solid #000;
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11px;
+      font-size: 13px;
       font-weight: bold;
       background: #fff;
     }
     .sep-date {
       margin: 0 2px;
       font-weight: bold;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     /* Travaux à effectuer */
     .ligne-travaux-titre {
       font-weight: 400;
-      font-size: 14px;
+      font-size: 16px;
       margin-bottom: 4px;
     }
     .ligne-pleine {
@@ -294,7 +296,7 @@ export function genererHtmlOrdreExecution(donnees) {
       align-items: flex-end;
       justify-content: center;
       text-align: center;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 600;
       margin-bottom: 8px;
     }
@@ -306,19 +308,19 @@ export function genererHtmlOrdreExecution(donnees) {
       width: 70%;
       margin-bottom: 6px;
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11.5px;
+      font-size: 13.5px;
     }
     .ligne-devis-reglement .valeur-soulignee,
     .ligne-devis-reglement > span:last-child,
     .ligne-devis-reglement > span:nth-child(2) {
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11.5px;
+      font-size: 13.5px;
       font-weight: 600;
     }
     .ligne-devis-reglement > span:first-child,
     .ligne-devis-reglement > span:nth-child(3) {
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11.5px;
+      font-size: 13.5px;
       font-weight: 500;
     }
     .champ-ligne {
@@ -326,29 +328,29 @@ export function genererHtmlOrdreExecution(donnees) {
       align-items: flex-end;
       margin-bottom: 6px;
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11.5px;
+      font-size: 13.5px;
     }
     .champ-ligne label {
       white-space: nowrap;
       margin-right: 6px;
       font-family: 'Poppins', Arial, sans-serif;
-      font-size: 11.5px;
+      font-size: 13.5px;
     }
     .champ-ligne .valeur-soulignee {
       flex-grow: 1;
       border-bottom: 1px solid #000;
-      min-height: 17px;
+      min-height: 18px;
       padding: 0 6px;
       font-family: 'Poppins', Arial, sans-serif;
       font-weight: 600;
       text-align: center;
-      font-size: 11.5px;
+      font-size: 13.5px;
     }
 
     .section-titre-souligne {
       text-decoration: underline;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 14px;
       margin: 10px 0 6px 0;
     }
 
@@ -357,7 +359,7 @@ export function genererHtmlOrdreExecution(donnees) {
       width: 70%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin: 12px auto;
+      margin: 22px auto;
     }
     table.tableau-visas th, table.tableau-visas td {
       border: 1.5px solid #000;
@@ -366,14 +368,14 @@ export function genererHtmlOrdreExecution(donnees) {
     }
     table.tableau-visas th {
       font-weight: bold;
-      font-size: 11.5px;
+      font-size: 13.5px;
       background: #f2f2f2;
     }
     table.tableau-visas td {
-      height: 52px;
+      height: 70px;
       vertical-align: top;
       text-align: left;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     /* Section Deux Colonnes : Travaux / Compteur */
@@ -393,7 +395,7 @@ export function genererHtmlOrdreExecution(donnees) {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 11.5px;
+      font-size: 13.5px;
     }
 
     /* Observations */
@@ -407,7 +409,7 @@ export function genererHtmlOrdreExecution(donnees) {
       border-bottom: 1px solid #000;
       min-height: 18px;
       padding: 0 4px;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     /* Tableau bas */
@@ -424,13 +426,13 @@ export function genererHtmlOrdreExecution(donnees) {
     table.tableau-bas th {
       font-weight: bold;
       text-align: center;
-      font-size: 11.5px;
+      font-size: 13.5px;
       background: #f2f2f2;
     }
     table.tableau-bas td {
-      height: 62px;
+      height: 52px;
       vertical-align: top;
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.5;
     }
 
@@ -440,9 +442,9 @@ export function genererHtmlOrdreExecution(donnees) {
       color: #fff;
       text-align: center;
       font-weight: bold;
-      font-size: 11.5px;
-      padding: 5px 0;
-      margin-top: 4px;
+      font-size: 13.5px;
+      padding: 4px 0;
+      margin-top: 3px;
       letter-spacing: 0.3px;
     }
 
@@ -495,11 +497,11 @@ export function genererHtmlOrdreExecution(donnees) {
       <div class="ligne-pleine">${echapperHtml(natureTravaux)}</div>
 
       <div class="ligne-devis-reglement">
-        <span style="font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 400;">Selon devis n°</span>
-        <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 600;">${echapperHtml(numerosDevisTexte)}</span>
-        <span style="margin-left: 12px; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 400;">Du</span>
-        <span style="border-bottom: 1px solid #000; min-width: 110px; text-align: center; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 600;">${echapperHtml(datesDevisTexte)}</span>
-        <span style="margin-left: 6px; font-family: 'Poppins', Arial, sans-serif; font-size: 11.5px; font-weight: 400;">(Ci-joint)</span>
+        <span style="font-family: 'Poppins', Arial, sans-serif; font-size: 13.5px; font-weight: 400;">Selon devis n°</span>
+        <span style="border-bottom: 1px solid #000; flex: 1; padding: 0 4px; font-family: 'Poppins', Arial, sans-serif; font-size: 13.5px; font-weight: 600;">${echapperHtml(numerosDevisTexte)}</span>
+        <span style="margin-left: 12px; font-family: 'Poppins', Arial, sans-serif; font-size: 13.5px; font-weight: 400;">Du</span>
+        <span style="border-bottom: 1px solid #000; min-width: 110px; text-align: center; font-family: 'Poppins', Arial, sans-serif; font-size: 13.5px; font-weight: 600;">${echapperHtml(datesDevisTexte)}</span>
+        <span style="margin-left: 6px; font-family: 'Poppins', Arial, sans-serif; font-size: 13.5px; font-weight: 400;">(Ci-joint)</span>
       </div>
 
       <div class="champ-ligne" style="margin-top: 4px;">
@@ -511,7 +513,7 @@ export function genererHtmlOrdreExecution(donnees) {
       <div class="section-titre-souligne">Bénéficiaire :</div>
 
       <div class="champ-ligne">
-        <label>Nom <span style="font-size: 10px;">(ou Raison sociale)</span></label>
+        <label>Nom <span style="font-size: 12px;">(ou Raison sociale)</span></label>
         <div class="valeur-soulignee">${echapperHtml(nom)}</div>
       </div>
 
@@ -557,11 +559,11 @@ export function genererHtmlOrdreExecution(donnees) {
       <div class="grille-deux-colonnes">
         <!-- Colonne Gauche -->
         <div class="col-gauche">
-          <div class="ligne-inline-date">
+          <div class="ligne-inline-date" style="margin-top: 5px;">
             <span>Travaux entamés le</span>
             ${genererCasesDate(travaux.date_debut)}
           </div>
-          <div class="ligne-inline-date" style="margin-top: 4px;">
+          <div class="ligne-inline-date" style="margin-top: 9px;">
             <span>Travaux achevés le</span>
             ${genererCasesDate(travaux.date_fin)}
           </div>
@@ -573,26 +575,26 @@ export function genererHtmlOrdreExecution(donnees) {
 
         <!-- Colonne Droite (Compteur) -->
         <div class="col-droite">
-          <div style="font-weight: bold; text-decoration: underline; font-size: 12px; margin-bottom: 2px;">Compteur</div>
-          <div class="ligne-inline-date">
+          <div style="font-weight: bold; text-decoration: underline; font-size: 14px; margin-bottom: 2px;">Compteur</div>
+          <div class="ligne-inline-date" style="margin-top: 5px;">
             <span>Posé le</span>
             ${genererCasesDate(travaux.date_fin || travaux.date_debut)}
           </div>
-          <div class="champ-ligne">
+          <div class="champ-ligne" style="margin-top: 5px;">
             <label>Marque :</label>
             <div class="valeur-soulignee">${echapperHtml(travaux.marque_compteur || 'Sensus')}</div>
           </div>
-          <div class="champ-ligne">
+          <div class="champ-ligne" style="margin-top: 5px;">
             <label>Type :</label>
             <div class="valeur-soulignee" style="max-width: 100px;">${echapperHtml(travaux.type_compteur || typeBranchement)}</div>
             <label style="margin-left: 10px;">Diamètre :</label>
             <div class="valeur-soulignee">${echapperHtml(diametre)}</div>
           </div>
-          <div class="ligne-inline-date">
+          <div class="ligne-inline-date" style="margin-top: 5px;">
             <span>N° de Série</span>
             ${genererCasesChiffres(travaux.numero_compteur || '', 10, 0)}
           </div>
-          <div class="ligne-inline-date" style="margin-top: 3px;">
+          <div class="ligne-inline-date" style="margin-top: 8px;">
             <span>Index de pose</span>
             ${genererCasesChiffres(miseEnService.index_initial !== undefined && miseEnService.index_initial !== null ? String(miseEnService.index_initial) : '', 4, 0)}
           </div>

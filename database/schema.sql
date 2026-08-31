@@ -181,6 +181,9 @@ CREATE TABLE Travaux (
     date_fin                DATETIME2 NULL,
     equipe_execution        NVARCHAR(100) NULL,
     numero_compteur         NVARCHAR(50) NULL,
+    marque_compteur         NVARCHAR(50) NULL,
+    type_compteur           NVARCHAR(50) NULL,
+    diametre_compteur       NVARCHAR(20) NULL,
     observations            NVARCHAR(MAX) NULL
 );
 
@@ -294,6 +297,10 @@ CREATE VIEW vw_DemandesSynthese AS
 SELECT
     d.id_demande,
     d.numero_demande,
+    d.id_agence,
+    d.id_commune,
+    d.id_type,
+    d.id_demandeur,
     CASE WHEN dem.est_personne_morale = 1 THEN dem.raison_sociale ELSE dem.nom + ' ' + dem.prenom END AS demandeur,
     dem.telephone,
     dem.telephone_secondaire,

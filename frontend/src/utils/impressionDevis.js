@@ -4,10 +4,6 @@ function echapperHtml(valeur) {
   })[caractere]);
 }
 
-function dateFrancaise(valeur) {
-  return valeur ? new Date(valeur).toLocaleDateString('fr-FR') : '';
-}
-
 function valeurNumero(demande) {
   return String(demande.numero_demande || '').split('/')[0].replace(/\D/g, '').slice(-4).padStart(4, '0');
 }

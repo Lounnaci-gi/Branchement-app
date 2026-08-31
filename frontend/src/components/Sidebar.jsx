@@ -8,6 +8,10 @@ export default function Sidebar({ agent, onOpenSearch }) {
   const [agentCourant, setAgentCourant] = useState(agent);
 
   useEffect(() => {
+    setAgentCourant(agent);
+  }, [agent]);
+
+  useEffect(() => {
     function actualiserAgent() {
       setAgentCourant(JSON.parse(localStorage.getItem('agent') || '{}'));
     }
