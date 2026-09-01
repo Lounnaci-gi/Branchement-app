@@ -8,7 +8,6 @@ import { LIBELLES_STATUT } from '../constants/statuts';
 import PanneauEtude from '../components/panneaux/PanneauEtude';
 import PanneauDevis from '../components/panneaux/PanneauDevis';
 import PanneauTravaux from '../components/panneaux/PanneauTravaux';
-import PanneauMiseEnService from '../components/panneaux/PanneauMiseEnService';
 import { imprimerAccuse } from '../utils/impressionAccuse';
 import { imprimerDemande } from '../utils/impressionDemande';
 import { imprimerDevis } from '../utils/impressionDevis';
@@ -94,7 +93,7 @@ export default function DetailDemande() {
     );
   }
 
-  const { demande, historique, etude, devis, travaux, miseEnService, transitionsPossibles } = fiche;
+  const { demande, historique, etude, devis, travaux, transitionsPossibles } = fiche;
   const typeBranchementAffiche = (() => {
     const brut = (demande.type_autre || demande.type_branchement || '').trim();
     if (!brut) return 'Branchement d\'eau potable';
@@ -114,8 +113,7 @@ export default function DetailDemande() {
     'DEVIS_EMIS',
     'DEVIS_PAYE',
     'TRAVAUX_EN_COURS',
-    'TRAVAUX_TERMINES',
-    'MISE_EN_SERVICE'
+    'TRAVAUX_TERMINES'
   ]);
 
   const estEtudeTerminee = STATUTS_AVEC_ETUDE.has(demande.statut_actuel)
@@ -123,9 +121,10 @@ export default function DetailDemande() {
     || Boolean(historique?.some((h) => h.code_statut === 'ETUDE_TERMINEE'));
 
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
+  const estDevisPaye = devisListe.some((item) => item.statut_paiement === 'PAYE');
   const estDevisPayeOuTravaux = Boolean(
     travaux ||
-    ['DEVIS_PAYE', 'TRAVAUX_EN_COURS', 'TRAVAUX_TERMINES', 'MISE_EN_SERVICE'].includes(demande.statut_actuel) ||
+    ['DEVIS_PAYE', 'TRAVAUX_EN_COURS', 'TRAVAUX_TERMINES'].includes(demande.statut_actuel) ||
     (devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE'))
   );
 
@@ -151,8 +150,7 @@ export default function DetailDemande() {
       ...demande,
       travaux,
       devis,
-      etude,
-      miseEnService
+      etude
     });
   }
 
@@ -240,7 +238,6 @@ export default function DetailDemande() {
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-etude')}>Étude ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-devis')}>Devis ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-travaux')}>Travaux ↓</button>
-            <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-mes')}>Mise en service ↓</button>
           </nav>
         </div>
         <Pipeline statutActuel={demande.statut_actuel} showLegend />
@@ -322,7 +319,7 @@ export default function DetailDemande() {
 
           {/* Panneaux avec ancres de défilement fluide */}
           <div id="panneau-etude">
-            <PanneauEtude idDemande={id} demande={demande} etude={etude} onEnregistre={recharger} />
+            <PanneauEtude idDemande={id} demande={demande} etude={etude} devisPaye={estDevisPaye} onEnregistre={recharger} />
           </div>
           <div id="panneau-devis">
             <PanneauDevis idDemande={id} devis={devis} etude={etude} onEnregistre={recharger} />
@@ -334,12 +331,8 @@ export default function DetailDemande() {
               travaux={travaux}
               devis={devis}
               etude={etude}
-              miseEnService={miseEnService}
               onEnregistre={recharger}
             />
-          </div>
-          <div id="panneau-mes">
-            <PanneauMiseEnService idDemande={id} miseEnService={miseEnService} travaux={travaux} onEnregistre={recharger} />
           </div>
 
         </div>

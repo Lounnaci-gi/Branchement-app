@@ -6,7 +6,7 @@ import InputDate from '../InputDate';
 
 const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
 
-export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }) {
+export default function PanneauEtude({ idDemande, demande, etude, devisPaye, onEnregistre }) {
   const dateDepot = demande?.date_depot?.slice(0, 10) || '';
   const [ouvert, setOuvert] = useState(false);
   const [form, setForm] = useState({
@@ -28,8 +28,16 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
     });
   }, [etude]);
 
+  useEffect(() => {
+    if (devisPaye) setOuvert(false);
+  }, [devisPaye]);
+
   async function enregistrer(e) {
     e.preventDefault();
+    if (devisPaye) {
+      notifierErreur("L'étude technique ne peut plus être modifiée car le devis est payé.");
+      return;
+    }
     if (form.date_visite && dateDepot && form.date_visite < dateDepot) {
       notifierErreur('La date de visite doit être supérieure ou égale à la date de dépôt de la demande.');
       return;
@@ -57,11 +65,13 @@ export default function PanneauEtude({ idDemande, demande, etude, onEnregistre }
         <button
           type="button"
           className="btn btn-secondary"
+          disabled={devisPaye}
           onClick={() => setOuvert((o) => !o)}
           aria-expanded={ouvert}
           aria-controls="panneau-etude-form"
+          title={devisPaye ? 'Impossible de modifier l’étude technique : le devis est payé.' : undefined}
         >
-          {etude ? 'Modifier' : 'Renseigner'}
+          {devisPaye ? 'Étude verrouillée' : etude ? 'Modifier' : 'Renseigner'}
         </button>
       </div>
 

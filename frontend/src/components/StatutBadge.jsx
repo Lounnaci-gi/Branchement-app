@@ -7,8 +7,7 @@ const STYLES = {
   DEVIS_EMIS: { bg: 'var(--color-accent-light)', fg: 'var(--color-accent)', border: 'var(--color-border-accent)' },
   DEVIS_PAYE: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', border: 'var(--color-border-success)' },
   TRAVAUX_EN_COURS: { bg: 'var(--color-primary-selection)', fg: 'var(--color-primary)', border: 'var(--color-border-primary)' },
-  TRAVAUX_TERMINES: { bg: 'var(--color-primary-selection)', fg: 'var(--color-primary)', border: 'var(--color-border-primary)' },
-  MISE_EN_SERVICE: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', border: 'var(--color-border-success)' },
+  TRAVAUX_TERMINES: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', border: 'var(--color-border-success)' },
   REJETEE: { bg: 'var(--color-danger-bg)', fg: 'var(--color-danger)', border: 'var(--color-border-danger)' },
   ANNULEE: { bg: 'var(--color-surface-sunken)', fg: 'var(--color-text-muted)', border: 'var(--color-border)' }
 };

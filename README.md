@@ -1,7 +1,7 @@
 # Suivi des Demandes de Branchement AEP
 
 Application de gestion et de suivi des demandes de branchement en eau potable (ADE).
-Workflow couvert : **Dépôt → Étude technique → Devis → Paiement → Travaux → Mise en service**.
+Workflow couvert : **Dépôt → Étude technique → Devis → Paiement → Travaux**.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ branchement-app/
     └── src/
         ├── pages/               → Connexion, TableauDeBord, ListeDemandes, NouvelleDemande, DetailDemande
         ├── components/          → Sidebar, Pipeline (visualisation workflow), StatutBadge
-        └── components/panneaux/ → Étude, Devis, Travaux, Mise en service
+        └── components/panneaux/ → Étude, Devis, Travaux
 ```
 
 ## 1. Base de données
@@ -65,7 +65,7 @@ Se connecter avec le compte créé à l'étape 2.
 - **Transitions de statut** : le graphe de transitions autorisées est défini dans `backend/routes/demandes.js` (`TRANSITIONS`). C'est le seul endroit à modifier si le workflow métier évolue.
 - **Numérotation** : les demandes sont numérotées `{compteur}/{année}` (ex: `0001/2026`), avec un compteur annuel généré côté serveur.
 - **Paiement** : suivi simple (montant + statut payé/impayé + date + mode), pas d'échéancier ni de relances — conforme à ce que tu as demandé.
-- **Rattachement à la facturation** : le champ `numero_abonne` dans `MisesEnService` est prévu comme point de jonction avec ton système de facturation existant (DBF/Clipper), mais aucune intégration automatique n'est faite — à connecter si besoin.
+- **Rattachement à la facturation** : le point d’intégration avec le système de facturation existant reste à connecter si besoin, sans étape de mise en service dans le workflow applicatif.
 
 ## Prochaines étapes possibles
 
@@ -73,4 +73,4 @@ Se connecter avec le compte créé à l'étape 2.
 - Upload réel des pièces jointes (CIN, plan de situation) — la table `PiecesJointes` existe déjà, il manque l'endpoint d'upload (multer) et l'UI
 - Export PDF du récapitulatif de demande / du devis
 - Notifications SMS/email au demandeur à chaque changement de statut
-- Intégration avec le système de facturation existant pour la mise en service automatique
+- Intégration avec le système de facturation existant pour la clôture automatique des dossiers

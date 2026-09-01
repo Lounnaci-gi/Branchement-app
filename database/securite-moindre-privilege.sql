@@ -43,7 +43,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.Demandeurs TO db_aep_app_rol
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.EtudesTechniques TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.Devis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.Travaux TO db_aep_app_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.MisesEnService TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.MarquesCompteur TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.PiecesJointes TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueStatuts TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE ON OBJECT::dbo.Agents TO db_aep_app_role;

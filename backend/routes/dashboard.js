@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
     const delaiMoyenJours = await delaiRequest.query(`
       SELECT AVG(DATEDIFF(day, date_depot, date_maj)) AS delai_moyen
       FROM Demandes
-      WHERE statut_actuel = 'MISE_EN_SERVICE'${req.agent.role === 'admin' ? '' : ' AND id_agence = @id_agence'}
+      WHERE statut_actuel = 'TRAVAUX_TERMINES'${req.agent.role === 'admin' ? '' : ' AND id_agence = @id_agence'}
     `);
 
     res.json({

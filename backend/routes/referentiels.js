@@ -88,6 +88,21 @@ router.get('/banques', async (req, res) => {
   }
 });
 
+router.get('/marques-compteur', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT libelle
+      FROM MarquesCompteur
+      ORDER BY libelle
+    `);
+    res.json(result.recordset.map((marque) => marque.libelle));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors du chargement des marques de compteur.' });
+  }
+});
+
 router.get('/statuts', async (req, res) => {
   try {
     const pool = await getPool();

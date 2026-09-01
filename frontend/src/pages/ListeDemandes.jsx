@@ -17,7 +17,6 @@ const ONGLETS_RAPIDES = [
   { id: 'en_cours', label: 'En cours', statut: 'EN_COURS' },
   { id: 'devis', label: 'Devis à payer', statut: 'DEVIS_EMIS' },
   { id: 'travaux', label: 'Travaux', statut: 'TRAVAUX_EN_COURS' },
-  { id: 'mes', label: 'Mises en service', statut: 'MISE_EN_SERVICE' },
   { id: 'rejetee', label: 'Rejetées / Annulées', statut: 'REJETEE' }
 ];
 
@@ -71,7 +70,7 @@ export default function ListeDemandes() {
         .then((res) => {
           let list = res.data.demandes || [];
           if (statutFiltre === 'EN_COURS') {
-            list = list.filter((d) => !['REJETEE', 'ANNULEE', 'MISE_EN_SERVICE'].includes(d.statut_actuel));
+            list = list.filter((d) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES'].includes(d.statut_actuel));
           }
           setDemandes(list);
           setTotal(res.data.total);
@@ -388,7 +387,7 @@ export default function ListeDemandes() {
                           .then((res) => {
                             let list = res.data.demandes || [];
                             if (statutFiltre === 'EN_COURS') {
-                              list = list.filter((d) => !['REJETEE', 'ANNULEE', 'MISE_EN_SERVICE'].includes(d.statut_actuel));
+                              list = list.filter((d) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES'].includes(d.statut_actuel));
                             }
                             setDemandes(list);
                             setTotal(res.data.total);

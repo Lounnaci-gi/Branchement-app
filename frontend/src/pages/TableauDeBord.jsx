@@ -93,11 +93,11 @@ export default function TableauDeBord() {
   }
 
   const total = donnees.parStatut
-    .filter((s) => !['REJETEE', 'ANNULEE', 'MISE_EN_SERVICE'].includes(s.code_statut))
+    .filter((s) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES'].includes(s.code_statut))
     .reduce((s, x) => s + x.total, 0);
 
   const demandesAchevees = donnees.parStatut
-    .find((s) => s.code_statut === 'MISE_EN_SERVICE')?.total || 0;
+    .find((s) => s.code_statut === 'TRAVAUX_TERMINES')?.total || 0;
 
   const maxTotal = Math.max(...donnees.parStatut.map((s) => s.total), 1);
 
@@ -150,17 +150,17 @@ export default function TableauDeBord() {
 
         <div
           className="card kpi kpi-interactive"
-          onClick={() => navigate('/demandes?statut=MISE_EN_SERVICE')}
-          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=MISE_EN_SERVICE'))}
+          onClick={() => navigate('/demandes?statut=TRAVAUX_TERMINES')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=TRAVAUX_TERMINES'))}
           role="button"
           tabIndex={0}
-          title="Voir les demandes achevées et mises en service"
+          title="Voir les demandes achevées"
         >
           <div className="kpi-valeur" style={{ color: 'var(--color-success)' }}>
             <CompteurAnime cible={demandesAchevees} />
           </div>
           <div className="kpi-label">Demandes achevées</div>
-          <div className="kpi-footer-hint">Mises en service →</div>
+          <div className="kpi-footer-hint">Travaux terminés →</div>
         </div>
 
         <div
@@ -197,8 +197,8 @@ export default function TableauDeBord() {
 
         <div
           className="card kpi kpi-interactive"
-          onClick={() => navigate('/demandes?statut=MISE_EN_SERVICE')}
-          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=MISE_EN_SERVICE'))}
+          onClick={() => navigate('/demandes?statut=TRAVAUX_TERMINES')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=TRAVAUX_TERMINES'))}
           role="button"
           tabIndex={0}
           title="Délai moyen constaté de réalisation"
@@ -206,7 +206,7 @@ export default function TableauDeBord() {
           <div className="kpi-valeur">
             <CompteurAnime cible={Math.round(donnees.delaiMoyenJours)} suffixe=" j" />
           </div>
-          <div className="kpi-label">Délai moyen dépôt → MES</div>
+          <div className="kpi-label">Délai moyen dépôt → travaux terminés</div>
           <div className="kpi-footer-hint">Historique global →</div>
         </div>
       </div>

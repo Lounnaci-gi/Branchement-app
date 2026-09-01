@@ -29,8 +29,7 @@ const TRANSITIONS = {
   DEVIS_EMIS: ['DEVIS_PAYE', 'ANNULEE'],
   DEVIS_PAYE: ['DEVIS_EMIS', 'TRAVAUX_EN_COURS', 'ANNULEE'],
   TRAVAUX_EN_COURS: ['TRAVAUX_TERMINES'],
-  TRAVAUX_TERMINES: ['MISE_EN_SERVICE'],
-  MISE_EN_SERVICE: [],
+  TRAVAUX_TERMINES: [],
   REJETEE: ['DEPOSEE'],
   ANNULEE: []
 };
@@ -91,6 +90,32 @@ async function verifierAccesDemande(pool, idDemande, agent) {
     return { code: 403, erreur: 'Accès refusé pour cette demande.' };
   }
   return { demande };
+}
+
+async function assurerMarqueCompteur(pool, libelle) {
+  const marque = String(libelle ?? '').trim();
+  if (!marque) return null;
+
+  const existant = await pool.request()
+    .input('libelle', sql.NVarChar(50), marque)
+    .query(`
+      SELECT TOP 1 libelle
+      FROM MarquesCompteur
+      WHERE LTRIM(RTRIM(libelle)) = @libelle
+         OR LOWER(LTRIM(RTRIM(libelle))) = LOWER(@libelle)
+    `);
+
+  if (existant.recordset[0]) return existant.recordset[0].libelle;
+
+  const insertion = await pool.request()
+    .input('libelle', sql.NVarChar(50), marque)
+    .query(`
+      INSERT INTO MarquesCompteur (libelle)
+      OUTPUT INSERTED.libelle
+      VALUES (@libelle)
+    `);
+
+  return insertion.recordset[0]?.libelle || marque;
 }
 
 async function genererNumeroOrdreExecution(pool) {
@@ -458,7 +483,6 @@ router.delete('/:id', async (req, res) => {
     await supprimer.query('DELETE FROM EtudesTechniques WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM Devis WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM Travaux WHERE id_demande = @id_demande');
-    await supprimer.query('DELETE FROM MisesEnService WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM PiecesJointes WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM Demandes WHERE id_demande = @id_demande');
     await transaction.commit();
@@ -518,8 +542,6 @@ router.get('/:id', async (req, res) => {
       .query(`SELECT * FROM Devis WHERE id_demande = @id ORDER BY date_emission ASC`);
     const travaux = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM Travaux WHERE id_demande = @id`);
-    const miseEnService = await pool.request().input('id', sql.Int, id)
-      .query(`SELECT * FROM MisesEnService WHERE id_demande = @id`);
     const pieces = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM PiecesJointes WHERE id_demande = @id`);
 
@@ -529,7 +551,6 @@ router.get('/:id', async (req, res) => {
       etude: etude.recordset[0] || null,
       devis: devis.recordset,
       travaux: travaux.recordset[0] || null,
-      miseEnService: miseEnService.recordset[0] || null,
       pieces: pieces.recordset,
       transitionsPossibles: TRANSITIONS[demande.recordset[0].statut_actuel] || []
     });
@@ -1028,6 +1049,7 @@ router.put('/:id/travaux', async (req, res) => {
       return res.status(400).json({ erreur: `La date de fin (${dateFr(date_fin)}) doit être supérieure ou égale à la date de début (${dateFr(date_debut)}).` });
     }
 
+    const marqueCompteurFinal = await assurerMarqueCompteur(pool, marque_compteur);
     const existe = await pool.request().input('id', sql.Int, id_demande)
       .query(`SELECT id_travaux FROM Travaux WHERE id_demande = @id`);
 
@@ -1038,7 +1060,7 @@ router.put('/:id/travaux', async (req, res) => {
         .input('date_fin', sql.DateTime2, date_fin || null)
         .input('equipe_execution', sql.NVarChar(100), equipe_execution?.trim() || null)
         .input('numero_compteur', sql.NVarChar(50), numero_compteur?.trim() || null)
-        .input('marque_compteur', sql.NVarChar(50), marque_compteur?.trim() || null)
+        .input('marque_compteur', sql.NVarChar(50), marqueCompteurFinal || null)
         .input('type_compteur', sql.NVarChar(50), type_compteur?.trim() || null)
         .input('diametre_compteur', sql.NVarChar(20), diametre_compteur?.trim() || null)
         .input('observations', sql.NVarChar, observations || null)
@@ -1054,7 +1076,7 @@ router.put('/:id/travaux', async (req, res) => {
         .input('date_fin', sql.DateTime2, date_fin || null)
         .input('equipe_execution', sql.NVarChar(100), equipe_execution?.trim() || null)
         .input('numero_compteur', sql.NVarChar(50), numero_compteur?.trim() || null)
-        .input('marque_compteur', sql.NVarChar(50), marque_compteur?.trim() || null)
+        .input('marque_compteur', sql.NVarChar(50), marqueCompteurFinal || null)
         .input('type_compteur', sql.NVarChar(50), type_compteur?.trim() || null)
         .input('diametre_compteur', sql.NVarChar(20), diametre_compteur?.trim() || null)
         .input('observations', sql.NVarChar, observations || null)
@@ -1075,70 +1097,6 @@ router.put('/:id/travaux', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: "Erreur lors de l'enregistrement des travaux." });
-  }
-});
-
-// PUT /api/demandes/:id/mise-en-service
-router.put('/:id/mise-en-service', async (req, res) => {
-  try {
-    const id_demande = req.params.id;
-    const { date_mise_service, numero_abonne, index_initial } = req.body;
-    const pool = await getPool();
-
-    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
-    if (acces.erreur) {
-      return res.status(acces.code).json({ erreur: acces.erreur });
-    }
-
-    if (!date_mise_service) {
-      return res.status(400).json({ erreur: 'La date de mise en service est obligatoire.' });
-    }
-    if (numero_abonne && !texteValide(numero_abonne, { maxLength: 50 })) {
-      return res.status(400).json({ erreur: 'Le numéro d’abonné contient des caractères non valides.' });
-    }
-    if (index_initial !== undefined && index_initial !== null && index_initial !== '') {
-      const idx = Number(index_initial);
-      if (isNaN(idx) || idx < 0 || idx > 9999999.999) {
-        return res.status(400).json({ erreur: 'L’index initial doit être un nombre positif (max 9999999.999).' });
-      }
-    }
-
-    const travaux = await pool.request().input('id', sql.Int, id_demande)
-      .query(`SELECT id_travaux, date_fin, numero_ordre_execution FROM Travaux WHERE id_demande = @id`);
-
-    if (travaux.recordset.length === 0) {
-      return res.status(400).json({ erreur: 'L’exécution des travaux doit être renseignée avant la mise en service.' });
-    }
-
-    const existe = await pool.request().input('id', sql.Int, id_demande)
-      .query(`SELECT id_mise_service FROM MisesEnService WHERE id_demande = @id`);
-
-    const indexFinal = (index_initial !== undefined && index_initial !== null && index_initial !== '') ? Number(index_initial) : null;
-
-    if (existe.recordset.length > 0) {
-      await pool.request()
-        .input('id_demande', sql.Int, id_demande)
-        .input('date_mise_service', sql.DateTime2, date_mise_service)
-        .input('numero_abonne', sql.NVarChar(50), numero_abonne?.trim() || null)
-        .input('index_initial', sql.Decimal(10, 3), indexFinal)
-        .query(`UPDATE MisesEnService SET date_mise_service=@date_mise_service,
-                numero_abonne=@numero_abonne, index_initial=@index_initial
-                WHERE id_demande=@id_demande`);
-    } else {
-      await pool.request()
-        .input('id_demande', sql.Int, id_demande)
-        .input('date_mise_service', sql.DateTime2, date_mise_service)
-        .input('numero_abonne', sql.NVarChar(50), numero_abonne?.trim() || null)
-        .input('index_initial', sql.Decimal(10, 3), indexFinal)
-        .query(`INSERT INTO MisesEnService (id_demande, date_mise_service, numero_abonne, index_initial)
-                VALUES (@id_demande, @date_mise_service, @numero_abonne, @index_initial)`);
-    }
-
-    await synchroniserStatut(pool, id_demande, 'MISE_EN_SERVICE', req.agent.id_agent, 'Mise en service enregistrée');
-    res.json({ message: 'Mise en service enregistrée.' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ erreur: "Erreur lors de l'enregistrement de la mise en service." });
   }
 });
 

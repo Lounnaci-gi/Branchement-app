@@ -354,10 +354,12 @@ export default function NouvelleDemande() {
       <div className="grille-formulaire">
         
         {/* Formulaire */}
-        <form onSubmit={soumettre} className="card" style={{ padding: 28 }}>
-          <h3 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>👤</span> Identité du demandeur
-          </h3>
+        <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Bloc 1: Identité du demandeur */}
+          <div className="card" style={{ padding: 28 }}>
+            <h3 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>👤</span> Identité du demandeur
+            </h3>
 
           <div className="champ">
             <label htmlFor="type-demandeur">Type de demandeur *</label>
@@ -533,10 +535,13 @@ export default function NouvelleDemande() {
               ))}
             </select>
           </div>
+          </div>
 
-          <h3 style={{ margin: '28px 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>📍</span> Emplacement & Spécifications du branchement
-          </h3>
+          {/* Bloc 2: Emplacement & Spécifications du branchement */}
+          <div className="card" style={{ padding: 28 }}>
+            <h3 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>📍</span> Emplacement & Spécifications du branchement
+            </h3>
 
           <div className="form-grille-2">
             <div className="champ">
@@ -640,8 +645,9 @@ export default function NouvelleDemande() {
             <label>Observations & Notes complémentaires</label>
             <textarea rows={3} value={form.observations ?? ''} onChange={(e) => maj('observations', e.target.value)} placeholder="Contraintes terrain, repère particulier..." />
           </div>
+          </div>
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
             <button type="submit" className="btn btn-primary" disabled={envoi}>
               <span>💾</span>
               <span>{envoi ? 'Enregistrement...' : modeEdition ? 'Enregistrer les modifications' : 'Déposer la demande'}</span>

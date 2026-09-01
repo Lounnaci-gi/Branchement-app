@@ -58,6 +58,12 @@ async function verifierEtMigrerBase(pool) {
         ALTER TABLE Travaux ADD type_compteur NVARCHAR(50) NULL;
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Travaux') AND name = 'diametre_compteur')
         ALTER TABLE Travaux ADD diametre_compteur NVARCHAR(20) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID('MarquesCompteur'))
+        CREATE TABLE MarquesCompteur (
+          id_marque INT IDENTITY(1,1) PRIMARY KEY,
+          libelle NVARCHAR(50) NOT NULL UNIQUE,
+          date_creation DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+        );
     `;
     await pool.request().query(migrationTravauxSQL);
 

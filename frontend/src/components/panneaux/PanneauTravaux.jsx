@@ -5,10 +5,12 @@ import { imprimerOrdreExecution } from '../../utils/impressionOrdreExecution';
 import InputDate from '../InputDate';
 
 const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
+const MARQUES_STANDARD = ['Sensus', 'Itron', 'Maddalena', 'Schlumberger', 'Elster', 'Landis+Gyr', 'Zenner', 'Aquameter', 'Kaifa', 'Other'];
 
 export default function PanneauTravaux({ idDemande, demande, travaux, devis, etude, miseEnService, onEnregistre }) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const devisPaye = devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE');
+  const [marquesDisponibles, setMarquesDisponibles] = useState([...MARQUES_STANDARD]);
 
   // Date de paiement la plus récente parmi tous les devis payés
   const dateMinDebut = (() => {
@@ -48,6 +50,16 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
   useEffect(() => {
     initialiserFormulaire();
   }, [travaux]);
+
+  useEffect(() => {
+    client.get('/referentiels/marques-compteur')
+      .then((res) => {
+        const marquesServeur = Array.isArray(res.data) ? res.data.filter(Boolean) : [];
+        const liste = [...new Set([...MARQUES_STANDARD, ...marquesServeur])];
+        setMarquesDisponibles(liste);
+      })
+      .catch(() => setMarquesDisponibles(MARQUES_STANDARD));
+  }, []);
 
   function ouvrirEdition() {
     initialiserFormulaire();
@@ -180,10 +192,16 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             <div className="champ">
               <label>Marque compteur</label>
               <input
+                list="marques-standard"
                 value={form.marque_compteur}
                 onChange={(e) => setForm({ ...form, marque_compteur: e.target.value })}
-                placeholder="ex: Itron, Maddalena…"
+                placeholder="ex: Sensus, Itron…"
               />
+              <datalist id="marques-standard">
+                {marquesDisponibles.map((marque) => (
+                  <option key={marque} value={marque} />
+                ))}
+              </datalist>
             </div>
             <div className="champ">
               <label>Type compteur</label>
@@ -212,7 +230,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             <label>Observations</label>
             <textarea rows={2} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
           </div>
-          <button className="btn btn-primary" disabled={envoi}>{envoi ? 'Enregistrement & impression...' : 'Enregistrer et imprimer l\'ordre'}</button>
+          <button className="btn btn-primary" disabled={envoi}>{envoi ? 'Enregistrement...' : 'Enregistrer'}</button>
         </form>
       )}
     </div>

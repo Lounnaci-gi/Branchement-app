@@ -153,8 +153,7 @@ const STATUTS_AVEC_ETUDE = new Set([
   'DEVIS_EMIS',
   'DEVIS_PAYE',
   'TRAVAUX_EN_COURS',
-  'TRAVAUX_TERMINES',
-  'MISE_EN_SERVICE'
+  'TRAVAUX_TERMINES'
 ]);
 
 export function imprimerDevis(demande, fenetre = null, dateEmission = null) {

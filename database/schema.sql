@@ -101,10 +101,9 @@ INSERT INTO Statuts (code_statut, libelle, ordre, est_final) VALUES
 ('DEVIS_EMIS',          N'Devis émis',                 4, 0),
 ('DEVIS_PAYE',          N'Devis payé',                 5, 0),
 ('TRAVAUX_EN_COURS',    N'Travaux en cours',           6, 0),
-('TRAVAUX_TERMINES',    N'Travaux terminés',           7, 0),
-('MISE_EN_SERVICE',     N'Mise en service',            8, 1),
-('REJETEE',             N'Demande rejetée',            9, 1),
-('ANNULEE',             N'Demande annulée',           10, 1);
+('TRAVAUX_TERMINES',    N'Travaux terminés',           7, 1),
+('REJETEE',             N'Demande rejetée',            8, 1),
+('ANNULEE',             N'Demande annulée',            9, 1);
 
 /* ------------------------------------------------------------
    6. DEMANDES DE BRANCHEMENT (table centrale)
@@ -188,14 +187,12 @@ CREATE TABLE Travaux (
 );
 
 /* ------------------------------------------------------------
-   11. MISE EN SERVICE
+   11. REFERENCES COMPTEURS
    ------------------------------------------------------------ */
-CREATE TABLE MisesEnService (
-    id_mise_service      INT IDENTITY(1,1) PRIMARY KEY,
-    id_demande           INT NOT NULL UNIQUE REFERENCES Demandes(id_demande),
-    date_mise_service     DATETIME2 NULL,
-    numero_abonne         NVARCHAR(30) NULL,
-    index_initial          DECIMAL(10,3) NULL
+CREATE TABLE MarquesCompteur (
+    id_marque             INT IDENTITY(1,1) PRIMARY KEY,
+    libelle               NVARCHAR(50) NOT NULL UNIQUE,
+    date_creation         DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
 /* ------------------------------------------------------------
@@ -235,7 +232,7 @@ CREATE INDEX IX_Devis_Demande ON Devis(id_demande);
 CREATE INDEX IX_Devis_StatutPaiement ON Devis(statut_paiement);
 
 CREATE INDEX IX_Travaux_NumeroCompteur ON Travaux(numero_compteur);
-CREATE INDEX IX_MisesEnService_NumeroAbonne ON MisesEnService(numero_abonne);
+CREATE INDEX IX_MarquesCompteur_Libelle ON MarquesCompteur(libelle);
 GO
 
 /* ============================================================
