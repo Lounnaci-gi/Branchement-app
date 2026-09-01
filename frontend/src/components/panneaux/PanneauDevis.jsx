@@ -4,7 +4,7 @@ import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import InputDate from '../InputDate';
 import './PanneauDevis.css';
 
-export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) {
+export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouillee = false, onEnregistre }) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const etudeRenseignee = Boolean(
     etude && (
@@ -88,6 +88,10 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
   }, [devisActuel, ouvert]);
 
   function ouvrirAjoutDevisComplementaire() {
+    if (demandeVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
     if (!etudeRenseignee) {
       notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
       return;
@@ -99,12 +103,20 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
   }
 
   function ouvrirModification(item) {
+    if (demandeVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
     setDevisSelectionne(item.id_devis);
     setOuvert(true);
   }
 
   async function enregistrer(e) {
     e.preventDefault();
+    if (demandeVerrouillee) {
+      await notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
     if (!devisActuel && !etudeRenseignee) {
       await notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
       return;
@@ -169,12 +181,12 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {devisListe.length > 0 && !ouvert && (
+          {!demandeVerrouillee && devisListe.length > 0 && !ouvert && (
             <button type="button" className="btn btn-primary" onClick={ouvrirAjoutDevisComplementaire}>
               <span>+</span> Devis complémentaire
             </button>
           )}
-          {devisListe.length === 0 && !ouvert && (
+          {!demandeVerrouillee && devisListe.length === 0 && !ouvert && (
             <button
               type="button"
               className="btn btn-primary"
@@ -243,14 +255,16 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
                 </div>
 
                 <div className="devis-card-actions">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => ouvrirModification(item)}
-                    title="Modifier ou encaisser ce devis"
-                  >
-                    <span>✎</span> {estPaye ? 'Modifier' : 'Régler / Modifier'}
-                  </button>
+                  {!demandeVerrouillee && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => ouvrirModification(item)}
+                      title="Modifier ou encaisser ce devis"
+                    >
+                      <span>✎</span> {estPaye ? 'Modifier' : 'Régler / Modifier'}
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -259,23 +273,29 @@ export default function PanneauDevis({ idDemande, devis, etude, onEnregistre }) 
           {devisListe.length === 0 && (
             <div className="devis-empty-state">
               <div className="devis-empty-icon">📑</div>
-              <div className="devis-empty-text">Aucun devis n'a encore été émis pour ce dossier.</div>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={!etudeRenseignee}
-                style={{ opacity: etudeRenseignee ? 1 : 0.6 }}
-                onClick={() => {
-                  if (!etudeRenseignee) {
-                    notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
-                    return;
-                  }
-                  setDevisSelectionne(null);
-                  setOuvert(true);
-                }}
-              >
-                + Émettre le premier devis
-              </button>
+              <div className="devis-empty-text">
+                {demandeVerrouillee
+                  ? 'Demande scellée — aucune modification de devis n’est autorisée.'
+                  : 'Aucun devis n\'a encore été émis pour ce dossier.'}
+              </div>
+              {!demandeVerrouillee && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!etudeRenseignee}
+                  style={{ opacity: etudeRenseignee ? 1 : 0.6 }}
+                  onClick={() => {
+                    if (!etudeRenseignee) {
+                      notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
+                      return;
+                    }
+                    setDevisSelectionne(null);
+                    setOuvert(true);
+                  }}
+                >
+                  + Émettre le premier devis
+                </button>
+              )}
             </div>
           )}
         </div>

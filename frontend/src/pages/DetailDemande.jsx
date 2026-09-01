@@ -12,6 +12,7 @@ import { imprimerAccuse } from '../utils/impressionAccuse';
 import { imprimerDemande } from '../utils/impressionDemande';
 import { imprimerDevis } from '../utils/impressionDevis';
 import { imprimerOrdreExecution } from '../utils/impressionOrdreExecution';
+import { imprimerContratAbonnement } from '../utils/impressionContratAbonnement';
 import { notifierErreur, notifierSucces } from '../utils/notifications';
 
 function nettoyerTexte(valeur, defaut = '') {
@@ -202,12 +203,29 @@ export default function DetailDemande() {
     imprimerDevis({ ...demande, date_etude_terminee: dateEtude, etude, historique }, null, dateEtude);
   }
 
+  const estTravauxTermines = Boolean(
+    travaux?.date_fin || demande.statut_actuel === 'TRAVAUX_TERMINES' || demande.statut_actuel === 'SCELLEE'
+  );
+
   function handleImprimerOrdreExecution() {
     if (!estDevisPayeOuTravaux) {
       notifierErreur("Le devis doit être payé avant de pouvoir imprimer l'ordre d'exécution.");
       return;
     }
     imprimerOrdreExecution({
+      ...demande,
+      travaux,
+      devis,
+      etude
+    });
+  }
+
+  function handleImprimerContratAbonnement() {
+    if (!estTravauxTermines) {
+      notifierErreur("Les travaux doivent être terminés avant d'imprimer le contrat d'abonnement.");
+      return;
+    }
+    imprimerContratAbonnement({
       ...demande,
       travaux,
       devis,
@@ -295,6 +313,15 @@ export default function DetailDemande() {
             title={estDevisPayeOuTravaux ? "Imprimer l'ordre d'exécution des travaux" : "Le devis doit être payé pour imprimer l'ordre d'exécution"}
           >
             <span>{estDevisPayeOuTravaux ? '🖨' : '🔒'}</span> Ordre d'exécution
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleImprimerContratAbonnement}
+            style={{ opacity: estTravauxTermines ? 1 : 0.6 }}
+            title={estTravauxTermines ? "Imprimer le contrat d'abonnement" : "Les travaux doivent être terminés pour imprimer le contrat d'abonnement"}
+          >
+            <span>{estTravauxTermines ? '🖨' : '🔒'}</span> Contrat d'abonnement
           </button>
           <button
             type="button"
@@ -414,10 +441,23 @@ export default function DetailDemande() {
 
           {/* Panneaux avec ancres de défilement fluide */}
           <div id="panneau-etude">
-            <PanneauEtude idDemande={id} demande={demande} etude={etude} devisPaye={estDevisPaye} onEnregistre={recharger} />
+            <PanneauEtude
+              idDemande={id}
+              demande={demande}
+              etude={etude}
+              devisPaye={estDevisPaye}
+              demandeVerrouillee={demande.est_verrouillee}
+              onEnregistre={recharger}
+            />
           </div>
           <div id="panneau-devis">
-            <PanneauDevis idDemande={id} devis={devis} etude={etude} onEnregistre={recharger} />
+            <PanneauDevis
+              idDemande={id}
+              devis={devis}
+              etude={etude}
+              demandeVerrouillee={demande.est_verrouillee}
+              onEnregistre={recharger}
+            />
           </div>
           <div id="panneau-travaux">
             <PanneauTravaux
@@ -426,6 +466,7 @@ export default function DetailDemande() {
               travaux={travaux}
               devis={devis}
               etude={etude}
+              demandeVerrouillee={demande.est_verrouillee}
               onEnregistre={recharger}
             />
           </div>
@@ -435,7 +476,7 @@ export default function DetailDemande() {
         {/* Colonne latérale : Actions de workflow & Historique */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {transitionsPossibles?.length > 0 && (
+          {!demande.est_verrouillee && transitionsPossibles?.length > 0 && (
             <div className="card" style={{ padding: 22 }}>
               <h3 style={{ marginBottom: 12, fontSize: 15 }}>Faire progresser le statut</h3>
               <div className="champ" style={{ marginBottom: 10 }}>

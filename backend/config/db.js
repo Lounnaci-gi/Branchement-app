@@ -67,6 +67,31 @@ async function verifierEtMigrerBase(pool) {
     `;
     await pool.request().query(migrationTravauxSQL);
 
+    const migrationVerrouillageSQL = `
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Demandes') AND name = 'est_verrouillee')
+        ALTER TABLE Demandes ADD est_verrouillee BIT NOT NULL DEFAULT 0;
+
+      IF NOT EXISTS (SELECT 1 FROM Statuts WHERE code_statut = 'SCELLEE')
+        INSERT INTO Statuts (code_statut, libelle, ordre, est_final)
+        VALUES ('SCELLEE', N'Demande scellée', 8, 1);
+
+      IF OBJECT_ID('dbo.HistoriqueModificationsDemandes', 'U') IS NULL
+      BEGIN
+        CREATE TABLE HistoriqueModificationsDemandes (
+          id_historique_modification INT IDENTITY(1,1) PRIMARY KEY,
+          id_demande INT NOT NULL REFERENCES Demandes(id_demande),
+          id_agent INT NOT NULL REFERENCES Agents(id_agent),
+          type_action NVARCHAR(50) NOT NULL DEFAULT 'MODIFICATION_DEMANDE',
+          description NVARCHAR(255) NOT NULL,
+          details NVARCHAR(MAX) NULL,
+          date_modification DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+        );
+
+        CREATE INDEX IX_HistoriqueModificationsDemande ON HistoriqueModificationsDemandes(id_demande);
+      END
+    `;
+    await pool.request().query(migrationVerrouillageSQL);
+
     const updateViewSQL = `
       CREATE OR ALTER VIEW vw_DemandesSynthese AS
       SELECT

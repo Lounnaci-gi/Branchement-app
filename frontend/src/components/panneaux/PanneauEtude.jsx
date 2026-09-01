@@ -6,7 +6,8 @@ import InputDate from '../InputDate';
 
 const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
 
-export default function PanneauEtude({ idDemande, demande, etude, devisPaye, onEnregistre }) {
+export default function PanneauEtude({ idDemande, demande, etude, devisPaye, demandeVerrouillee = false, onEnregistre }) {
+  const lectureSeule = devisPaye || demandeVerrouillee;
   const dateDepot = demande?.date_depot?.slice(0, 10) || '';
   const [ouvert, setOuvert] = useState(false);
   const [form, setForm] = useState({
@@ -29,11 +30,15 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, onE
   }, [etude]);
 
   useEffect(() => {
-    if (devisPaye) setOuvert(false);
-  }, [devisPaye]);
+    if (lectureSeule) setOuvert(false);
+  }, [lectureSeule]);
 
   async function enregistrer(e) {
     e.preventDefault();
+    if (demandeVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
     if (devisPaye) {
       notifierErreur("L'étude technique ne peut plus être modifiée car le devis est payé.");
       return;
@@ -65,13 +70,19 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, onE
         <button
           type="button"
           className="btn btn-secondary"
-          disabled={devisPaye}
+          disabled={lectureSeule}
           onClick={() => setOuvert((o) => !o)}
           aria-expanded={ouvert}
           aria-controls="panneau-etude-form"
-          title={devisPaye ? 'Impossible de modifier l’étude technique : le devis est payé.' : undefined}
+          title={
+            demandeVerrouillee
+              ? 'Impossible de modifier l’étude technique : la demande est scellée.'
+              : devisPaye
+                ? 'Impossible de modifier l’étude technique : le devis est payé.'
+                : undefined
+          }
         >
-          {devisPaye ? 'Étude verrouillée' : etude ? 'Modifier' : 'Renseigner'}
+          {demandeVerrouillee ? 'Demande scellée' : devisPaye ? 'Étude verrouillée' : etude ? 'Modifier' : 'Renseigner'}
         </button>
       </div>
 

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import { imprimerOrdreExecution } from '../../utils/impressionOrdreExecution';
+import { imprimerContratAbonnement } from '../../utils/impressionContratAbonnement';
 import InputDate from '../InputDate';
 
 const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
 const MARQUES_STANDARD = ['Sensus', 'Itron', 'Maddalena', 'Schlumberger', 'Elster', 'Landis+Gyr', 'Zenner', 'Aquameter', 'Kaifa', 'Other'];
 
-export default function PanneauTravaux({ idDemande, demande, travaux, devis, etude, miseEnService, onEnregistre }) {
+export default function PanneauTravaux({ idDemande, demande, travaux, devis, etude, miseEnService, demandeVerrouillee = false, onEnregistre }) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const devisPaye = devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE');
   const [marquesDisponibles, setMarquesDisponibles] = useState([...MARQUES_STANDARD]);
@@ -61,9 +62,26 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       .catch(() => setMarquesDisponibles(MARQUES_STANDARD));
   }, []);
 
+  useEffect(() => {
+    if (demandeVerrouillee) setOuvert(false);
+  }, [demandeVerrouillee]);
+
   function ouvrirEdition() {
+    if (demandeVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
     initialiserFormulaire();
     setOuvert(true);
+  }
+
+  function handleImprimerContrat(travauxData = travaux) {
+    imprimerContratAbonnement({
+      ...demande,
+      travaux: travauxData,
+      devis,
+      etude
+    });
   }
 
   function handleImprimer(travauxData = travaux) {
@@ -85,6 +103,10 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
 
   async function enregistrer(e) {
     e.preventDefault();
+    if (demandeVerrouillee) {
+      await notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
     if (!devisPaye) {
       await notifierErreur(`Le devis doit être payé avant de renseigner l'exécution des travaux.`);
       return;
@@ -100,18 +122,37 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       return;
     }
     setEnvoi(true);
+    const fenetreContrat = form.date_fin ? window.open('', '_blank', 'width=900,height=1000') : null;
+    let contratImprime = false;
     try {
-      await client.put(`/demandes/${idDemande}/travaux`, form);
+      const res = await client.put(`/demandes/${idDemande}/travaux`, form);
       setOuvert(false);
-      notifierSucces('Exécution des travaux enregistrée.');
+      if (form.date_fin) {
+        imprimerContratAbonnement({
+          ...demande,
+          travaux: {
+            ...form,
+            numero_ordre_execution: res.data?.numero_ordre_execution || travaux?.numero_ordre_execution || ''
+          },
+          devis,
+          etude
+        }, fenetreContrat);
+        contratImprime = true;
+        notifierSucces('Exécution des travaux enregistrée. Impression du contrat d’abonnement…');
+      } else {
+        notifierSucces('Exécution des travaux enregistrée.');
+      }
       onEnregistre();
     } catch (err) {
       notifierErreur(err.response?.data?.erreur || "Erreur lors de l'enregistrement des travaux.");
     } finally {
+      if (!contratImprime && fenetreContrat && !fenetreContrat.closed) fenetreContrat.close();
       setEnvoi(false);
     }
   }
 
+
+  const travauxTermines = Boolean(travaux?.date_fin || form.date_fin);
 
   return (
     <div className="card" style={{ padding: 24 }}>
@@ -119,25 +160,43 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
         <h3>Exécution des travaux</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!ouvert && travaux && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => handleImprimer(travaux || form)}
-              title="Imprimer l'ordre d'exécution"
-            >
-              <span>🖨</span> Imprimer ordre d'exécution
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleImprimer(travaux || form)}
+                title="Imprimer l'ordre d'exécution"
+              >
+                <span>🖨</span> Imprimer ordre d'exécution
+              </button>
+              {travauxTermines && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleImprimerContrat(travaux || form)}
+                  title="Imprimer le contrat d'abonnement"
+                >
+                  <span>🖨</span> Contrat d'abonnement
+                </button>
+              )}
+            </>
           )}
           <button
             type="button"
             className="btn btn-secondary"
-            disabled={!devisPaye}
+            disabled={!devisPaye || demandeVerrouillee}
             onClick={ouvrirEdition}
             aria-expanded={ouvert}
             aria-controls="panneau-travaux-form"
-            title={!devisPaye ? 'Le devis doit être payé avant de renseigner les travaux.' : undefined}
+            title={
+              demandeVerrouillee
+                ? 'Impossible de modifier les travaux : la demande est scellée.'
+                : !devisPaye
+                  ? 'Le devis doit être payé avant de renseigner les travaux.'
+                  : undefined
+            }
           >
-            {travaux ? 'Modifier' : 'Renseigner'}
+            {demandeVerrouillee ? 'Demande scellée' : travaux ? 'Modifier' : 'Renseigner'}
           </button>
         </div>
       </div>

@@ -79,7 +79,7 @@ async function synchroniserStatut(pool, idDemande, nouveauStatut, idAgent, comme
     .execute('sp_ChangerStatutDemande');
 }
 
-async function verifierAccesDemande(pool, idDemande, agent) {
+async function verifierAccesDemande(pool, idDemande, agent, options = {}) {
   const result = await pool.request()
     .input('id_demande', sql.Int, idDemande)
     .query('SELECT id_demande, id_agence, statut_actuel, est_verrouillee FROM Demandes WHERE id_demande = @id_demande');
@@ -90,30 +90,16 @@ async function verifierAccesDemande(pool, idDemande, agent) {
   if (agent.role !== 'admin' && demande.id_agence !== agent.id_agence) {
     return { code: 403, erreur: 'Accès refusé pour cette demande.' };
   }
+  if (options.exigerModifiable && demande.est_verrouillee) {
+    return {
+      code: 403,
+      erreur: options.messageVerrouillee || 'Cette demande est scellée : les modifications sont interdites.'
+    };
+  }
   return { demande };
 }
 
-async function assurerTableHistoriqueModifications(pool) {
-  await pool.request().query(`
-    IF OBJECT_ID('dbo.HistoriqueModificationsDemandes', 'U') IS NULL
-    BEGIN
-      CREATE TABLE HistoriqueModificationsDemandes (
-        id_historique_modification INT IDENTITY(1,1) PRIMARY KEY,
-        id_demande INT NOT NULL REFERENCES Demandes(id_demande),
-        id_agent INT NOT NULL REFERENCES Agents(id_agent),
-        type_action NVARCHAR(50) NOT NULL DEFAULT 'MODIFICATION_DEMANDE',
-        description NVARCHAR(255) NOT NULL,
-        details NVARCHAR(MAX) NULL,
-        date_modification DATETIME2 NOT NULL DEFAULT SYSDATETIME()
-      );
-
-      CREATE INDEX IX_HistoriqueModificationsDemande ON HistoriqueModificationsDemandes(id_demande);
-    END
-  `);
-}
-
 async function enregistrerHistoriqueModification(transaction, idDemande, idAgent, description, details = null) {
-  await assurerTableHistoriqueModifications(transaction.parent || transaction.pool || transaction);
   await new sql.Request(transaction)
     .input('id_demande', sql.Int, idDemande)
     .input('id_agent', sql.Int, idAgent)
@@ -225,7 +211,7 @@ router.get('/demandeurs/recherche', async (req, res) => {
 // PUT /api/demandes/:id - modifier les informations d'une demande
 router.put('/:id', async (req, res) => {
   const pool = await getPool();
-  const acces = await verifierAccesDemande(pool, req.params.id, req.agent);
+  const acces = await verifierAccesDemande(pool, req.params.id, req.agent, { exigerModifiable: true });
   if (acces.erreur) {
     return res.status(acces.code).json({ erreur: acces.erreur });
   }
@@ -271,17 +257,6 @@ router.put('/:id', async (req, res) => {
     }
     if (!coordonneesValides(demandeur)) {
       return res.status(400).json({ erreur: 'Le téléphone doit être au format 0552 11 74 33 et l\'email doit être valide.' });
-    }
-
-    const demandeExiste = await pool.request()
-      .input('id_demande', sql.Int, req.params.id)
-      .query('SELECT id_demandeur, est_verrouillee FROM Demandes WHERE id_demande = @id_demande');
-
-    if (demandeExiste.recordset.length === 0) {
-      return res.status(404).json({ erreur: 'Demande introuvable.' });
-    }
-    if (demandeExiste.recordset[0].est_verrouillee) {
-      return res.status(403).json({ erreur: 'Cette demande est scellée : les modifications sont interdites.' });
     }
 
     await transaction.begin();
@@ -637,7 +612,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       demande: demande.recordset[0],
-      historique: historique.recordset,
+      historique,
       etude: etude.recordset[0] || null,
       devis: devis.recordset,
       travaux: travaux.recordset[0] || null,
@@ -779,19 +754,12 @@ router.patch('/:id/statut', async (req, res) => {
     }
 
     const pool = await getPool();
-    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
       return res.status(acces.code).json({ erreur: acces.erreur });
     }
 
-    const actuel = await pool.request().input('id', sql.Int, id_demande)
-      .query(`SELECT statut_actuel FROM Demandes WHERE id_demande = @id`);
-
-    if (actuel.recordset.length === 0) {
-      return res.status(404).json({ erreur: 'Demande introuvable.' });
-    }
-
-    const statutActuel = actuel.recordset[0].statut_actuel;
+    const statutActuel = acces.demande.statut_actuel;
     const transitionsAutorisees = TRANSITIONS[statutActuel] || [];
 
     if (!transitionsAutorisees.includes(nouveau_statut)) {
@@ -870,7 +838,7 @@ router.put('/:id/etude', async (req, res) => {
     const { date_visite, distance_reseau_m, diametre_conduite, faisabilite, observations } = req.body;
     const pool = await getPool();
 
-    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
       return res.status(acces.code).json({ erreur: acces.erreur });
     }
@@ -968,7 +936,7 @@ router.put('/:id/devis', async (req, res) => {
       return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif valide (max 999 999 999.99).' });
     }
     const pool = await getPool();
-    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
       return res.status(acces.code).json({ erreur: acces.erreur });
     }
@@ -1073,7 +1041,7 @@ router.patch('/:id/devis/paiement', async (req, res) => {
       return res.status(400).json({ erreur: 'Le numéro de versement et la banque valides sont obligatoires.' });
     }
     const pool = await getPool();
-    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
       return res.status(acces.code).json({ erreur: acces.erreur });
     }
@@ -1128,7 +1096,7 @@ router.put('/:id/travaux', async (req, res) => {
     const { date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations } = req.body;
     const pool = await getPool();
 
-    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
       return res.status(acces.code).json({ erreur: acces.erreur });
     }
