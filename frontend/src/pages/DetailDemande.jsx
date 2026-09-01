@@ -33,6 +33,7 @@ export default function DetailDemande() {
   const [commentaire, setCommentaire] = useState('');
   const [enTransition, setEnTransition] = useState(false);
   const [copieChamp, setCopieChamp] = useState(null);
+  const [detailsOuverts, setDetailsOuverts] = useState({});
 
   const recharger = useCallback(() => {
     client.get(`/demandes/${id}`).then((res) => setFiche(res.data)).finally(() => setChargement(false));
@@ -67,6 +68,66 @@ export default function DetailDemande() {
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  function exporterHistoriqueCSV() {
+    if (!historique || historique.length === 0) return;
+
+    const entetes = ['Date', 'Type', 'Statut', 'Agent', 'Description', 'Détails'];
+    const lignes = historique.map((h) => {
+      const type = h.type_historique === 'MODIFICATION' ? 'Modification' : 'Statut';
+      const statut = h.type_historique === 'MODIFICATION' ? '—' : (h.statut_libelle || '');
+      const description = h.type_historique === 'MODIFICATION'
+        ? (h.description || 'Mise à jour du dossier')
+        : (h.commentaire || '');
+
+      let detailsText = '';
+      if (h.type_historique === 'MODIFICATION' && h.details) {
+        try {
+          const details = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
+          const passages = [];
+
+          function extraire(obj, prefix = '') {
+            if (!obj || typeof obj !== 'object') return;
+            Object.entries(obj).forEach(([cle, valeur]) => {
+              if (valeur === null || valeur === undefined || valeur === '') return;
+              if (typeof valeur === 'object') {
+                extraire(valeur, `${prefix}${cle} / `);
+                return;
+              }
+              passages.push(`${prefix || ''}${cle}: ${String(valeur)}`);
+            });
+          }
+
+          extraire(details);
+          detailsText = passages.join(' ; ');
+        } catch {
+          detailsText = '';
+        }
+      }
+
+      const valeurs = [
+        new Date(h.date_changement).toLocaleString('fr-FR'),
+        type,
+        statut,
+        h.agent_nom || '',
+        description,
+        detailsText
+      ].map((valeur) => `"${String(valeur ?? '').replace(/"/g, '""')}"`);
+
+      return valeurs.join(';');
+    });
+
+    const csvContent = '\uFEFF' + [entetes.join(';'), ...lignes].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = `historique_demande_${demande.numero_demande}_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(lien);
+    lien.click();
+    document.body.removeChild(lien);
+    URL.revokeObjectURL(url);
   }
 
   if (chargement) {
@@ -154,6 +215,19 @@ export default function DetailDemande() {
     });
   }
 
+  async function scellerDemande() {
+    const confirme = await demanderConfirmation('Sceller cette demande ? Les modifications et la suppression seront interdites définitivement.');
+    if (!confirme) return;
+
+    try {
+      await client.patch(`/demandes/${id}/verrouiller`);
+      notifierSucces('Demande scellée avec succès.');
+      recharger();
+    } catch (err) {
+      notifierErreur(err.response?.data?.erreur || 'Impossible de sceller la demande.');
+    }
+  }
+
   return (
     <div className="page">
       <Breadcrumbs
@@ -222,9 +296,30 @@ export default function DetailDemande() {
           >
             <span>{estDevisPayeOuTravaux ? '🖨' : '🔒'}</span> Ordre d'exécution
           </button>
-          <Link to={`/demandes/${id}/modifier`} className="btn btn-secondary">
-            <span>✎</span> Modifier
-          </Link>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={exporterHistoriqueCSV}
+            title="Exporter l'historique de la demande au format CSV"
+            disabled={!historique || historique.length === 0}
+          >
+            <span>📄</span> Exporter historique
+          </button>
+          {demande.statut_actuel === 'TRAVAUX_TERMINES' && !demande.est_verrouillee && (
+            <button type="button" className="btn btn-primary" onClick={scellerDemande}>
+              <span>🔒</span> Sceller la demande
+            </button>
+          )}
+          {!demande.est_verrouillee && (
+            <Link to={`/demandes/${id}/modifier`} className="btn btn-secondary">
+              <span>✎</span> Modifier
+            </Link>
+          )}
+          {demande.est_verrouillee && (
+            <button type="button" className="btn btn-secondary" disabled style={{ opacity: 0.8 }}>
+              <span>🔒</span> Demande scellée
+            </button>
+          )}
         </div>
       </header>
 
@@ -403,22 +498,98 @@ export default function DetailDemande() {
           <div className="card" style={{ padding: 22 }}>
             <h3 style={{ marginBottom: 16, fontSize: 15 }}>Historique d'activité</h3>
             <div className="chronologie">
-              {historique.map((h) => (
-                <div key={h.id_historique} className="chronologie-item">
-                  <div className="chronologie-point" />
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{h.statut_libelle}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                      {new Date(h.date_changement).toLocaleString('fr-FR')} · {h.agent_nom}
-                    </div>
-                    {h.commentaire && (
-                      <div style={{ fontSize: 12, marginTop: 4, fontStyle: 'italic', background: 'var(--color-surface-sunken)', padding: '4px 8px', borderRadius: 6 }}>
-                        "{h.commentaire}"
+              {historique.map((h) => {
+                const itemKey = `${h.type_historique}-${h.id_historique}`;
+                const libelle = h.type_historique === 'MODIFICATION' ? 'Mise à jour du dossier' : h.statut_libelle;
+                const commentaire = h.type_historique === 'MODIFICATION' ? (h.description || 'Données du dossier mises à jour.') : h.commentaire;
+
+                let details = null;
+                if (h.type_historique === 'MODIFICATION' && h.details) {
+                  try {
+                    details = typeof h.details === 'string' ? JSON.parse(h.details) : h.details;
+                  } catch {
+                    details = null;
+                  }
+                }
+
+                const champsModifies = details && typeof details === 'object'
+                  ? Object.entries(details)
+                      .filter(([, valeur]) => valeur !== null && valeur !== undefined && valeur !== '')
+                      .flatMap(([cle, valeur]) => {
+                        if (cle === 'demandeur' && typeof valeur === 'object') {
+                          return Object.entries(valeur)
+                            .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                            .map(([sousCle, sousValeur]) => ({
+                              libelle: {
+                                qualite_demandeur: 'Qualité du demandeur',
+                                est_personne_morale: 'Type de demandeur',
+                                nom: 'Nom',
+                                prenom: 'Prénom',
+                                raison_sociale: 'Raison sociale'
+                              }[sousCle] || sousCle, valeur: sousValeur
+                            }));
+                        }
+
+                        const libelleChamp = {
+                          id_type: 'Type de branchement',
+                          type_autre: 'Précision du type',
+                          adresse_branchement: 'Adresse du branchement',
+                          id_commune: 'Commune du branchement',
+                          observations: 'Observations',
+                          qualite_demandeur: 'Qualité du demandeur',
+                          est_personne_morale: 'Type de demandeur',
+                          nom: 'Nom',
+                          prenom: 'Prénom',
+                          raison_sociale: 'Raison sociale'
+                        }[cle] || cle;
+
+                        return [{ libelle: libelleChamp, valeur }];
+                      })
+                  : [];
+
+                const detailsOuvertsPourCetItem = Boolean(detailsOuverts[itemKey]);
+
+                return (
+                  <div key={itemKey} className="chronologie-item">
+                    <div className="chronologie-point" />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{libelle}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                        {new Date(h.date_changement).toLocaleString('fr-FR')} · {h.agent_nom}
                       </div>
-                    )}
+                      {commentaire && (
+                        <div style={{ fontSize: 12, marginTop: 4, fontStyle: 'italic', background: 'var(--color-surface-sunken)', padding: '4px 8px', borderRadius: 6 }}>
+                          "{commentaire}"
+                        </div>
+                      )}
+
+                      {h.type_historique === 'MODIFICATION' && champsModifies.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ marginTop: 8, padding: '6px 10px', fontSize: 11.5 }}
+                          onClick={() => setDetailsOuverts((prev) => ({ ...prev, [itemKey]: !prev[itemKey] }))}
+                        >
+                          {detailsOuvertsPourCetItem ? 'Masquer les détails' : 'Voir les détails'}
+                        </button>
+                      )}
+
+                      {h.type_historique === 'MODIFICATION' && detailsOuvertsPourCetItem && champsModifies.length > 0 && (
+                        <div style={{ fontSize: 11.5, marginTop: 8, background: 'var(--color-surface-sunken)', padding: '8px 10px', borderRadius: 6 }}>
+                          {champsModifies.map((champ, index) => (
+                            <div key={`${champ.libelle}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 4 }}>
+                              <strong style={{ flexShrink: 0 }}>{champ.libelle}</strong>
+                              <span style={{ textAlign: 'right', color: 'var(--color-text)' }}>
+                                {typeof champ.valeur === 'object' ? JSON.stringify(champ.valeur) : String(champ.valeur)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

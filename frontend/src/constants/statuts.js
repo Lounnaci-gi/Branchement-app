@@ -6,12 +6,14 @@ export const ETAPES_PIPELINE = [
   { code: 'DEVIS_EMIS', libelle: 'Devis émis', abrev: 'Devis' },
   { code: 'DEVIS_PAYE', libelle: 'Devis payé', abrev: 'Payé' },
   { code: 'TRAVAUX_EN_COURS', libelle: 'Travaux en cours', abrev: 'Travaux' },
-  { code: 'TRAVAUX_TERMINES', libelle: 'Travaux terminés', abrev: 'Travaux ✓' }
+  { code: 'TRAVAUX_TERMINES', libelle: 'Travaux terminés', abrev: 'Travaux ✓' },
+  { code: 'SCELLEE', libelle: 'Scellée', abrev: 'Scellée' }
 ];
 
 export const STATUTS_TERMINAUX = {
   REJETEE: { libelle: 'Rejetée', couleur: 'danger' },
-  ANNULEE: { libelle: 'Annulée', couleur: 'muted' }
+  ANNULEE: { libelle: 'Annulée', couleur: 'muted' },
+  SCELLEE: { libelle: 'Scellée', couleur: 'success' }
 };
 
 export function indexEtape(code) {

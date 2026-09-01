@@ -139,7 +139,7 @@ export default function ListeDemandes() {
   }
 
   function demandeSupprimable(demande) {
-    return demande.statut_actuel === 'ANNULEE' || demande.statut_paiement !== 'PAYE';
+    return !demande.est_verrouillee && (demande.statut_actuel === 'ANNULEE' || demande.statut_paiement !== 'PAYE');
   }
 
   // Export CSV
@@ -387,7 +387,7 @@ export default function ListeDemandes() {
                           .then((res) => {
                             let list = res.data.demandes || [];
                             if (statutFiltre === 'EN_COURS') {
-                              list = list.filter((d) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES'].includes(d.statut_actuel));
+                              list = list.filter((d) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES', 'SCELLEE'].includes(d.statut_actuel));
                             }
                             setDemandes(list);
                             setTotal(res.data.total);
@@ -478,14 +478,16 @@ export default function ListeDemandes() {
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                    <Link
-                      to={`/demandes/${d.id_demande}/modifier`}
-                      className="btn btn-secondary btn-icon"
-                      title="Modifier la demande"
-                      aria-label={`Modifier la demande ${d.numero_demande}`}
-                    >
-                      ✎
-                    </Link>
+                    {!d.est_verrouillee && (
+                      <Link
+                        to={`/demandes/${d.id_demande}/modifier`}
+                        className="btn btn-secondary btn-icon"
+                        title="Modifier la demande"
+                        aria-label={`Modifier la demande ${d.numero_demande}`}
+                      >
+                        ✎
+                      </Link>
+                    )}
                     {demandeSupprimable(d) && (
                       <button
                         type="button"

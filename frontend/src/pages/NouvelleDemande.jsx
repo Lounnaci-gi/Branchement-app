@@ -81,6 +81,7 @@ export default function NouvelleDemande() {
   const [suggestions, setSuggestions] = useState([]);
   const [champRecherche, setChampRecherche] = useState('');
   const [autofillSource, setAutofillSource] = useState(null);
+  const [demandeVerrouillee, setDemandeVerrouillee] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function NouvelleDemande() {
         const response = await client.get(`/demandes/${id}`);
         const demande = response.data.demande;
         const natureTravaux = normaliserNatureTravaux(demande.type_autre || '') || 'Branchement d\'eau potable';
+        setDemandeVerrouillee(Boolean(demande.est_verrouillee));
         setForm({
           est_personne_morale: Boolean(demande.est_personne_morale),
           raison_sociale: demande.raison_sociale || '',
@@ -121,6 +123,7 @@ export default function NouvelleDemande() {
           observations: demande.observations || ''
         });
       } else {
+        setDemandeVerrouillee(false);
         setForm(VIDE);
       }
     }
@@ -216,6 +219,11 @@ export default function NouvelleDemande() {
 
   async function soumettre(e) {
     e.preventDefault();
+    if (modeEdition && demandeVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
+
     const cinSaisi = String(form.cin ?? '').trim();
     if (!form.est_personne_morale && form.type_piece_identite === 'CIN' && cinSaisi && !/^\d{18}$/.test(cinSaisi)) {
       notifierErreur('Le numéro de CIN doit contenir exactement 18 chiffres.');
@@ -648,9 +656,9 @@ export default function NouvelleDemande() {
           </div>
 
           <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            <button type="submit" className="btn btn-primary" disabled={envoi}>
+            <button type="submit" className="btn btn-primary" disabled={envoi || (modeEdition && demandeVerrouillee)}>
               <span>💾</span>
-              <span>{envoi ? 'Enregistrement...' : modeEdition ? 'Enregistrer les modifications' : 'Déposer la demande'}</span>
+              <span>{envoi ? 'Enregistrement...' : modeEdition ? (demandeVerrouillee ? 'Demande scellée' : 'Enregistrer les modifications') : 'Déposer la demande'}</span>
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>Annuler</button>
           </div>

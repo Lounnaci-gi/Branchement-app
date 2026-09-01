@@ -29,7 +29,8 @@ const TRANSITIONS = {
   DEVIS_EMIS: ['DEVIS_PAYE', 'ANNULEE'],
   DEVIS_PAYE: ['DEVIS_EMIS', 'TRAVAUX_EN_COURS', 'ANNULEE'],
   TRAVAUX_EN_COURS: ['TRAVAUX_TERMINES'],
-  TRAVAUX_TERMINES: [],
+  TRAVAUX_TERMINES: ['SCELLEE'],
+  SCELLEE: [],
   REJETEE: ['DEPOSEE'],
   ANNULEE: []
 };
@@ -81,7 +82,7 @@ async function synchroniserStatut(pool, idDemande, nouveauStatut, idAgent, comme
 async function verifierAccesDemande(pool, idDemande, agent) {
   const result = await pool.request()
     .input('id_demande', sql.Int, idDemande)
-    .query('SELECT id_demande, id_agence, statut_actuel FROM Demandes WHERE id_demande = @id_demande');
+    .query('SELECT id_demande, id_agence, statut_actuel, est_verrouillee FROM Demandes WHERE id_demande = @id_demande');
   const demande = result.recordset[0];
   if (!demande) {
     return { code: 404, erreur: 'Demande introuvable.' };
@@ -90,6 +91,39 @@ async function verifierAccesDemande(pool, idDemande, agent) {
     return { code: 403, erreur: 'Accès refusé pour cette demande.' };
   }
   return { demande };
+}
+
+async function assurerTableHistoriqueModifications(pool) {
+  await pool.request().query(`
+    IF OBJECT_ID('dbo.HistoriqueModificationsDemandes', 'U') IS NULL
+    BEGIN
+      CREATE TABLE HistoriqueModificationsDemandes (
+        id_historique_modification INT IDENTITY(1,1) PRIMARY KEY,
+        id_demande INT NOT NULL REFERENCES Demandes(id_demande),
+        id_agent INT NOT NULL REFERENCES Agents(id_agent),
+        type_action NVARCHAR(50) NOT NULL DEFAULT 'MODIFICATION_DEMANDE',
+        description NVARCHAR(255) NOT NULL,
+        details NVARCHAR(MAX) NULL,
+        date_modification DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+      );
+
+      CREATE INDEX IX_HistoriqueModificationsDemande ON HistoriqueModificationsDemandes(id_demande);
+    END
+  `);
+}
+
+async function enregistrerHistoriqueModification(transaction, idDemande, idAgent, description, details = null) {
+  await assurerTableHistoriqueModifications(transaction.parent || transaction.pool || transaction);
+  await new sql.Request(transaction)
+    .input('id_demande', sql.Int, idDemande)
+    .input('id_agent', sql.Int, idAgent)
+    .input('type_action', sql.NVarChar(50), 'MODIFICATION_DEMANDE')
+    .input('description', sql.NVarChar(255), description)
+    .input('details', sql.NVarChar(sql.MAX), details ? JSON.stringify(details) : null)
+    .query(`
+      INSERT INTO HistoriqueModificationsDemandes (id_demande, id_agent, type_action, description, details)
+      VALUES (@id_demande, @id_agent, @type_action, @description, @details)
+    `);
 }
 
 async function assurerMarqueCompteur(pool, libelle) {
@@ -239,6 +273,17 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ erreur: 'Le téléphone doit être au format 0552 11 74 33 et l\'email doit être valide.' });
     }
 
+    const demandeExiste = await pool.request()
+      .input('id_demande', sql.Int, req.params.id)
+      .query('SELECT id_demandeur, est_verrouillee FROM Demandes WHERE id_demande = @id_demande');
+
+    if (demandeExiste.recordset.length === 0) {
+      return res.status(404).json({ erreur: 'Demande introuvable.' });
+    }
+    if (demandeExiste.recordset[0].est_verrouillee) {
+      return res.status(403).json({ erreur: 'Cette demande est scellée : les modifications sont interdites.' });
+    }
+
     await transaction.begin();
     const demande = await new sql.Request(transaction)
       .input('id_demande', sql.Int, req.params.id)
@@ -283,6 +328,27 @@ router.put('/:id', async (req, res) => {
             .query(`UPDATE Demandes SET id_type=@id_type, type_autre=@type_autre, adresse_branchement=@adresse_branchement,
               id_commune=@id_commune, observations=@observations, date_maj=SYSDATETIME()
               WHERE id_demande=@id_demande`);
+
+    await enregistrerHistoriqueModification(
+      transaction,
+      req.params.id,
+      req.agent.id_agent,
+      'Mise à jour des informations du dossier',
+      {
+        id_type,
+        type_autre: type_autre?.trim() || null,
+        adresse_branchement: adresse_branchement.trim(),
+        id_commune,
+        observations: observations || null,
+        demandeur: {
+          qualite_demandeur: qualiteDemandeur,
+          est_personne_morale: estPersonneMorale,
+          nom: estPersonneMorale ? null : demandeur.nom?.trim(),
+          prenom: estPersonneMorale ? null : demandeur.prenom?.trim(),
+          raison_sociale: estPersonneMorale ? demandeur.raison_sociale?.trim() : null
+        }
+      }
+    );
 
     await transaction.commit();
     res.json({ message: 'Informations de la demande mises à jour.' });
@@ -460,7 +526,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const demande = await pool.request()
       .input('id_demande', sql.Int, id_demande)
-      .query(`SELECT d.id_demande, d.id_agence, d.statut_actuel, dv.statut_paiement
+      .query(`SELECT d.id_demande, d.id_agence, d.statut_actuel, d.est_verrouillee, dv.statut_paiement
               FROM Demandes d
               LEFT JOIN Devis dv ON dv.id_demande = d.id_demande
               WHERE d.id_demande = @id_demande`);
@@ -472,6 +538,9 @@ router.delete('/:id', async (req, res) => {
     if (req.agent.role !== 'admin' && demandeCible.id_agence !== req.agent.id_agence) {
       return res.status(403).json({ erreur: 'Vous ne pouvez pas supprimer cette demande.' });
     }
+    if (demandeCible.est_verrouillee) {
+      return res.status(403).json({ erreur: 'Cette demande est scellée : la suppression est interdite.' });
+    }
     if (demande.recordset.some((item) => item.statut_paiement === 'PAYE')) {
       return res.status(400).json({ erreur: 'Cette demande ne peut pas être supprimée car un devis est payé.' });
     }
@@ -479,6 +548,7 @@ router.delete('/:id', async (req, res) => {
     await transaction.begin();
     transactionDemarree = true;
     const supprimer = new sql.Request(transaction).input('id_demande', sql.Int, id_demande);
+    await supprimer.query('DELETE FROM HistoriqueModificationsDemandes WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM HistoriqueStatuts WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM EtudesTechniques WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM Devis WHERE id_demande = @id_demande');
@@ -512,7 +582,8 @@ router.get('/:id', async (req, res) => {
              dem.telephone, dem.telephone_secondaire, dem.email AS demandeur_email, dem.cin, dem.type_piece_identite, dem.fils_de, dem.ne_le,
              dem.cin_delivre_le, dem.cin_delivre_par, dem.adresse AS demandeur_adresse,
                   dem.id_commune AS id_commune_residence, c_res.nom_commune AS nom_commune_residence,
-             a.nom_agence, c.nom_commune, t.libelle AS type_branchement, s.libelle AS statut_libelle
+             a.nom_agence, c.nom_commune, t.libelle AS type_branchement, s.libelle AS statut_libelle,
+             d.est_verrouillee
       FROM Demandes d
       JOIN Demandeurs dem ON dem.id_demandeur = d.id_demandeur
       JOIN Agences a ON a.id_agence = d.id_agence
@@ -527,14 +598,33 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ erreur: 'Demande introuvable.' });
     }
 
-    const historique = await pool.request().input('id', sql.Int, id).query(`
-      SELECT h.*, s.libelle AS statut_libelle, s.ordre, ag.nom + ' ' + ag.prenom AS agent_nom
+    const historiqueStatuts = await pool.request().input('id', sql.Int, id).query(`
+      SELECT h.*, s.libelle AS statut_libelle, s.ordre, ag.nom + ' ' + ag.prenom AS agent_nom,
+        'STATUT' AS type_historique
       FROM HistoriqueStatuts h
       JOIN Statuts s ON s.code_statut = h.code_statut
       JOIN Agents ag ON ag.id_agent = h.id_agent
       WHERE h.id_demande = @id
       ORDER BY h.date_changement ASC
     `);
+
+    const historiqueModifications = await pool.request().input('id', sql.Int, id).query(`
+      SELECT hm.id_historique_modification AS id_historique,
+             hm.id_demande,
+             hm.type_action,
+             hm.description,
+             hm.details,
+             hm.date_modification AS date_changement,
+             ag.nom + ' ' + ag.prenom AS agent_nom,
+             'MODIFICATION' AS type_historique
+      FROM HistoriqueModificationsDemandes hm
+      JOIN Agents ag ON ag.id_agent = hm.id_agent
+      WHERE hm.id_demande = @id
+      ORDER BY hm.date_modification ASC
+    `);
+
+    const historique = [...historiqueStatuts.recordset, ...historiqueModifications.recordset]
+      .sort((a, b) => new Date(a.date_changement) - new Date(b.date_changement));
 
     const etude = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM EtudesTechniques WHERE id_demande = @id`);
@@ -727,6 +817,49 @@ router.patch('/:id/statut', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: 'Erreur lors du changement de statut.' });
+  }
+});
+
+// PATCH /api/demandes/:id/verrouiller - sceller une demande après validation finale
+router.patch('/:id/verrouiller', async (req, res) => {
+  try {
+    const id_demande = req.params.id;
+    const pool = await getPool();
+    const acces = await verifierAccesDemande(pool, id_demande, req.agent);
+    if (acces.erreur) {
+      return res.status(acces.code).json({ erreur: acces.erreur });
+    }
+
+    const demande = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT statut_actuel, est_verrouillee FROM Demandes WHERE id_demande = @id_demande');
+
+    if (demande.recordset.length === 0) {
+      return res.status(404).json({ erreur: 'Demande introuvable.' });
+    }
+
+    if (demande.recordset[0].statut_actuel !== 'TRAVAUX_TERMINES') {
+      return res.status(400).json({ erreur: 'La demande doit être entièrement finalisée pour être scellée.' });
+    }
+    if (demande.recordset[0].est_verrouillee) {
+      return res.status(400).json({ erreur: 'Cette demande est déjà scellée.' });
+    }
+
+    await pool.request()
+      .input('id_demande', sql.Int, id_demande)
+      .query(`UPDATE Demandes SET statut_actuel = 'SCELLEE', est_verrouillee = 1, date_maj = SYSDATETIME() WHERE id_demande = @id_demande`);
+
+    await enregistrerHistoriqueModification(
+      pool,
+      id_demande,
+      req.agent.id_agent,
+      'Demande scellée / verrouillée',
+      { statut: 'SCELLEE', etat: 'verrouillee', motif: 'Finalisation complète du dossier' }
+    );
+
+    res.json({ message: 'Demande scellée avec succès. Les modifications et suppressions sont désormais interdites.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors du scellement de la demande.' });
   }
 });
 

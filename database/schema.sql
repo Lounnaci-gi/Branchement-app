@@ -101,9 +101,10 @@ INSERT INTO Statuts (code_statut, libelle, ordre, est_final) VALUES
 ('DEVIS_EMIS',          N'Devis émis',                 4, 0),
 ('DEVIS_PAYE',          N'Devis payé',                 5, 0),
 ('TRAVAUX_EN_COURS',    N'Travaux en cours',           6, 0),
-('TRAVAUX_TERMINES',    N'Travaux terminés',           7, 1),
-('REJETEE',             N'Demande rejetée',            8, 1),
-('ANNULEE',             N'Demande annulée',            9, 1);
+('TRAVAUX_TERMINES',    N'Travaux terminés',           7, 0),
+('SCELLEE',             N'Demande scellée',            8, 1),
+('REJETEE',             N'Demande rejetée',            9, 1),
+('ANNULEE',             N'Demande annulée',            10, 1);
 
 /* ------------------------------------------------------------
    6. DEMANDES DE BRANCHEMENT (table centrale)
@@ -121,7 +122,8 @@ CREATE TABLE Demandes (
     id_agent_creation   INT NOT NULL REFERENCES Agents(id_agent),
     date_depot          DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     date_maj            DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
-    observations        NVARCHAR(MAX) NULL
+    observations        NVARCHAR(MAX) NULL,
+    est_verrouillee     BIT NOT NULL DEFAULT 0
 );
 
 /* ------------------------------------------------------------
@@ -134,6 +136,16 @@ CREATE TABLE HistoriqueStatuts (
     id_agent        INT NOT NULL REFERENCES Agents(id_agent),
     date_changement DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     commentaire     NVARCHAR(500) NULL
+);
+
+CREATE TABLE HistoriqueModificationsDemandes (
+    id_historique_modification INT IDENTITY(1,1) PRIMARY KEY,
+    id_demande                 INT NOT NULL REFERENCES Demandes(id_demande),
+    id_agent                   INT NOT NULL REFERENCES Agents(id_agent),
+    type_action                NVARCHAR(50) NOT NULL DEFAULT 'MODIFICATION_DEMANDE',
+    description                NVARCHAR(255) NOT NULL,
+    details                    NVARCHAR(MAX) NULL,
+    date_modification          DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
 /* ------------------------------------------------------------
@@ -220,6 +232,7 @@ CREATE INDEX IX_Demandes_Date ON Demandes(date_depot);
 
 CREATE INDEX IX_Historique_Demande ON HistoriqueStatuts(id_demande);
 CREATE INDEX IX_Historique_Agent ON HistoriqueStatuts(id_agent);
+CREATE INDEX IX_HistoriqueModifications_Demande ON HistoriqueModificationsDemandes(id_demande);
 
 CREATE INDEX IX_Demandeurs_Commune ON Demandeurs(id_commune);
 CREATE INDEX IX_Demandeurs_Nom_Prenom ON Demandeurs(nom, prenom);

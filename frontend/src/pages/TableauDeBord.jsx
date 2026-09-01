@@ -93,11 +93,11 @@ export default function TableauDeBord() {
   }
 
   const total = donnees.parStatut
-    .filter((s) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES'].includes(s.code_statut))
+    .filter((s) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES', 'SCELLEE'].includes(s.code_statut))
     .reduce((s, x) => s + x.total, 0);
 
   const demandesAchevees = donnees.parStatut
-    .find((s) => s.code_statut === 'TRAVAUX_TERMINES')?.total || 0;
+    .find((s) => s.code_statut === 'SCELLEE')?.total || 0;
 
   const maxTotal = Math.max(...donnees.parStatut.map((s) => s.total), 1);
 

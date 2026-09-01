@@ -8,6 +8,7 @@ const STYLES = {
   DEVIS_PAYE: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', border: 'var(--color-border-success)' },
   TRAVAUX_EN_COURS: { bg: 'var(--color-primary-selection)', fg: 'var(--color-primary)', border: 'var(--color-border-primary)' },
   TRAVAUX_TERMINES: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', border: 'var(--color-border-success)' },
+  SCELLEE: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', border: 'var(--color-border-success)' },
   REJETEE: { bg: 'var(--color-danger-bg)', fg: 'var(--color-danger)', border: 'var(--color-border-danger)' },
   ANNULEE: { bg: 'var(--color-surface-sunken)', fg: 'var(--color-text-muted)', border: 'var(--color-border)' }
 };
