@@ -181,8 +181,63 @@ CREATE TABLE Devis (
     banque              NVARCHAR(150) NULL
 );
 
+CREATE TABLE LignesDevis (
+    id_ligne            INT IDENTITY(1,1) PRIMARY KEY,
+    id_devis            INT NOT NULL REFERENCES Devis(id_devis) ON DELETE CASCADE,
+    code_article        NVARCHAR(50) NOT NULL,
+    libelle             NVARCHAR(150) NOT NULL,
+    unite               NVARCHAR(20) NULL,
+    diametre            NVARCHAR(50) NULL,
+    quantite            DECIMAL(10,2) NOT NULL DEFAULT 1,
+    prix_unitaire       DECIMAL(12,2) NOT NULL DEFAULT 0,
+    montant_ht          DECIMAL(12,2) NOT NULL DEFAULT 0,
+    type_tva            NVARCHAR(20) NULL,
+    taux_tva            DECIMAL(5,2) NOT NULL DEFAULT 19,
+    ordre               INT NOT NULL DEFAULT 0
+);
+
 /* ------------------------------------------------------------
-   10. TRAVAUX D'EXECUTION
+   10. REFERENTIEL DES ARTICLES DE DEVIS
+   ------------------------------------------------------------ */
+CREATE TABLE FamillesArticles (
+    id_famille      INT IDENTITY(1,1) PRIMARY KEY,
+    code_famille    NVARCHAR(50) NOT NULL UNIQUE,
+    libelle         NVARCHAR(100) NOT NULL,
+    actif           BIT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE ArticlesDevis (
+    id_article      INT IDENTITY(1,1) PRIMARY KEY,
+    id_famille      INT NOT NULL REFERENCES FamillesArticles(id_famille),
+    code_article    NVARCHAR(50) NOT NULL UNIQUE,
+    libelle         NVARCHAR(150) NOT NULL,
+    unite           NVARCHAR(20) NOT NULL CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG')),
+    mode_prix       NVARCHAR(20) NOT NULL DEFAULT N'PRESTATION' CONSTRAINT CK_ArticlesDevis_ModePrix CHECK (mode_prix IN (N'PRESTATION', N'FOURNITURE_POSE')),
+    prix_unitaire   DECIMAL(12,2) NOT NULL CONSTRAINT CK_ArticlesDevis_Prix CHECK (prix_unitaire >= 0),
+    prix_fourniture DECIMAL(12,2) NULL CONSTRAINT CK_ArticlesDevis_PrixFourniture CHECK (prix_fourniture IS NULL OR prix_fourniture >= 0),
+    prix_pose       DECIMAL(12,2) NULL CONSTRAINT CK_ArticlesDevis_PrixPose CHECK (prix_pose IS NULL OR prix_pose >= 0),
+    type_tva        NVARCHAR(20) NOT NULL DEFAULT N'PRESTATION' CONSTRAINT CK_ArticlesDevis_TypeTva CHECK (type_tva IN (N'PRESTATION', N'TRAVAUX')),
+    taux_tva        DECIMAL(5,2) NOT NULL DEFAULT 19 CONSTRAINT CK_ArticlesDevis_TauxTva CHECK (taux_tva >= 0 AND taux_tva <= 100),
+    avec_diametre   BIT NOT NULL DEFAULT 0,
+    actif           BIT NOT NULL DEFAULT 1
+);
+
+CREATE TABLE TarifsArticlesDevis (
+    id_tarif        INT IDENTITY(1,1) PRIMARY KEY,
+    id_article      INT NOT NULL REFERENCES ArticlesDevis(id_article),
+    mode_prix       NVARCHAR(20) NOT NULL CONSTRAINT CK_TarifsArticles_ModePrix CHECK (mode_prix IN (N'PRESTATION', N'FOURNITURE_POSE')),
+    prix_unitaire   DECIMAL(12,2) NOT NULL CONSTRAINT CK_TarifsArticles_Prix CHECK (prix_unitaire >= 0),
+    prix_fourniture DECIMAL(12,2) NULL CONSTRAINT CK_TarifsArticles_PrixFourniture CHECK (prix_fourniture IS NULL OR prix_fourniture >= 0),
+    prix_pose       DECIMAL(12,2) NULL CONSTRAINT CK_TarifsArticles_PrixPose CHECK (prix_pose IS NULL OR prix_pose >= 0),
+    type_tva        NVARCHAR(20) NOT NULL CONSTRAINT CK_TarifsArticles_TypeTva CHECK (type_tva IN (N'PRESTATION', N'TRAVAUX')),
+    taux_tva        DECIMAL(5,2) NOT NULL CONSTRAINT CK_TarifsArticles_TauxTva CHECK (taux_tva >= 0 AND taux_tva <= 100),
+    date_debut      DATE NOT NULL,
+    date_fin        DATE NULL,
+    CONSTRAINT CK_TarifsArticles_Periode CHECK (date_fin IS NULL OR date_fin >= date_debut)
+);
+
+/* ------------------------------------------------------------
+   11. TRAVAUX D'EXECUTION
    ------------------------------------------------------------ */
 CREATE TABLE Travaux (
     id_travaux              INT IDENTITY(1,1) PRIMARY KEY,
@@ -199,7 +254,7 @@ CREATE TABLE Travaux (
 );
 
 /* ------------------------------------------------------------
-   11. REFERENCES COMPTEURS
+    12. REFERENCES COMPTEURS
    ------------------------------------------------------------ */
 CREATE TABLE MarquesCompteur (
     id_marque             INT IDENTITY(1,1) PRIMARY KEY,
@@ -208,7 +263,7 @@ CREATE TABLE MarquesCompteur (
 );
 
 /* ------------------------------------------------------------
-   12. PIECES JOINTES
+    13. PIECES JOINTES
    ------------------------------------------------------------ */
 CREATE TABLE PiecesJointes (
     id_piece        INT IDENTITY(1,1) PRIMARY KEY,
@@ -243,6 +298,7 @@ CREATE INDEX IX_Demandeurs_CIN ON Demandeurs(cin);
 
 CREATE INDEX IX_Devis_Demande ON Devis(id_demande);
 CREATE INDEX IX_Devis_StatutPaiement ON Devis(statut_paiement);
+CREATE INDEX IX_LignesDevis_Devis ON LignesDevis(id_devis);
 
 CREATE INDEX IX_Travaux_NumeroCompteur ON Travaux(numero_compteur);
 CREATE INDEX IX_MarquesCompteur_Libelle ON MarquesCompteur(libelle);

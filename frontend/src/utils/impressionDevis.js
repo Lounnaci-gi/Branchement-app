@@ -120,7 +120,8 @@ export function genererHtmlDevis(demande, dateEmission = null) {
   <div class="field"><label>Nom&nbsp;(ou Raison sociale)</label><div class="line">${echapperHtml(nom)}</div></div>
   <div class="field"><label>Prénom</label><div class="line">${echapperHtml(prenom)}</div></div>
 
-  <div class="section-title">Adresse de branchement :</div>
+  <div class="section-title">Lieu des travaux :</div>
+  <div class="field"><label>Nature</label><div class="line">${echapperHtml(natureTravauxAffichee)}</div></div>
   <div class="field"><label>Rue</label><div class="line">${echapperHtml(demande.adresse_branchement)}</div></div>
   <div class="field"><label>Commune</label><div class="line">${echapperHtml(communeBranchement)}</div></div>
 

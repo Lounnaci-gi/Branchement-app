@@ -1,19 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import Pipeline from '../components/Pipeline';
 import StatutBadge from '../components/StatutBadge';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { LIBELLES_STATUT } from '../constants/statuts';
 import PanneauEtude from '../components/panneaux/PanneauEtude';
-import PanneauDevis from '../components/panneaux/PanneauDevis';
+import PanneauDevis, { estimerMontantDevis } from '../components/panneaux/PanneauDevis';
 import PanneauTravaux from '../components/panneaux/PanneauTravaux';
 import { imprimerAccuse } from '../utils/impressionAccuse';
 import { imprimerDemande } from '../utils/impressionDemande';
 import { imprimerDevis } from '../utils/impressionDevis';
 import { imprimerOrdreExecution } from '../utils/impressionOrdreExecution';
 import { imprimerContratAbonnement } from '../utils/impressionContratAbonnement';
-import { notifierErreur, notifierSucces } from '../utils/notifications';
+import { demanderConfirmation, notifierErreur, notifierSucces } from '../utils/notifications';
 
 function nettoyerTexte(valeur, defaut = '') {
   const texte = String(valeur ?? '').replace(/[<>"']/g, '').replace(/\s{2,}/g, ' ').trim();
@@ -29,6 +29,7 @@ const MOTIFS_REJET_RAPIDES = [
 
 export default function DetailDemande() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [fiche, setFiche] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [commentaire, setCommentaire] = useState('');
@@ -156,6 +157,7 @@ export default function DetailDemande() {
   }
 
   const { demande, historique, etude, devis, travaux, transitionsPossibles } = fiche;
+  const demandeEstVerrouillee = demande.est_verrouillee === true || demande.est_verrouillee === 1 || demande.est_verrouillee === '1';
   const typeBranchementAffiche = (() => {
     const brut = (demande.type_autre || demande.type_branchement || '').trim();
     if (!brut) return 'Branchement d\'eau potable';
@@ -201,6 +203,16 @@ export default function DetailDemande() {
       || (demande.statut_actuel === 'ETUDE_TERMINEE' ? demande.date_maj : null)
       || new Date();
     imprimerDevis({ ...demande, date_etude_terminee: dateEtude, etude, historique }, null, dateEtude);
+  }
+
+  const montantEstimeDevis = estimerMontantDevis(demande, etude);
+
+  function ouvrirCreateurDevis() {
+    if (demandeEstVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
+    navigate(`/demandes/${id}/devis/nouveau`);
   }
 
   const estTravauxTermines = Boolean(
@@ -296,6 +308,16 @@ export default function DetailDemande() {
           >
             <span>🖨</span> Imprimer accusé
           </button>
+          {!demandeEstVerrouillee && devisListe.length === 0 && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={ouvrirCreateurDevis}
+              title="Créer un devis pour cette demande"
+            >
+              <span>📄</span> Créer un devis
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary"
@@ -332,17 +354,17 @@ export default function DetailDemande() {
           >
             <span>📄</span> Exporter historique
           </button>
-          {demande.statut_actuel === 'TRAVAUX_TERMINES' && !demande.est_verrouillee && (
+          {demande.statut_actuel === 'TRAVAUX_TERMINES' && !demandeEstVerrouillee && (
             <button type="button" className="btn btn-primary" onClick={scellerDemande}>
               <span>🔒</span> Sceller la demande
             </button>
           )}
-          {!demande.est_verrouillee && (
+          {!demandeEstVerrouillee && (
             <Link to={`/demandes/${id}/modifier`} className="btn btn-secondary">
               <span>✎</span> Modifier
             </Link>
           )}
-          {demande.est_verrouillee && (
+          {demandeEstVerrouillee && (
             <button type="button" className="btn btn-secondary" disabled style={{ opacity: 0.8 }}>
               <span>🔒</span> Demande scellée
             </button>
@@ -446,16 +468,18 @@ export default function DetailDemande() {
               demande={demande}
               etude={etude}
               devisPaye={estDevisPaye}
-              demandeVerrouillee={demande.est_verrouillee}
+              demandeVerrouillee={demandeEstVerrouillee}
               onEnregistre={recharger}
             />
           </div>
           <div id="panneau-devis">
             <PanneauDevis
               idDemande={id}
+              demande={demande}
               devis={devis}
               etude={etude}
-              demandeVerrouillee={demande.est_verrouillee}
+              onAfficherDevis={(idDevis) => navigate(`/demandes/${id}/devis/${idDevis}`)}
+              demandeVerrouillee={demandeEstVerrouillee}
               onEnregistre={recharger}
             />
           </div>
@@ -466,7 +490,7 @@ export default function DetailDemande() {
               travaux={travaux}
               devis={devis}
               etude={etude}
-              demandeVerrouillee={demande.est_verrouillee}
+              demandeVerrouillee={demandeEstVerrouillee}
               onEnregistre={recharger}
             />
           </div>
@@ -476,7 +500,7 @@ export default function DetailDemande() {
         {/* Colonne latérale : Actions de workflow & Historique */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {!demande.est_verrouillee && transitionsPossibles?.length > 0 && (
+          {!demandeEstVerrouillee && transitionsPossibles?.length > 0 && (
             <div className="card" style={{ padding: 22 }}>
               <h3 style={{ marginBottom: 12, fontSize: 15 }}>Faire progresser le statut</h3>
               <div className="champ" style={{ marginBottom: 10 }}>

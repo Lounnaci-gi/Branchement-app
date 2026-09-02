@@ -33,3 +33,8 @@ Thumbs.db
 
 # Uploads (si activé)
 backend/uploads/
+
+# Fichiers temporaires Microsoft Office (verrous ~$...)
+~$*
+*.tmp
+*.bak

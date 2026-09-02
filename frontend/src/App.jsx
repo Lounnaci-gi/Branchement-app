@@ -6,6 +6,8 @@ import TableauDeBord from './pages/TableauDeBord';
 import ListeDemandes from './pages/ListeDemandes';
 import NouvelleDemande from './pages/NouvelleDemande';
 import DetailDemande from './pages/DetailDemande';
+import CreationDevis from './pages/CreationDevis';
+import AffichageDevis from './pages/AffichageDevis';
 import GestionCommunes from './pages/GestionCommunes';
 import Profil from './pages/Profil';
 
@@ -58,6 +60,8 @@ export default function App() {
       <Route path="/demandes" element={<EspaceProtege><ListeDemandes /></EspaceProtege>} />
       <Route path="/demandes/nouvelle" element={<EspaceProtege><NouvelleDemande /></EspaceProtege>} />
       <Route path="/demandes/:id/modifier" element={<EspaceProtege><NouvelleDemande /></EspaceProtege>} />
+      <Route path="/demandes/:id/devis/nouveau" element={<EspaceProtege><CreationDevis /></EspaceProtege>} />
+      <Route path="/demandes/:id/devis/:idDevis" element={<EspaceProtege><AffichageDevis /></EspaceProtege>} />
       <Route path="/demandes/:id" element={<EspaceProtege><DetailDemande /></EspaceProtege>} />
       <Route path="/referentiels/communes" element={<EspaceProtege><GestionCommunes /></EspaceProtege>} />
       <Route path="/profil" element={<EspaceProtege><Profil /></EspaceProtege>} />

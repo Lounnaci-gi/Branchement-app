@@ -97,7 +97,8 @@ export default function TableauDeBord() {
     .reduce((s, x) => s + x.total, 0);
 
   const demandesAchevees = donnees.parStatut
-    .find((s) => s.code_statut === 'SCELLEE')?.total || 0;
+    .filter((s) => ['TRAVAUX_EN_COURS', 'TRAVAUX_TERMINES', 'SCELLEE'].includes(s.code_statut))
+    .reduce((total, s) => total + Number(s.total || 0), 0);
 
   const maxTotal = Math.max(...donnees.parStatut.map((s) => s.total), 1);
 

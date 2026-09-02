@@ -4,7 +4,74 @@ import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import InputDate from '../InputDate';
 import './PanneauDevis.css';
 
-export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouillee = false, onEnregistre }) {
+const LIBELLES_UNITES = {
+  U: 'U (Unité)',
+  ML: 'ML (Mètre linéaire)',
+  'M²': 'M² (Mètre carré)',
+  M3: 'M3 (Mètre cube)',
+  KG: 'KG (Kilogramme)'
+};
+
+function prixArticle(article) {
+  if (article.modePrix === 'FOURNITURE_POSE') {
+    return Number(article.prixFourniture || 0) + Number(article.prixPose || 0);
+  }
+  return Number(article.prix || 0);
+}
+
+function tvaArticle(article) {
+  return prixArticle(article) * (Number(article.tauxTva ?? 19) / 100);
+}
+
+export function estimerMontantDevis(demande, etude) {
+  if (!demande || !etude) return 0;
+
+  const texteType = String(demande.type_branchement || demande.type_autre || '').trim().toLowerCase();
+  const distance = Number(etude.distance_reseau_m ?? 0) || 0;
+  const diametreTexte = String(etude.diametre_conduite ?? '').replace(/[^\d.]/g, '');
+  const diametre = Number(diametreTexte) || 0;
+
+  const tarifsParUsage = {
+    domestique: { base: 18000, distance: 75, diametre: { 20: 210, 25: 260, 32: 320, 40: 420, 50: 510, 63: 620, 80: 760, 100: 920, 110: 1040, 125: 1180, 150: 1360 } },
+    administratif: { base: 26000, distance: 110, diametre: { 20: 310, 25: 390, 32: 470, 40: 630, 50: 760, 63: 910, 80: 1080, 100: 1280, 110: 1450, 125: 1640, 150: 1870 } },
+    commercial: { base: 31000, distance: 130, diametre: { 20: 410, 25: 500, 32: 610, 40: 820, 50: 990, 63: 1180, 80: 1380, 100: 1630, 110: 1880, 125: 2160, 150: 2450 } },
+    industriel: { base: 44000, distance: 160, diametre: { 20: 520, 25: 640, 32: 780, 40: 980, 50: 1200, 63: 1450, 80: 1740, 100: 2080, 110: 2380, 125: 2710, 150: 3050 } },
+    extension: { base: 34000, distance: 95, diametre: { 20: 290, 25: 350, 32: 420, 40: 560, 50: 690, 63: 830, 80: 980, 100: 1150, 110: 1290, 125: 1460, 150: 1660 } },
+    renovation: { base: 22000, distance: 80, diametre: { 20: 250, 25: 300, 32: 370, 40: 500, 50: 620, 63: 740, 80: 900, 100: 1060, 110: 1200, 125: 1360, 150: 1560 } },
+    resiliation: { base: 22000, distance: 82, diametre: { 20: 250, 25: 300, 32: 370, 40: 500, 50: 620, 63: 740, 80: 900, 100: 1060, 110: 1200, 125: 1360, 150: 1560 } }
+  };
+
+  let profil = 'domestique';
+  if (texteType.includes('administratif')) profil = 'administratif';
+  else if (texteType.includes('commercial')) profil = 'commercial';
+  else if (texteType.includes('industriel')) profil = 'industriel';
+  else if (texteType.includes('extension') || texteType.includes('réseau')) profil = 'extension';
+  else if (texteType.includes('rénovation') || texteType.includes('résiliation')) profil = 'renovation';
+
+  const tarif = tarifsParUsage[profil];
+  const diametreReference = Object.keys(tarif.diametre).map(Number).sort((a, b) => a - b).find((valeur) => diametre <= valeur) || 150;
+  const coutDiametre = tarif.diametre[diametreReference] || tarif.diametre[150] || 0;
+  const montant = tarif.base + (distance * tarif.distance) + coutDiametre;
+
+  return Math.max(0, Math.round(montant / 100) * 100);
+}
+
+export default function PanneauDevis({
+  idDemande,
+  demande,
+  devis,
+  etude,
+  onAfficherDevis,
+  demandeVerrouillee = false,
+  onEnregistre,
+  ouvrirFormulaire = false,
+  onFormulaireOuvert,
+  formulaireUniquement = false,
+  onAnnule,
+  afficherActionsCreation = false,
+  afficherResumeDemande = true,
+  masquerArticlesSelectionnes = false
+}) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const etudeRenseignee = Boolean(
     etude && (
@@ -33,12 +100,90 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
 
   const [enregistrerPaiement, setEnregistrerPaiement] = useState(false);
   const [numeroDevisPreview, setNumeroDevisPreview] = useState('');
+  const [articleFamilles, setArticleFamilles] = useState([]);
+  const [articlesSelectionnes, setArticlesSelectionnes] = useState({});
+  const [lignesDevis, setLignesDevis] = useState([]);
+  const [rechercheArticle, setRechercheArticle] = useState('');
+  const [suggestionsFiltrees, setSuggestionsFiltrees] = useState([]);
+  const [suggestionVisible, setSuggestionVisible] = useState(false);
+
+  const tousLesArticles = articleFamilles.flatMap((f) => f.articles);
 
   const devisActuel = devisListe.find((item) => item.id_devis === devisSelectionne) || null;
   const montantTotalCumule = devisListe.reduce((acc, curr) => acc + (Number(curr.montant) || 0), 0);
+  const montantEstime = estimerMontantDevis({ type_branchement: etude?.type_branchement, type_autre: etude?.type_autre }, etude);
+
+  const totalArticles = lignesDevis.reduce((acc, ligne) => acc + (Number(ligne.quantite) || 0) * prixArticle(ligne), 0);
+  const totalTvaPrestation = lignesDevis.reduce((acc, ligne) => {
+    const qte = Number(ligne.quantite) || 0;
+    return acc + (ligne.typeTva === 'TRAVAUX' ? 0 : qte * tvaArticle(ligne));
+  }, 0);
+  const totalTvaTravaux = lignesDevis.reduce((acc, ligne) => {
+    const qte = Number(ligne.quantite) || 0;
+    return acc + (ligne.typeTva === 'TRAVAUX' ? qte * tvaArticle(ligne) : 0);
+  }, 0);
+  const totalTva = totalTvaPrestation + totalTvaTravaux;
+  const totalTTC = totalArticles + totalTva;
+
+  function ajusterArticle(articleCode, delta) {
+    setArticlesSelectionnes((prev) => {
+      const actuel = Number(prev[articleCode] || 0);
+      const next = Math.max(0, actuel + delta);
+      return { ...prev, [articleCode]: next };
+    });
+  }
+
+  function rechercherArticles(valeur) {
+    setRechercheArticle(valeur);
+    if (!valeur.trim()) {
+      setSuggestionsFiltrees([]);
+      setSuggestionVisible(false);
+      return;
+    }
+    const q = valeur.toLowerCase();
+    const filtres = tousLesArticles.filter(
+      (a) => a.libelle.toLowerCase().includes(q) || a.code.toLowerCase().includes(q)
+    ).slice(0, 10);
+    setSuggestionsFiltrees(filtres);
+    setSuggestionVisible(true);
+  }
+
+  function ajouterArticle(article) {
+    setLignesDevis((prev) => {
+      const existe = prev.find((l) => l.code === article.code);
+      if (existe) {
+        return prev.map((l) =>
+          l.code === article.code ? { ...l, quantite: String(Number(l.quantite || 0) + 1) } : l
+        );
+      }
+      return [...prev, { ...article, quantite: '1', diametre: '' }];
+    });
+    setRechercheArticle('');
+    setSuggestionsFiltrees([]);
+    setSuggestionVisible(false);
+  }
+
+  function supprimerLigne(code) {
+    setLignesDevis((prev) => prev.filter((l) => l.code !== code));
+  }
+
+  function changerQuantite(code, valeur) {
+    setLignesDevis((prev) =>
+      prev.map((l) => (l.code === code ? { ...l, quantite: valeur } : l))
+    );
+  }
+
+  function changerDiametre(code, valeur) {
+    setLignesDevis((prev) =>
+      prev.map((l) => (l.code === code ? { ...l, diametre: valeur } : l))
+    );
+  }
 
   useEffect(() => {
     client.get('/referentiels/banques').then((res) => setBanques(res.data)).catch(() => setBanques([]));
+    client.get('/referentiels/articles')
+      .then((res) => setArticleFamilles(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setArticleFamilles([]));
   }, []);
 
   useEffect(() => {
@@ -64,6 +209,7 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
   useEffect(() => {
     if (!devisActuel) {
       setForm({ montant: '' });
+      setLignesDevis([]);
       setEnregistrerPaiement(false);
       setPaiement({
         mode_paiement: 'Especes',
@@ -76,6 +222,7 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
       return;
     }
     setForm({ montant: devisActuel.montant || '' });
+    setLignesDevis(Array.isArray(devisActuel.articles) ? devisActuel.articles : []);
     setEnregistrerPaiement(devisActuel.statut_paiement === 'PAYE');
     setPaiement({
       mode_paiement: devisActuel.mode_paiement === 'Virement' ? 'Versement_bancaire' : (devisActuel.mode_paiement || 'Especes'),
@@ -87,17 +234,39 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
     });
   }, [devisActuel, ouvert]);
 
+  useEffect(() => {
+    if (!ouvert || devisActuel?.statut_paiement === 'PAYE') return;
+    if (lignesDevis.length > 0 && totalTTC > 0) {
+      setForm((prev) => ({ ...prev, montant: String(Math.round(totalTTC * 100) / 100) }));
+    }
+  }, [ouvert, devisActuel, totalTTC, lignesDevis.length]);
+
+  useEffect(() => {
+    if (!ouvrirFormulaire || demandeVerrouillee) return;
+    setDevisSelectionne(null);
+    setForm({ montant: '' });
+    setLignesDevis([]);
+    setEnregistrerPaiement(false);
+    setPaiement({
+      mode_paiement: 'Especes',
+      date_paiement: new Date().toISOString().slice(0, 10),
+      numero_recu: '',
+      numero_cheque: '',
+      numero_versement: '',
+      banque: ''
+    });
+    setOuvert(true);
+    onFormulaireOuvert?.();
+  }, [ouvrirFormulaire, demandeVerrouillee, onFormulaireOuvert]);
+
   function ouvrirAjoutDevisComplementaire() {
     if (demandeVerrouillee) {
       notifierErreur('Cette demande est scellée : les modifications sont interdites.');
       return;
     }
-    if (!etudeRenseignee) {
-      notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
-      return;
-    }
     setDevisSelectionne(null);
     setForm({ montant: '' });
+    setLignesDevis([]);
     setEnregistrerPaiement(false);
     setOuvert(true);
   }
@@ -111,17 +280,31 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
     setOuvert(true);
   }
 
+  function fermerFormulaire() {
+    if (formulaireUniquement) {
+      onAnnule?.();
+      return;
+    }
+    setOuvert(false);
+    setDevisSelectionne(null);
+  }
+
   async function enregistrer(e) {
     e.preventDefault();
     if (demandeVerrouillee) {
       await notifierErreur('Cette demande est scellée : les modifications sont interdites.');
       return;
     }
-    if (!devisActuel && !etudeRenseignee) {
-      await notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
+    const montantTotalArticles = totalTTC > 0 ? (Math.round(totalTTC * 100) / 100) : (Number(form.montant) || 0);
+    if (lignesDevis.length === 0 && montantTotalArticles <= 0) {
+      await notifierErreur('Veuillez ajouter au moins un article pour calculer le montant du devis.');
       return;
     }
-    if (devisActuel?.statut_paiement === 'PAYE' && Number(form.montant) !== Number(devisActuel.montant)) {
+    if (montantTotalArticles <= 0) {
+      await notifierErreur('Le montant total calculé du devis doit être supérieur à 0.');
+      return;
+    }
+    if (devisActuel?.statut_paiement === 'PAYE' && Number(montantTotalArticles) !== Number(devisActuel.montant)) {
       await notifierErreur('Le montant d’un devis réglé ne peut pas être modifié.');
       return;
     }
@@ -132,8 +315,9 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
     setEnvoi(true);
     try {
       const resDevis = await client.put(`/demandes/${idDemande}/devis`, {
-        montant: form.montant,
-        id_devis: devisActuel?.id_devis
+        montant: montantTotalArticles,
+        id_devis: devisActuel?.id_devis,
+        articles: lignesDevis
       });
 
       const idDevisEnregistre = devisActuel?.id_devis || resDevis.data?.id_devis;
@@ -181,23 +365,19 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {!demandeVerrouillee && devisListe.length > 0 && !ouvert && (
+          {afficherActionsCreation && !demandeVerrouillee && devisListe.length > 0 && !ouvert && (
             <button type="button" className="btn btn-primary" onClick={ouvrirAjoutDevisComplementaire}>
               <span>+</span> Devis complémentaire
             </button>
           )}
-          {!demandeVerrouillee && devisListe.length === 0 && !ouvert && (
+          {afficherActionsCreation && !demandeVerrouillee && devisListe.length === 0 && !ouvert && (
             <button
               type="button"
               className="btn btn-primary"
-              disabled={!etudeRenseignee}
-              style={{ opacity: etudeRenseignee ? 1 : 0.6 }}
               onClick={() => {
-                if (!etudeRenseignee) {
-                  notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
-                  return;
-                }
                 setDevisSelectionne(null);
+                setForm({ montant: '' });
+                setLignesDevis([]);
                 setOuvert(true);
               }}
             >
@@ -205,7 +385,7 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
             </button>
           )}
           {ouvert && (
-            <button type="button" className="btn btn-secondary" onClick={() => { setOuvert(false); setDevisSelectionne(null); }}>
+            <button type="button" className="btn btn-secondary" onClick={fermerFormulaire}>
               ✕ Fermer
             </button>
           )}
@@ -213,7 +393,7 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
       </div>
 
       {/* Liste des devis émis */}
-      {!ouvert && (
+      {!ouvert && !formulaireUniquement && (
         <div className="devis-liste-container">
           {devisListe.map((item, index) => {
             const estPaye = item.statut_paiement === 'PAYE';
@@ -232,6 +412,11 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
                 <div className="devis-card-montant">
                   <span className="devis-numero-libelle">Montant</span>
                   <span className="devis-montant-chiffre">{Number(item.montant).toLocaleString('fr-DZ')} DA</span>
+                  {Array.isArray(item.articles) && item.articles.length > 0 && (
+                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      {item.articles.length} article{item.articles.length > 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
 
                 {item.date_emission && (
@@ -255,14 +440,22 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
                 </div>
 
                 <div className="devis-card-actions">
-                  {!demandeVerrouillee && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => onAfficherDevis?.(item.id_devis)}
+                    title="Afficher le devis dans une page dédiée"
+                  >
+                    <span>👁</span> Afficher
+                  </button>
+                  {!demandeVerrouillee && !estPaye && (
                     <button
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => ouvrirModification(item)}
-                      title="Modifier ou encaisser ce devis"
+                      title="Modifier ou régler ce devis impayé"
                     >
-                      <span>✎</span> {estPaye ? 'Modifier' : 'Régler / Modifier'}
+                      <span>✎</span> Régler / Modifier
                     </button>
                   )}
                 </div>
@@ -278,18 +471,14 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
                   ? 'Demande scellée — aucune modification de devis n’est autorisée.'
                   : 'Aucun devis n\'a encore été émis pour ce dossier.'}
               </div>
-              {!demandeVerrouillee && (
+              {afficherActionsCreation && !demandeVerrouillee && (
                 <button
                   type="button"
                   className="btn btn-primary"
-                  disabled={!etudeRenseignee}
-                  style={{ opacity: etudeRenseignee ? 1 : 0.6 }}
                   onClick={() => {
-                    if (!etudeRenseignee) {
-                      notifierErreur("L'étude technique doit être renseignée avant d'émettre un devis.");
-                      return;
-                    }
                     setDevisSelectionne(null);
+                    setForm({ montant: '' });
+                    setLignesDevis([]);
                     setOuvert(true);
                   }}
                 >
@@ -317,11 +506,19 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
               type="button"
               className="btn btn-secondary"
               style={{ padding: '4px 10px', fontSize: 12 }}
-              onClick={() => { setOuvert(false); setDevisSelectionne(null); }}
+              onClick={fermerFormulaire}
             >
               Annuler
             </button>
           </div>
+
+          {afficherResumeDemande && <div style={{ marginBottom: 18, padding: '12px 14px', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-surface-sunken)' }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Abonné</div>
+            <div style={{ fontWeight: 700 }}>{demande?.est_personne_morale ? demande.raison_sociale : `${demande?.demandeur_nom || ''} ${demande?.demandeur_prenom || ''}`.trim() || '—'}</div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lieu des travaux</div>
+            <div style={{ fontWeight: 600 }}>{demande?.adresse_branchement || '—'}</div>
+            <div style={{ color: 'var(--color-text-muted)' }}>{demande?.nom_commune || 'Commune non renseignée'} · {demande?.type_autre || demande?.type_branchement || 'Nature non renseignée'}</div>
+          </div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             <div className="champ" style={{ margin: 0 }}>
@@ -345,20 +542,231 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
             </div>
 
             <div className="champ" style={{ margin: 0 }}>
-              <label>MONTANT DU DEVIS (DA) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                placeholder="ex: 45 000.00"
-                value={form.montant}
-                onChange={(e) => setForm({ ...form, montant: e.target.value })}
-                disabled={devisActuel?.statut_paiement === 'PAYE'}
-                title={devisActuel?.statut_paiement === 'PAYE' ? 'Le montant d’un devis réglé ne peut pas être modifié.' : undefined}
-                style={{ fontSize: 15, fontWeight: 600, opacity: devisActuel?.statut_paiement === 'PAYE' ? 0.7 : 1 }}
-              />
+              <label>MONTANT GLOBAL DU DEVIS (TTC)</label>
+              <div
+                style={{
+                  minHeight: 40,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0 14px',
+                  background: 'var(--color-surface-sunken)',
+                  border: (totalTTC > 0 || Number(form.montant) > 0) ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  color: (totalTTC > 0 || Number(form.montant) > 0) ? 'var(--color-primary)' : 'var(--color-text-muted)'
+                }}
+              >
+                <span>{(totalTTC > 0 ? totalTTC : (Number(form.montant) || 0)).toLocaleString('fr-DZ')} DA</span>
+                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--color-text-muted)' }}>
+                  {totalTTC > 0 ? 'Addition de tous les articles' : (lignesDevis.length === 0 ? 'Ajoutez des articles ci-dessous' : '')}
+                </span>
+              </div>
             </div>
+          </div>
+
+          <div className="champ" style={{ marginTop: 18, gridColumn: '1 / -1' }}>
+            <label>ARTICLES / PIÈCES</label>
+
+            {/* Barre de recherche + autocomplétion */}
+            <div style={{ position: 'relative', marginBottom: 10 }}>
+              <input
+                type="text"
+                placeholder={tousLesArticles.length === 0 ? 'Chargement du référentiel…' : 'Rechercher un article par nom ou code…'}
+                value={rechercheArticle}
+                disabled={tousLesArticles.length === 0}
+                onChange={(e) => rechercherArticles(e.target.value)}
+                onBlur={() => setTimeout(() => setSuggestionVisible(false), 150)}
+                onFocus={() => rechercheArticle.trim() && setSuggestionVisible(suggestionsFiltrees.length > 0)}
+                style={{ width: '100%' }}
+                autoComplete="off"
+              />
+              {suggestionVisible && suggestionsFiltrees.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                  borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', maxHeight: 280, overflowY: 'auto'
+                }}>
+                  {suggestionsFiltrees.map((article) => (
+                    <button
+                      key={article.code}
+                      type="button"
+                      onMouseDown={() => ajouterArticle(article)}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        width: '100%', padding: '9px 14px', background: 'none', border: 'none',
+                        borderBottom: '1px solid var(--color-border)', cursor: 'pointer',
+                        textAlign: 'left', gap: 12
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span>{article.libelle}</span>
+                          {article.avecDiametre && (
+                            <span style={{
+                              fontSize: 10.5,
+                              background: 'var(--color-surface-sunken)',
+                              border: '1px solid var(--color-border)',
+                              color: 'var(--color-primary)',
+                              padding: '1px 5px',
+                              borderRadius: 4,
+                              fontWeight: 600
+                            }}>
+                              Ø Diamètre
+                            </span>
+                          )}
+                        </div>
+                        <small style={{ color: 'var(--color-text-muted)' }}>
+                          {article.code} · {LIBELLES_UNITES[article.unite] || article.unite}
+                        </small>
+                      </div>
+                      <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: 'var(--color-primary)' }}>
+                        {prixArticle(article).toLocaleString('fr-DZ')} DA
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {suggestionVisible && suggestionsFiltrees.length === 0 && rechercheArticle.trim() && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                  background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                  borderRadius: 8, padding: '10px 14px', color: 'var(--color-text-muted)', fontSize: 13
+                }}>
+                  Aucun article trouvé pour « {rechercheArticle} »
+                </div>
+              )}
+            </div>
+
+            {/* Tableau des lignes saisies */}
+            {lignesDevis.length > 0 ? (() => {
+              const auMoinsUnAvecDiametre = lignesDevis.some((l) => l.avecDiametre);
+              const colonnesGrille = auMoinsUnAvecDiametre
+                ? 'minmax(160px, 1fr) 95px 90px 80px 110px 36px'
+                : 'minmax(160px, 1fr) 90px 80px 110px 36px';
+
+              return (
+              <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+                {/* En-tête */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: colonnesGrille,
+                  gap: 8, padding: '8px 12px', background: 'var(--color-surface-sunken)',
+                  borderBottom: '1px solid var(--color-border)',
+                  fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em'
+                }}>
+                  <span>Article</span>
+                  {auMoinsUnAvecDiametre && <span style={{ textAlign: 'center' }}>Diamètre</span>}
+                  <span style={{ textAlign: 'center' }}>Qté</span>
+                  <span style={{ textAlign: 'right' }}>P.U.</span>
+                  <span style={{ textAlign: 'right' }}>Montant HT</span>
+                  <span />
+                </div>
+
+                {/* Lignes */}
+                {lignesDevis.map((ligne) => {
+                  const qte = Number(ligne.quantite) || 0;
+                  const pu = prixArticle(ligne);
+                  const montantLigne = qte * pu;
+                  return (
+                    <div
+                      key={ligne.code}
+                      style={{
+                        display: 'grid', gridTemplateColumns: colonnesGrille,
+                        gap: 8, padding: '10px 12px', alignItems: 'center',
+                        borderBottom: '1px solid var(--color-border)'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{ligne.libelle}</div>
+                        <small style={{ color: 'var(--color-text-muted)' }}>
+                          {ligne.code} · {LIBELLES_UNITES[ligne.unite] || ligne.unite}
+                          {ligne.modePrix === 'FOURNITURE_POSE'
+                            ? ` · F ${Number(ligne.prixFourniture || 0).toLocaleString('fr-DZ')} + P ${Number(ligne.prixPose || 0).toLocaleString('fr-DZ')} DA`
+                            : null}
+                        </small>
+                      </div>
+                      {auMoinsUnAvecDiametre && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {ligne.avecDiametre ? (
+                            <input
+                              type="text"
+                              list="liste-diametres"
+                              placeholder="ex: 20 mm"
+                              value={ligne.diametre || ''}
+                              onChange={(e) => changerDiametre(ligne.code, e.target.value)}
+                              style={{ width: 84, textAlign: 'center', padding: '4px 6px', fontSize: 12.5 }}
+                            />
+                          ) : (
+                            <span style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>—</span>
+                          )}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '2px 7px', fontSize: 14 }}
+                          onClick={() => changerQuantite(ligne.code, String(Math.max(0, (Number(ligne.quantite) || 0) - 1)))}
+                        >−</button>
+                        <input
+                          type="number"
+                          min="0"
+                          value={ligne.quantite}
+                          onChange={(e) => changerQuantite(ligne.code, e.target.value)}
+                          style={{ width: 44, textAlign: 'center', fontWeight: 700, padding: '4px 6px' }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ padding: '2px 7px', fontSize: 14 }}
+                          onClick={() => changerQuantite(ligne.code, String((Number(ligne.quantite) || 0) + 1))}
+                        >+</button>
+                      </div>
+                      <span style={{ textAlign: 'right', color: 'var(--color-text-muted)', fontSize: 12.5 }}>
+                        {pu.toLocaleString('fr-DZ')} DA
+                      </span>
+                      <strong style={{ textAlign: 'right' }}>
+                        {montantLigne.toLocaleString('fr-DZ')} DA
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => supprimerLigne(ligne.code)}
+                        title="Supprimer cette ligne"
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--color-danger, #e53e3e)', fontSize: 16, padding: 0, lineHeight: 1
+                        }}
+                      >×</button>
+                    </div>
+                  );
+                })}
+
+                {/* Récapitulatif */}
+                <div style={{ padding: '10px 12px', background: 'var(--color-surface-sunken)', display: 'grid', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-muted)' }}>
+                    <span>Total HT</span><span>{totalArticles.toLocaleString('fr-DZ')} DA</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-muted)' }}>
+                    <span>TVA Prestation</span><span>{totalTvaPrestation.toLocaleString('fr-DZ')} DA</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-muted)' }}>
+                    <span>TVA Travaux</span><span>{totalTvaTravaux.toLocaleString('fr-DZ')} DA</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 14, marginTop: 4, paddingTop: 6, borderTop: '1px solid var(--color-border)' }}>
+                    <span>Total TTC</span><span style={{ color: 'var(--color-primary)' }}>{totalTTC.toLocaleString('fr-DZ')} DA</span>
+                  </div>
+                </div>
+              </div>
+              );
+            })() : (
+              <div style={{
+                padding: '18px 14px', textAlign: 'center', color: 'var(--color-text-muted)',
+                border: '1px dashed var(--color-border)', borderRadius: 10, fontSize: 13
+              }}>
+                Aucun article ajouté — recherchez un article ci-dessus pour commencer.
+              </div>
+            )}
           </div>
 
           {/* Section carte interactive pour l'encaissement / paiement */}
@@ -511,7 +919,7 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
               type="button"
               className="btn btn-secondary"
               disabled={envoi}
-              onClick={() => { setOuvert(false); setDevisSelectionne(null); }}
+              onClick={fermerFormulaire}
             >
               Annuler
             </button>
@@ -529,6 +937,21 @@ export default function PanneauDevis({ idDemande, devis, etude, demandeVerrouill
 
       <datalist id="banques-enregistrees">
         {banques.map((banque) => <option key={banque} value={banque} />)}
+      </datalist>
+
+      <datalist id="liste-diametres">
+        <option value="15 mm" />
+        <option value="20 mm" />
+        <option value="25 mm" />
+        <option value="32 mm" />
+        <option value="40 mm" />
+        <option value="50 mm" />
+        <option value="63 mm" />
+        <option value="80 mm" />
+        <option value="100 mm" />
+        <option value="110 mm" />
+        <option value="125 mm" />
+        <option value="160 mm" />
       </datalist>
     </div>
   );

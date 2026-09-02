@@ -90,13 +90,17 @@ async function verifierAccesDemande(pool, idDemande, agent, options = {}) {
   if (agent.role !== 'admin' && demande.id_agence !== agent.id_agence) {
     return { code: 403, erreur: 'Accès refusé pour cette demande.' };
   }
-  if (options.exigerModifiable && demande.est_verrouillee) {
+  if (options.exigerModifiable && estVerrouillee(demande.est_verrouillee)) {
     return {
       code: 403,
       erreur: options.messageVerrouillee || 'Cette demande est scellée : les modifications sont interdites.'
     };
   }
   return { demande };
+}
+
+function estVerrouillee(valeur) {
+  return valeur === true || valeur === 1 || valeur === '1';
 }
 
 async function enregistrerHistoriqueModification(transaction, idDemande, idAgent, description, details = null) {
@@ -526,6 +530,7 @@ router.delete('/:id', async (req, res) => {
     await supprimer.query('DELETE FROM HistoriqueModificationsDemandes WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM HistoriqueStatuts WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM EtudesTechniques WHERE id_demande = @id_demande');
+    await supprimer.query('DELETE FROM LignesDevis WHERE id_devis IN (SELECT id_devis FROM Devis WHERE id_demande = @id_demande)');
     await supprimer.query('DELETE FROM Devis WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM Travaux WHERE id_demande = @id_demande');
     await supprimer.query('DELETE FROM PiecesJointes WHERE id_demande = @id_demande');
@@ -605,16 +610,53 @@ router.get('/:id', async (req, res) => {
       .query(`SELECT * FROM EtudesTechniques WHERE id_demande = @id`);
     const devis = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM Devis WHERE id_demande = @id ORDER BY date_emission ASC`);
+
+    const devisIds = devis.recordset.map((d) => d.id_devis);
+    const lignesMap = {};
+    if (devisIds.length > 0) {
+      const idsListe = devisIds.map((val) => Number(val)).filter((n) => Number.isInteger(n) && n > 0).join(',');
+      if (idsListe) {
+        const lignesRes = await pool.request().query(`
+          SELECT * FROM LignesDevis WHERE id_devis IN (${idsListe}) ORDER BY ordre ASC, id_ligne ASC
+        `);
+        for (const l of lignesRes.recordset) {
+          if (!lignesMap[l.id_devis]) lignesMap[l.id_devis] = [];
+          lignesMap[l.id_devis].push({
+            id_ligne: l.id_ligne,
+            code: l.code_article,
+            libelle: l.libelle,
+            unite: l.unite,
+            diametre: l.diametre,
+            quantite: Number(l.quantite),
+            prix: Number(l.prix_unitaire),
+            montantLigne: Number(l.montant_ht),
+            typeTva: l.type_tva,
+            tauxTva: Number(l.taux_tva),
+            avecDiametre: Boolean(l.diametre)
+          });
+        }
+      }
+    }
+
+    const devisAvecArticles = devis.recordset.map((d) => ({
+      ...d,
+      articles: lignesMap[d.id_devis] || []
+    }));
+
     const travaux = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM Travaux WHERE id_demande = @id`);
     const pieces = await pool.request().input('id', sql.Int, id)
       .query(`SELECT * FROM PiecesJointes WHERE id_demande = @id`);
 
     res.json({
-      demande: demande.recordset[0],
+      demande: {
+        ...demande.recordset[0],
+        est_verrouillee: estVerrouillee(demande.recordset[0].est_verrouillee),
+        statut_actuel: demande.recordset[0].statut_actuel || 'DEPOSEE'
+      },
       historique,
       etude: etude.recordset[0] || null,
-      devis: devis.recordset,
+      devis: devisAvecArticles,
       travaux: travaux.recordset[0] || null,
       pieces: pieces.recordset,
       transitionsPossibles: TRANSITIONS[demande.recordset[0].statut_actuel] || []
@@ -721,9 +763,9 @@ router.post('/', async (req, res) => {
       .input('observations', sql.NVarChar, observations || null)
             .query(`DECLARE @demande_inseree TABLE (id_demande INT, numero_demande NVARCHAR(30), date_depot DATETIME2);
               INSERT INTO Demandes
-              (numero_demande, id_demandeur, id_agence, id_type, type_autre, adresse_branchement, id_commune, id_agent_creation, observations)
+              (numero_demande, id_demandeur, id_agence, id_type, type_autre, adresse_branchement, id_commune, statut_actuel, id_agent_creation, observations, est_verrouillee)
               OUTPUT INSERTED.id_demande, INSERTED.numero_demande, INSERTED.date_depot INTO @demande_inseree
-              VALUES (@numero_demande, @id_demandeur, @id_agence, @id_type, @type_autre, @adresse_branchement, @id_commune, @id_agent_creation, @observations);
+              VALUES (@numero_demande, @id_demandeur, @id_agence, @id_type, @type_autre, @adresse_branchement, @id_commune, 'DEPOSEE', @id_agent_creation, @observations, 0);
               SELECT id_demande, numero_demande, date_depot FROM @demande_inseree`);
 
     await transaction.commit();
@@ -808,7 +850,7 @@ router.patch('/:id/verrouiller', async (req, res) => {
     if (demande.recordset[0].statut_actuel !== 'TRAVAUX_TERMINES') {
       return res.status(400).json({ erreur: 'La demande doit être entièrement finalisée pour être scellée.' });
     }
-    if (demande.recordset[0].est_verrouillee) {
+    if (estVerrouillee(demande.recordset[0].est_verrouillee)) {
       return res.status(400).json({ erreur: 'Cette demande est déjà scellée.' });
     }
 
@@ -931,7 +973,7 @@ router.get('/:id/devis/preview', async (req, res) => {
 router.put('/:id/devis', async (req, res) => {
   try {
     const id_demande = req.params.id;
-    const { montant, id_devis } = req.body;
+    const { montant, id_devis, articles } = req.body;
     if (montant === undefined || montant === null || String(montant).trim() === '' || isNaN(Number(montant)) || Number(montant) < 0 || Number(montant) > 999999999.99) {
       return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif valide (max 999 999 999.99).' });
     }
@@ -945,7 +987,11 @@ router.put('/:id/devis', async (req, res) => {
       .query('SELECT id_etude FROM EtudesTechniques WHERE id_demande = @id_demande');
 
     if (etudeExiste.recordset.length === 0) {
-      return res.status(400).json({ erreur: "L'étude technique doit être renseignée avant d'émettre un devis." });
+      await pool.request()
+        .input('id_demande', sql.Int, id_demande)
+        .input('id_agent_technique', sql.Int, req.agent.id_agent)
+        .query(`INSERT INTO EtudesTechniques (id_demande, id_agent_technique, date_visite, faisabilite, observations)
+                VALUES (@id_demande, @id_agent_technique, SYSDATETIME(), 'Faisable', N'Étude technique automatique lors de l''émission du devis')`);
     }
 
     const idDevisValide = id_devis ? entierPositif(id_devis) : null;
@@ -964,8 +1010,8 @@ router.put('/:id/devis', async (req, res) => {
         .input('id_demande', sql.Int, id_demande)
         .query(`SELECT id_devis, montant, statut_paiement FROM Devis WHERE id_devis=@id_devis AND id_demande=@id_demande`);
 
-      if (devisActuel.recordset[0]?.statut_paiement === 'PAYE' && Number(montant) !== Number(devisActuel.recordset[0].montant)) {
-        return res.status(400).json({ erreur: 'Le montant d’un devis réglé ne peut pas être modifié.' });
+      if (devisActuel.recordset[0]?.statut_paiement === 'PAYE') {
+        return res.status(400).json({ erreur: 'Un devis réglé ne peut plus être modifié.' });
       }
 
       await pool.request()
@@ -984,6 +1030,43 @@ router.put('/:id/devis', async (req, res) => {
       if (insertRes.recordset.length > 0) {
         idDevisFinal = insertRes.recordset[0].id_devis;
         numeroDevisFinal = insertRes.recordset[0].numero_devis;
+      }
+    }
+
+    // Persistance des lignes d'articles si transmises
+    if (idDevisFinal && Array.isArray(articles)) {
+      await pool.request()
+        .input('id_devis', sql.Int, idDevisFinal)
+        .query('DELETE FROM LignesDevis WHERE id_devis = @id_devis');
+
+      for (let i = 0; i < articles.length; i++) {
+        const art = articles[i];
+        const codeArticle = String(art.code || art.code_article || '').trim();
+        const libelle = String(art.libelle || '').trim();
+        if (!codeArticle || !libelle) continue;
+
+        const unite = String(art.unite || '').trim() || null;
+        const diametre = String(art.diametre || '').trim() || null;
+        const quantite = Number(art.quantite) > 0 ? Number(art.quantite) : 1;
+        const prixUnitaire = Number(art.prix ?? art.prix_unitaire ?? 0) >= 0 ? Number(art.prix ?? art.prix_unitaire ?? 0) : 0;
+        const montantHt = Number(art.montantLigne ?? (quantite * prixUnitaire));
+        const typeTva = String(art.typeTva || art.type_tva || '').trim() || null;
+        const tauxTva = Number.isFinite(Number(art.tauxTva ?? art.taux_tva)) ? Number(art.tauxTva ?? art.taux_tva) : 19;
+
+        await pool.request()
+          .input('id_devis', sql.Int, idDevisFinal)
+          .input('code_article', sql.NVarChar(50), codeArticle)
+          .input('libelle', sql.NVarChar(150), libelle)
+          .input('unite', sql.NVarChar(20), unite)
+          .input('diametre', sql.NVarChar(50), diametre)
+          .input('quantite', sql.Decimal(10, 2), quantite)
+          .input('prix_unitaire', sql.Decimal(12, 2), prixUnitaire)
+          .input('montant_ht', sql.Decimal(12, 2), montantHt)
+          .input('type_tva', sql.NVarChar(20), typeTva)
+          .input('taux_tva', sql.Decimal(5, 2), tauxTva)
+          .input('ordre', sql.Int, i + 1)
+          .query(`INSERT INTO LignesDevis (id_devis, code_article, libelle, unite, diametre, quantite, prix_unitaire, montant_ht, type_tva, taux_tva, ordre)
+                  VALUES (@id_devis, @code_article, @libelle, @unite, @diametre, @quantite, @prix_unitaire, @montant_ht, @type_tva, @taux_tva, @ordre)`);
       }
     }
 

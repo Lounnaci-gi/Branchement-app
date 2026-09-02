@@ -97,7 +97,7 @@ export default function NouvelleDemande() {
         const response = await client.get(`/demandes/${id}`);
         const demande = response.data.demande;
         const natureTravaux = normaliserNatureTravaux(demande.type_autre || '') || 'Branchement d\'eau potable';
-        setDemandeVerrouillee(Boolean(demande.est_verrouillee));
+        setDemandeVerrouillee(demande.est_verrouillee === true || demande.est_verrouillee === 1 || demande.est_verrouillee === '1');
         setForm({
           est_personne_morale: Boolean(demande.est_personne_morale),
           raison_sociale: demande.raison_sociale || '',

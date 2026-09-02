@@ -186,7 +186,23 @@ export default function ListeDemandes() {
             {total} dossier{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''} · Gestion du pipeline et suivi
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              const dossier = demandesTriees[0];
+              if (!dossier) {
+                notifierErreur('Aucune demande n’est actuellement sélectionnée pour créer un devis.');
+                return;
+              }
+              navigate(`/demandes/${dossier.id_demande}/devis/nouveau`);
+            }}
+            disabled={demandesTriees.length === 0 || demandesTriees.some((d) => d.est_verrouillee)}
+            title="Créer un devis depuis la première demande visible"
+          >
+            <span>💳</span> Créer un devis
+          </button>
           <button
             type="button"
             className="btn btn-secondary"
@@ -477,7 +493,19 @@ export default function ListeDemandes() {
                   </span>
                 </td>
                 <td style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                  <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+                    {!d.est_verrouillee && (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                        onClick={() => navigate(`/demandes/${d.id_demande}/devis/nouveau`)}
+                        title="Créer un devis pour cette demande"
+                        aria-label={`Créer un devis pour la demande ${d.numero_demande}`}
+                      >
+                        <span>💳</span> Devis
+                      </button>
+                    )}
                     {!d.est_verrouillee && (
                       <Link
                         to={`/demandes/${d.id_demande}/modifier`}
