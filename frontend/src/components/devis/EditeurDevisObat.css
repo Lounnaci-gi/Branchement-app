@@ -1,0 +1,1819 @@
+/* ============================================================
+   Éditeur de Devis — Thème & Style Obat
+   ============================================================ */
+
+.obat-devis-wrapper {
+  min-height: calc(100vh - 80px);
+  background-color: #EEF2F6;
+  color: #2C3E50;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  margin: -24px;
+}
+
+:root[data-theme='dark'] .obat-devis-wrapper {
+  background-color: #0F172A;
+}
+
+.obat-devis-wrapper input,
+.obat-devis-wrapper select,
+.obat-devis-wrapper textarea {
+  color: #1F2937 !important;
+}
+
+/* ---------- 1. BARRE D'ACTION SUPÉRIEURE (TOPBAR) ---------- */
+.obat-topbar {
+  background: #FFFFFF;
+  height: 56px;
+  border-bottom: 1px solid #DCE3E8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme='dark'] .obat-topbar {
+  background: #1E293B;
+  border-color: #334155;
+}
+
+:root[data-theme='dark'] .obat-doc-title {
+  color: #F8FAFC;
+}
+
+:root[data-theme='dark'] .obat-btn-option,
+:root[data-theme='dark'] .obat-btn-annuler {
+  background: #334155;
+  border-color: #475569;
+  color: #F1F5F9;
+}
+
+:root[data-theme='dark'] .obat-btn-close {
+  color: #94A3B8;
+}
+
+.obat-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.obat-doc-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1F2937;
+  letter-spacing: -0.01em;
+}
+
+.obat-nav-tabs {
+  display: flex;
+  gap: 4px;
+  height: 56px;
+}
+
+.obat-nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748B;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  height: 100%;
+}
+
+.obat-nav-tab:hover {
+  color: #1991EB;
+}
+
+.obat-nav-tab.active {
+  color: #1991EB;
+  font-weight: 600;
+  border-bottom-color: #1991EB;
+}
+
+.obat-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.obat-btn-option {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: #4B5563;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-option:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+}
+
+.obat-btn-annuler {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: #4B5563;
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-annuler:hover {
+  background: #F9FAFB;
+  color: #1F2937;
+}
+
+.obat-btn-enregistrer {
+  background: #1991EB;
+  border: 1px solid #1991EB;
+  color: #FFFFFF;
+  padding: 6px 16px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(25, 145, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.obat-btn-enregistrer:hover {
+  background: #147ad4;
+  border-color: #147ad4;
+}
+
+.obat-btn-finaliser {
+  background: #27AE60;
+  border: 1px solid #27AE60;
+  color: #FFFFFF;
+  padding: 6px 16px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(39, 174, 96, 0.25);
+  transition: all 0.15s ease;
+}
+
+.obat-btn-finaliser:hover {
+  background: #219653;
+  border-color: #219653;
+}
+
+.obat-btn-close {
+  background: transparent;
+  border: none;
+  color: #6B7280;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.obat-btn-close:hover {
+  background: #F3F4F6;
+  color: #111827;
+}
+
+/* ---------- 2. ONGLET LATÉRAL BIBLIOTHÈQUES ---------- */
+.obat-floating-biblio-btn {
+  position: fixed;
+  left: 0;
+  top: 130px;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-left: none;
+  padding: 8px 14px;
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4B5563;
+  cursor: pointer;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.obat-floating-biblio-btn:hover {
+  background: #1991EB;
+  color: #FFFFFF;
+  border-color: #1991EB;
+}
+
+.obat-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 60;
+  animation: obatFadeIn 0.2s ease;
+}
+
+.obat-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 90vw;
+  background: #FFFFFF;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  animation: obatSlideRight 0.22s ease-out;
+}
+
+.obat-drawer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.obat-drawer-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1F2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obat-drawer-search {
+  padding: 12px 20px;
+  border-bottom: 1px solid #F3F4F6;
+  background: #F9FAFB;
+}
+
+.obat-drawer-search input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  outline: none;
+  background: #FFFFFF;
+}
+
+.obat-drawer-search input:focus {
+  border-color: #1991EB;
+  box-shadow: 0 0 0 3px rgba(25, 145, 235, 0.15);
+}
+
+.obat-familles-tags {
+  display: flex;
+  gap: 6px;
+  padding: 10px 20px;
+  overflow-x: auto;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FAFAFA;
+}
+
+.obat-famille-tag {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4B5563;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.obat-famille-tag.active {
+  background: #1991EB;
+  color: #FFFFFF;
+  border-color: #1991EB;
+}
+
+.obat-drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.obat-drawer-item {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.obat-drawer-item:hover {
+  border-color: #1991EB;
+  box-shadow: 0 2px 6px rgba(25, 145, 235, 0.08);
+}
+
+.obat-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.obat-item-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1F2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.obat-item-sub {
+  font-size: 11.5px;
+  color: #6B7280;
+  margin-top: 2px;
+}
+
+.obat-item-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.obat-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.obat-item-add-btn {
+  background: #EEF7FF;
+  border: 1px solid #BAE0FF;
+  color: #1991EB;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-item-add-btn:hover {
+  background: #1991EB;
+  color: #FFFFFF;
+  border-color: #1991EB;
+}
+
+/* ---------- 3. ZONE PRINCIPALE DE TRAVAIL ---------- */
+.obat-workspace {
+  flex: 1;
+  padding: 24px 20px 80px;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+/* ---------- 4. FEUILLE DE DEVIS (A4 BLANCHE) ---------- */
+.obat-sheet {
+  background: #FFFFFF;
+  width: 100%;
+  max-width: 980px;
+  min-height: 1050px;
+  padding: 36px 42px 48px;
+  border-radius: 4px;
+  border: 1px solid #D6DFE6;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* En-tête de la feuille */
+.obat-sheet-header {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 28px;
+  margin-bottom: 22px;
+}
+
+.obat-sheet-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.obat-sheet-header-left h1.obat-sheet-numero {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2C3E50;
+  letter-spacing: -0.01em;
+}
+
+.obat-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4B5563;
+}
+
+.obat-meta-row span.label {
+  color: #374151;
+}
+
+.obat-link-action {
+  color: #1991EB;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.obat-link-action:hover {
+  color: #1173bf;
+}
+
+/* Tooltip info mention obligatoire */
+.obat-tooltip-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.obat-info-bubble {
+  position: absolute;
+  top: -34px;
+  left: 0;
+  background: #1F2937;
+  color: #FFFFFF;
+  font-size: 11px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.obat-info-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 14px;
+  border-width: 4px;
+  border-style: solid;
+  border-color: #1F2937 transparent transparent transparent;
+}
+
+.obat-desc-toggle {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: #1991EB;
+  cursor: pointer;
+}
+
+.obat-desc-textarea {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 13px;
+  color: #374151;
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* En-tête côté droit (Client) */
+.obat-sheet-header-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.obat-client-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.obat-client-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.obat-client-line {
+  font-size: 13px;
+  color: #475569;
+}
+
+.obat-object-banner {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1E293B;
+  padding: 2px 0;
+}
+
+/* ---------- 5. SECTION CENTRALE / OBJET DU DEVIS ---------- */
+.obat-section-title-wrap {
+  text-align: center;
+  margin: 16px 0 14px;
+}
+
+.obat-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1F2937;
+  border: none;
+  background: transparent;
+  text-align: center;
+  padding: 4px 8px;
+  border-bottom: 1px dashed transparent;
+  width: 60%;
+  max-width: 500px;
+}
+
+.obat-section-title:hover,
+.obat-section-title:focus {
+  border-bottom-color: #1991EB;
+  outline: none;
+}
+
+/* ---------- 6. TABLEAU DE ARTICLES (STYLE OBAT BLEU VIF) ---------- */
+.obat-table-container {
+  width: 100%;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.obat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.obat-table thead tr {
+  background-color: #1991EB; /* Bleu vif Obat */
+  color: #FFFFFF;
+}
+
+.obat-table th {
+  padding: 8px 6px;
+  font-weight: 600;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.obat-table th:last-child {
+  border-right: none;
+}
+
+.obat-table th.center {
+  text-align: center;
+}
+
+.obat-table th.right {
+  text-align: right;
+}
+
+.obat-table td {
+  padding: 7px 6px;
+  border-bottom: 1px solid #E5E7EB;
+  border-right: 1px solid #F3F4F6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.obat-table td:last-child {
+  border-right: none;
+}
+
+.obat-table tbody tr:hover {
+  background-color: #F9FAFB;
+}
+
+.obat-table input[type="text"],
+.obat-table input[type="number"],
+.obat-table select {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 13px;
+  font-family: inherit;
+  color: inherit;
+  transition: all 0.15s ease;
+}
+
+.obat-table input:hover,
+.obat-table select:hover {
+  border-color: #D1D5DB;
+  background: #FFFFFF;
+}
+
+.obat-table input:focus,
+.obat-table select:focus {
+  border-color: #1991EB;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(25, 145, 235, 0.15);
+  outline: none;
+}
+
+.obat-col-num {
+  width: 38px;
+  text-align: center;
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.obat-col-desig {
+  min-width: 200px;
+}
+
+.obat-col-desig strong {
+  display: block;
+  font-size: 13px;
+  color: #1F2937;
+}
+
+.obat-col-desig small {
+  display: block;
+  font-size: 11px;
+  color: #6B7280;
+  margin-top: 1px;
+}
+
+.obat-col-qte {
+  width: 75px;
+  text-align: center;
+}
+
+.obat-col-unite {
+  width: 65px;
+  text-align: center;
+}
+
+.obat-col-pu {
+  width: 95px;
+  text-align: right;
+}
+
+.obat-col-marge {
+  width: 65px;
+  text-align: center;
+}
+
+.obat-col-tva {
+  width: 65px;
+  text-align: center;
+}
+
+.obat-col-total {
+  width: 105px;
+  text-align: right;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.obat-col-del {
+  width: 32px;
+  text-align: center;
+}
+
+.obat-btn-del {
+  background: none;
+  border: none;
+  color: #9CA3AF;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.obat-btn-del:hover {
+  color: #EF4444;
+  background: #FEE2E2;
+}
+
+.obat-table-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 13px;
+  background: #FAFAFA;
+}
+
+/* ---------- 7. BARRE D'AJOUT D'ÉLÉMENTS SOUS LE TABLEAU ---------- */
+.obat-add-elements-wrapper {
+  margin-bottom: 24px;
+}
+
+.obat-add-elements-prompt {
+  font-size: 12px;
+  color: #6B7280;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.obat-add-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.obat-add-group-left,
+.obat-add-group-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obat-btn-add-element {
+  background: #FFFFFF;
+  border: 1px solid #BAE0FF;
+  color: #1991EB;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-add-element:hover {
+  background: #1991EB;
+  color: #FFFFFF;
+  border-color: #1991EB;
+}
+
+.obat-btn-add-secondary {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: #4B5563;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-add-secondary:hover {
+  background: #F3F4F6;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+/* ---------- 8. BAS DU DEVIS (CONDITIONS & TOTAUX) ---------- */
+.obat-bottom-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 28px;
+  align-items: start;
+  margin-top: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #E5E7EB;
+}
+
+/* Colonne de gauche */
+.obat-bottom-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.obat-block-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.obat-block-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.obat-payment-methods {
+  font-size: 12.5px;
+  color: #4B5563;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.obat-payment-methods strong {
+  color: #1F2937;
+}
+
+.obat-payment-pill {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #4B5563;
+  cursor: pointer;
+}
+
+.obat-payment-pill.selected {
+  background: #EEF7FF;
+  border-color: #1991EB;
+  color: #1991EB;
+  font-weight: 600;
+}
+
+/* Conditions financières (Acompte en rouge/orange) */
+.obat-acompte-row {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #D32F2F; /* Rouge/corail Obat */
+}
+
+.obat-reste-row {
+  font-size: 12.5px;
+  color: #4B5563;
+}
+
+.obat-delete-free-text {
+  font-size: 12px;
+  color: #1991EB;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Encadré Bancaire */
+.obat-bank-card {
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  padding: 9px 12px;
+  background: #FAFAFA;
+  font-size: 12px;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+}
+
+.obat-bank-card div {
+  letter-spacing: 0.02em;
+}
+
+.obat-dechets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #4B5563;
+}
+
+/* Colonne de droite (Totaux & Net à payer) */
+.obat-bottom-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.obat-remise-link-row {
+  text-align: right;
+}
+
+.obat-summary-card {
+  background: #FAFAFA;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.obat-summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #374151;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.obat-summary-line:last-child {
+  border-bottom: none;
+}
+
+.obat-summary-line strong {
+  font-weight: 600;
+  color: #1F2937;
+}
+
+/* BANDEAU BLEU VIF NET À PAYER */
+.obat-net-payer-banner {
+  background-color: #1991EB; /* Bleu vif Obat */
+  color: #FFFFFF;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 14px;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.obat-net-payer-banner .amount {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* Notes de bas de page */
+.obat-footer-notes {
+  margin-top: 32px;
+  padding-top: 14px;
+  border-top: 1px dashed #D1D5DB;
+}
+
+.obat-footer-notes h4 {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4B5563;
+  margin: 0 0 6px;
+}
+
+.obat-footer-notes textarea {
+  width: 100%;
+  border: 1px solid #E5E7EB;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #4B5563;
+  resize: vertical;
+  background: #FAFAFA;
+}
+
+/* ---------- 9. BOUTON BAS GAUCHE VENTILATION ---------- */
+.obat-bottom-ventilation-btn {
+  position: fixed;
+  bottom: 0;
+  left: 20px;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-bottom: none;
+  padding: 4px 12px;
+  border-radius: 4px 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4B5563;
+  cursor: pointer;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
+  z-index: 30;
+}
+
+.obat-bottom-ventilation-btn:hover {
+  background: #1991EB;
+  color: #FFFFFF;
+}
+
+/* Modal / Dropdown Styles */
+.obat-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  min-width: 170px;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.obat-dropdown-item {
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #374151;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obat-dropdown-item:hover {
+  background: #F3F4F6;
+  color: #111827;
+}
+
+/* Modal finalisation & paiement */
+.obat-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  padding: 20px;
+}
+
+.obat-modal-card {
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 520px;
+  padding: 24px;
+}
+
+.obat-modal-card h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1F2937;
+}
+
+.obat-modal-card p {
+  color: #6B7280;
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+
+@keyframes obatFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes obatSlideRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* Print mode pour la prévisualisation */
+@media print {
+  .obat-topbar,
+  .obat-floating-biblio-btn,
+  .obat-bottom-ventilation-btn,
+  .obat-add-elements-wrapper,
+  .obat-btn-del,
+  .obat-drawer,
+  .obat-desc-toggle,
+  .no-print {
+    display: none !important;
+  }
+  .obat-devis-wrapper {
+    background: #FFFFFF !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .obat-workspace {
+    padding: 0 !important;
+  }
+  .obat-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+/* ============================================================
+   ENRICHISSEMENTS OBAT (Focus t=84s, Sections, Packs, Cadenas)
+   ============================================================ */
+
+/* Badge ADE */
+.obat-ade-badge {
+  background: #1991EB;
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-right: 8px;
+}
+
+.obat-ade-corp-header {
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.obat-corp-tag {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1991EB;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.obat-corp-sub {
+  font-size: 11px;
+  color: #64748B;
+}
+
+/* Statut des mentions d'exécution (t=84s) */
+.obat-mention-status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.obat-mention-status-pill.ok {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.obat-mention-status-pill.warn {
+  background: #FFFBEB;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+  animation: obatPulseWarn 2s infinite ease-in-out;
+}
+
+@keyframes obatPulseWarn {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.obat-req-star {
+  color: #DC2626;
+  font-weight: bold;
+}
+
+.obat-meta-mandatory {
+  background: #F8FAFC;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 3px solid #1991EB;
+}
+
+.obat-link-empty {
+  color: #D97706 !important;
+  font-style: italic;
+  text-decoration: underline dashed;
+}
+
+/* Onglets du tiroir Bibliothèque */
+.obat-drawer-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #F1F5F9;
+  padding: 4px;
+  border-radius: 6px;
+  margin: 12px 16px 8px;
+}
+
+.obat-drawer-tab {
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-drawer-tab.active {
+  background: #FFFFFF;
+  color: #1991EB;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Cartes Packs AEP */
+.obat-pack-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 14px;
+  margin: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.obat-pack-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #CBD5E1;
+}
+
+.obat-pack-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.obat-pack-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #1F2937;
+}
+
+.obat-pack-count {
+  font-size: 11px;
+  background: #EFF6FF;
+  color: #1991EB;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.obat-pack-desc {
+  font-size: 12px;
+  color: #64748B;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.obat-pack-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 10px;
+}
+
+.obat-pack-total {
+  font-size: 12px;
+  color: #4B5563;
+}
+
+.obat-btn-add-pack {
+  background: #1991EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.obat-btn-add-pack:hover {
+  background: #147ad4;
+}
+
+/* Sections Hiérarchiques */
+.obat-sections-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.obat-section-block {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease;
+}
+
+.obat-section-block.active-section {
+  border-color: #93C5FD;
+}
+
+.obat-section-bar {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.obat-section-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.obat-section-icon {
+  font-size: 16px;
+}
+
+.obat-section-title-input {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1E293B;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: 100%;
+  max-width: 500px;
+  transition: all 0.15s ease;
+}
+
+.obat-section-title-input:hover,
+.obat-section-title-input:focus {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  outline: none;
+}
+
+.obat-section-preview-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.obat-section-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.obat-section-subtotal-badge {
+  font-size: 12.5px;
+  color: #475569;
+  background: #EFF6FF;
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.obat-btn-del-section {
+  background: transparent;
+  border: 1px solid #FCA5A5;
+  color: #DC2626;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-del-section:hover {
+  background: #FEF2F2;
+}
+
+/* Actions d'ajout dans la section */
+.obat-section-add-actions {
+  background: #FAFAFA;
+  border-top: 1px dashed #E2E8F0;
+  padding: 8px 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.obat-btn-quick-add {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-quick-add:hover {
+  background: #F1F5F9;
+  color: #1E293B;
+  border-color: #94A3B8;
+}
+
+/* Tags de type */
+.obat-type-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.obat-type-tag.mo {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+.obat-type-tag.fourn {
+  background: #E0E7FF;
+  color: #4338CA;
+}
+
+.obat-type-tag.ouv {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.obat-tva-zero {
+  font-size: 11px;
+  color: #2563EB;
+  font-weight: 600;
+}
+
+/* Ouvrage et sous-éléments */
+.obat-tr-ouvrage {
+  background: #F8FAFC !important;
+}
+
+.obat-line-subdetail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.obat-btn-cfg-ouvrage {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-cfg-ouvrage:hover {
+  background: #DBEAFE;
+}
+
+.obat-preview-sous-elements {
+  margin-top: 4px;
+  padding-left: 12px;
+  border-left: 2px solid #CBD5E1;
+}
+
+.obat-se-preview-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #64748B;
+  padding: 1px 0;
+}
+
+/* Modale Avertissement non bloquante (t=84s) */
+.obat-warning-card {
+  max-width: 480px;
+  border-top: 4px solid #F59E0B;
+}
+
+.obat-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.obat-warning-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #92400E;
+}
+
+.obat-warn-icon {
+  font-size: 24px;
+}
+
+.obat-warning-text {
+  font-size: 13.5px;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.obat-warning-callout {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #78350F;
+  margin-bottom: 18px;
+}
+
+.obat-warning-callout p {
+  margin: 4px 0 0;
+}
+
+.obat-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.obat-btn-action-primary {
+  background: #1991EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.obat-btn-action-primary:hover {
+  background: #147ad4;
+}
+
+.obat-btn-action-secondary {
+  background: #F3F4F6;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  border-radius: 5px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-action-secondary:hover {
+  background: #E5E7EB;
+}
+
+/* Modale Config ouvrage avec cadenas */
+.obat-config-ouvrage-card {
+  max-width: 760px;
+  width: 90%;
+}
+
+.obat-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 10px;
+}
+
+.obat-tag-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #DCFCE7;
+  color: #15803D;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.obat-ouvrage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
+.obat-ouvrage-table th {
+  background: #F8FAFC;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #CBD5E1;
+  color: #475569;
+  font-weight: 600;
+}
+
+.obat-ouvrage-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.obat-padlock-btn {
+  background: transparent;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 3px 6px;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.obat-padlock-btn.locked {
+  background: #F1F5F9;
+}
+
+.obat-padlock-btn.unlocked {
+  background: #FEF3C7;
+  border-color: #F59E0B;
+}
+
+.obat-btn-add-subelement {
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  color: #1991EB;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 4px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-add-subelement:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+}
+
+.obat-ouvrage-summary-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #E2E8F0;
+  padding-top: 14px;
+  margin-top: 14px;
+}
+
+/* Gestion des déchets */
+.obat-dechets-card {
+  margin-top: 12px;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.obat-dechets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.obat-dechets-body {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #15803D;
+  line-height: 1.4;
+}
+
+/* Encadré Bon pour accord */
+.obat-bon-pour-accord {
+  margin-top: 18px;
+  border: 1.5px dashed #94A3B8;
+  border-radius: 6px;
+  padding: 12px 16px;
+  background: #F8FAFC;
+}
+
+.obat-accord-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.obat-accord-text {
+  font-size: 11px;
+  color: #475569;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.obat-accord-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.obat-sign-box {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  padding: 10px;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.obat-sign-box span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.obat-sign-box small {
+  font-size: 10px;
+  color: #94A3B8;
+  font-style: italic;
+}
+
+.obat-mention-autoliquidation {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #2563EB;
+  font-style: italic;
+}
+
+/* Popover ventilation */
+.obat-ventilation-popover {
+  position: fixed;
+  bottom: 30px;
+  left: 20px;
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  padding: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 40;
+  min-width: 260px;
+  font-size: 12.5px;
+}
+
+.obat-ventilation-header {
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.obat-btn-close-sm {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6B7280;
+}

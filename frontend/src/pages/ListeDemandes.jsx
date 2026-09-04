@@ -179,17 +179,27 @@ export default function ListeDemandes() {
     <div className="page">
       <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Demandes' }]} />
 
-      <header className="page-header">
+      <header className="obat-page-header">
         <div>
-          <h1>Demandes de branchement</h1>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>
-            {total} dossier{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''} · Gestion du pipeline et suivi
+          <span className="obat-section-badge">ADE • DOSSIERS D'ABONNÉS</span>
+          <h1 className="obat-page-title">Demandes de branchement</h1>
+          <p className="obat-page-subtitle">
+            {total} dossier{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''} · Suivi des étapes, étude technique et devis
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="obat-page-actions">
           <button
             type="button"
-            className="btn btn-primary"
+            className="obat-btn obat-btn-sec"
+            onClick={exporterCSV}
+            disabled={demandesTriees.length === 0}
+            title="Exporter la liste au format CSV / Excel"
+          >
+            <span>📥</span> Exporter CSV
+          </button>
+          <button
+            type="button"
+            className="obat-btn obat-btn-sec"
             onClick={() => {
               const dossier = demandesTriees[0];
               if (!dossier) {
@@ -201,100 +211,90 @@ export default function ListeDemandes() {
             disabled={demandesTriees.length === 0 || demandesTriees.some((d) => d.est_verrouillee)}
             title="Créer un devis depuis la première demande visible"
           >
-            <span>💳</span> Créer un devis
+            <span>📄</span> Créer un devis
           </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={exporterCSV}
-            disabled={demandesTriees.length === 0}
-            title="Exporter la liste au format CSV / Excel"
-          >
-            <span>📥</span> Exporter CSV
-          </button>
-          <Link to="/demandes/nouvelle" className="btn btn-primary">
-            <span>➕</span> Nouvelle demande
+          <Link to="/demandes/nouvelle" className="obat-btn obat-btn-pri">
+            <span>✨</span> Nouvelle demande
           </Link>
         </div>
       </header>
 
-      {/* Onglets interactifs rapides */}
-      <div className="onglets-statuts" role="tablist">
-        {ONGLETS_RAPIDES.map((onglet) => {
-          const estActif = statutFiltre === onglet.statut;
-          return (
-            <button
-              key={onglet.id}
-              type="button"
-              role="tab"
-              aria-selected={estActif}
-              className={`onglet-statut-btn ${estActif ? 'actif' : ''}`}
-              onClick={() => {
-                setStatutFiltre(onglet.statut);
-                setSearchParams(onglet.statut ? { statut: onglet.statut } : {});
-              }}
-            >
-              <span>{onglet.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Barre de filtre et recherche intelligente Obat */}
+      <div className="obat-filter-bar">
+        <div className="obat-filter-row">
+          <div className="obat-search-box">
+            <span className="obat-search-box-icon">🔍</span>
+            <input
+              placeholder="Recherche instantanée par N°, nom de client, commune ou téléphone..."
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+            />
+            {recherche && (
+              <button
+                type="button"
+                onClick={() => setRecherche('')}
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-muted)',
+                  fontSize: 14
+                }}
+                title="Effacer la recherche"
+                aria-label="Effacer la recherche"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-      {/* Barre de filtre et recherche intelligente */}
-      <div className="card filtres-demandes" style={{ padding: 14, display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <input
-            placeholder="Recherche instantanée par N°, nom de client, commune ou téléphone..."
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-            style={{ width: '100%', padding: '10px 36px 10px 38px', borderRadius: 8 }}
-          />
-          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.6, pointerEvents: 'none' }}>
-            🔍
-          </span>
-          {recherche && (
-            <button
-              type="button"
-              onClick={() => setRecherche('')}
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--color-text-muted)',
-                fontSize: 14
-              }}
-              title="Effacer la recherche"
-              aria-label="Effacer la recherche"
-            >
-              ✕
-            </button>
-          )}
+          <select
+            className="obat-filter-select"
+            value={statutFiltre}
+            onChange={(e) => {
+              setStatutFiltre(e.target.value);
+              setSearchParams(e.target.value ? { statut: e.target.value } : {});
+            }}
+          >
+            <option value="">Tous les statuts détaillés</option>
+            {ETAPES_PIPELINE.map((e) => (
+              <option key={e.code} value={e.code}>{e.libelle}</option>
+            ))}
+            {Object.entries(STATUTS_TERMINAUX).map(([code, v]) => (
+              <option key={code} value={code}>{v.libelle}</option>
+            ))}
+          </select>
         </div>
 
-        <select
-          value={statutFiltre}
-          onChange={(e) => {
-            setStatutFiltre(e.target.value);
-            setSearchParams(e.target.value ? { statut: e.target.value } : {});
-          }}
-          style={{ padding: '10px 14px', borderRadius: 8, minWidth: 200 }}
-        >
-          <option value="">Tous les statuts détaillés</option>
-          {ETAPES_PIPELINE.map((e) => (
-            <option key={e.code} value={e.code}>{e.libelle}</option>
-          ))}
-          {Object.entries(STATUTS_TERMINAUX).map(([code, v]) => (
-            <option key={code} value={code}>{v.libelle}</option>
-          ))}
-        </select>
+        {/* Pilules de statuts rapides style Obat */}
+        <div className="obat-pill-tabs" role="tablist">
+          {ONGLETS_RAPIDES.map((onglet) => {
+            const estActif = statutFiltre === onglet.statut;
+            return (
+              <button
+                key={onglet.id}
+                type="button"
+                role="tab"
+                aria-selected={estActif}
+                className={`obat-pill-tab ${estActif ? 'active' : ''}`}
+                onClick={() => {
+                  setStatutFiltre(onglet.statut);
+                  setSearchParams(onglet.statut ? { statut: onglet.statut } : {});
+                }}
+              >
+                <span>{onglet.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Tableau des demandes avec tri interactif */}
-      <div className="card tableau-responsive" style={{ overflow: 'hidden' }}>
+      {/* Tableau des demandes dans une carte Obat */}
+      <div className="obat-section-card tableau-responsive">
         <table className="tableau">
           <thead>
             <tr>

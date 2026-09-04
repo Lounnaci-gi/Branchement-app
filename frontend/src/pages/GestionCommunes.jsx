@@ -48,51 +48,75 @@ export default function GestionCommunes() {
   return (
     <div className="page">
       <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Gestion des communes' }]} />
-      <header className="page-header">
+      <header className="obat-page-header">
         <div>
-          <h1>Gestion des communes</h1>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>Référentiel des agences et communes rattachées</p>
+          <span className="obat-section-badge">ADE • RÉFÉRENTIEL TERRITORIAL</span>
+          <h1 className="obat-page-title">Gestion des communes</h1>
+          <p className="obat-page-subtitle">Référentiel des agences et communes rattachées pour le déploiement des branchements</p>
         </div>
       </header>
 
-      <form onSubmit={ajouter} className="card" style={{ padding: 24, marginBottom: 20, maxWidth: 760 }}>
-        <h3 style={{ marginBottom: 16 }}>Ajouter une commune</h3>
-        <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-3">
-          <div className="champ">
-            <label htmlFor="nom-commune">Nom de la commune *</label>
-            <input id="nom-commune" required value={form.nom_commune} onChange={(e) => modifier('nom_commune', e.target.value)} />
-          </div>
-          <div className="champ">
-            <label htmlFor="wilaya">Wilaya *</label>
-            <input id="wilaya" required value={form.wilaya} onChange={(e) => modifier('wilaya', e.target.value)} />
-          </div>
-          <div className="champ">
-            <label htmlFor="agence">Agence *</label>
-            <select id="agence" required value={form.id_agence} onChange={(e) => modifier('id_agence', e.target.value)}>
-              <option value="">Sélectionner...</option>
-              {agences.map((agence) => (
-                <option key={agence.id_agence} value={agence.id_agence}>{agence.nom_agence}</option>
-              ))}
-            </select>
+      <div className="obat-section-card" style={{ maxWidth: 860 }}>
+        <div className="obat-section-card-header">
+          <div className="obat-section-card-title">
+            <span>➕</span> Ajouter une nouvelle commune
           </div>
         </div>
-        <button type="submit" className="btn btn-primary mt-2" disabled={envoi}>
-          {envoi ? 'Ajout...' : 'Ajouter la commune'}
-        </button>
-      </form>
-
-      <section className="card" style={{ padding: 24 }}>
-        <h3 style={{ marginBottom: 16 }}>Communes enregistrées ({communes.length})</h3>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {communes.map((commune) => (
-            <div key={commune.id_commune} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
-              <strong>{commune.nom_commune}</strong>
-              <span>{commune.wilaya}</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>{commune.nom_agence}</span>
+        <div className="obat-section-card-body">
+          <form onSubmit={ajouter} noValidate>
+            <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-3">
+              <div className="champ">
+                <label htmlFor="nom-commune">Nom de la commune *</label>
+                <input id="nom-commune" required value={form.nom_commune} onChange={(e) => modifier('nom_commune', e.target.value)} placeholder="Ex: Tizi Ouzou" />
+              </div>
+              <div className="champ">
+                <label htmlFor="wilaya">Wilaya *</label>
+                <input id="wilaya" required value={form.wilaya} onChange={(e) => modifier('wilaya', e.target.value)} placeholder="Ex: Tizi Ouzou" />
+              </div>
+              <div className="champ">
+                <label htmlFor="agence">Agence de rattachement *</label>
+                <select id="agence" required value={form.id_agence} onChange={(e) => modifier('id_agence', e.target.value)}>
+                  <option value="">Sélectionner...</option>
+                  {agences.map((agence) => (
+                    <option key={agence.id_agence} value={agence.id_agence}>{agence.nom_agence}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          ))}
+            <button type="submit" className="obat-btn obat-btn-pri" style={{ marginTop: 12 }} disabled={envoi}>
+              {envoi ? 'Enregistrement...' : '✓ Ajouter la commune'}
+            </button>
+          </form>
         </div>
-      </section>
+      </div>
+
+      <div className="obat-section-card" style={{ maxWidth: 860 }}>
+        <div className="obat-section-card-header">
+          <div className="obat-section-card-title">
+            <span>📍</span> Communes enregistrées ({communes.length})
+          </div>
+        </div>
+        <div className="tableau-responsive">
+          <table className="tableau">
+            <thead>
+              <tr>
+                <th>Commune</th>
+                <th>Wilaya</th>
+                <th>Agence rattachée</th>
+              </tr>
+            </thead>
+            <tbody>
+              {communes.map((commune) => (
+                <tr key={commune.id_commune}>
+                  <td><strong>{commune.nom_commune}</strong></td>
+                  <td>{commune.wilaya}</td>
+                  <td style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{commune.nom_agence}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

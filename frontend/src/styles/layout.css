@@ -1,6 +1,44 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+}
+
+.app-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.app-topbar {
+  height: 68px;
+  padding: 0 40px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.app-topbar-context { display: grid; gap: 1px; }
+.app-topbar-context strong { color: var(--color-primary-dark); font-size: 14px; }
+.app-topbar-context span { color: var(--color-text-muted); font-size: 12px; }
+.app-topbar-actions { display: flex; align-items: center; gap: 10px; }
+.app-topbar-search {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 12px;
+}
+
 .page {
-  padding: 36px 44px;
-  max-width: 1200px;
+  padding: 30px 40px 48px;
+  max-width: 1440px;
   width: 100%;
 }
 
@@ -8,11 +46,11 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 .page-header h1 {
-  font-size: clamp(24px, 3vw, 32px);
-  letter-spacing: -0.02em;
+  font-size: clamp(24px, 3vw, 30px);
+  letter-spacing: -0.035em;
 }
 .page-header p {
   font-size: 13px;
@@ -27,7 +65,7 @@
 }
 
 .kpi {
-  padding: 20px;
+  padding: 18px 20px;
   position: relative;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -37,29 +75,9 @@
   box-shadow: var(--shadow-elevated);
 }
 
-.kpi::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: var(--color-primary);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  box-shadow: 0 1px 8px var(--color-glow);
-}
-
-.kpi:nth-child(2)::before {
-  background: var(--color-success);
-  box-shadow: 0 1px 8px rgba(74, 222, 128, 0.3);
-}
-
-.kpi:nth-child(4)::before {
-  background: var(--color-accent);
-  box-shadow: 0 1px 8px rgba(251, 146, 60, 0.3);
-}
-
 .kpi-valeur {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--color-primary-dark);
   letter-spacing: -0.02em;
@@ -386,13 +404,13 @@
 }
 .tableau thead th {
   text-align: left;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: var(--color-surface-sunken);
   color: var(--color-text-muted);
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -593,13 +611,19 @@
 
 @media (max-width: 900px) {
   .grille-kpi { grid-template-columns: repeat(2, 1fr); }
-  .page { padding: 20px; }
+  .app-topbar { padding: 0 20px; }
+  .page { padding: 22px 20px 36px; }
   .grille-detail { grid-template-columns: 1fr; }
   .grille-formulaire { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
-  .page { padding: 20px 14px; }
+  .app-shell { display: block; }
+  .app-topbar { height: auto; min-height: 60px; padding: 10px 14px; }
+  .app-topbar-context { display: none; }
+  .app-topbar-actions { width: 100%; justify-content: space-between; }
+  .app-topbar-search { flex: 1; text-align: left; }
+  .page { padding: 20px 14px 32px; }
   .page-header { flex-direction: column; gap: 16px; }
   .page-header .btn { width: 100%; justify-content: center; }
   .page-actions { width: 100%; }
@@ -614,3 +638,471 @@
   .pipeline-nav .btn-lien { flex: 1; text-align: center; padding: 8px 6px; }
   .grille-info { grid-template-columns: 1fr; }
 }
+
+/* =============================================================
+   COMPOSANTS GLOBAUX STYLE OBAT
+   Applicables partout dans le projet
+   ============================================================= */
+
+/* --- Page Header Obat --- */
+.obat-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.obat-page-title {
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  margin: 4px 0 3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.obat-page-subtitle {
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.obat-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- Badge de section (contexte: ADE, TECHNIQUE, etc.) --- */
+.obat-section-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  margin-bottom: 6px;
+}
+
+/* --- Cartes avec en-tête Obat --- */
+.obat-section-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.obat-section-card-header {
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.obat-section-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obat-section-card-body {
+  padding: 20px;
+}
+
+/* --- Stat cards Obat (KPIs globaux) --- */
+.obat-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.obat-kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: default;
+}
+
+.obat-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated);
+  border-color: var(--color-primary);
+}
+
+.obat-kpi-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.obat-kpi-icon.blue  { background: #EFF6FF; color: #1991EB; }
+.obat-kpi-icon.green { background: #ECFDF5; color: #10B981; }
+.obat-kpi-icon.amber { background: #FFFBEB; color: #F59E0B; }
+.obat-kpi-icon.red   { background: #FEF2F2; color: #EF4444; }
+.obat-kpi-icon.purple{ background: #F5F3FF; color: #8B5CF6; }
+.obat-kpi-icon.cyan  { background: #F0F9FF; color: #0EA5E9; }
+
+:root[data-theme='dark'] .obat-kpi-icon.blue   { background: rgba(59,170,232,0.14); color: #3BAAE8; }
+:root[data-theme='dark'] .obat-kpi-icon.green  { background: rgba(52,211,153,0.14); color: #34D399; }
+:root[data-theme='dark'] .obat-kpi-icon.amber  { background: rgba(251,176,66,0.14); color: #FBB042; }
+:root[data-theme='dark'] .obat-kpi-icon.red    { background: rgba(251,113,133,0.14); color: #FB7185; }
+:root[data-theme='dark'] .obat-kpi-icon.purple { background: rgba(167,139,250,0.14); color: #A78BFA; }
+:root[data-theme='dark'] .obat-kpi-icon.cyan   { background: rgba(56,189,248,0.14); color: #38BDF8; }
+
+.obat-kpi-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  line-height: 1.15;
+}
+
+.obat-kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* --- Filtres et recherche globaux --- */
+.obat-filter-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.obat-filter-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.obat-search-box {
+  flex: 1;
+  min-width: 240px;
+  position: relative;
+}
+
+.obat-search-box-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.obat-search-box input {
+  width: 100%;
+  padding: 8px 10px 8px 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: all 0.15s ease;
+}
+
+.obat-search-box input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-glow);
+}
+
+.obat-filter-select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.obat-filter-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-glow);
+}
+
+/* --- Pill-tabs (filtres par statut/famille) --- */
+.obat-pill-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.obat-pill-tab {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.obat-pill-tab:hover {
+  background: var(--color-primary-selection);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.obat-pill-tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.obat-pill-count {
+  font-size: 10.5px;
+  background: rgba(0,0,0,0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.obat-pill-tab.active .obat-pill-count {
+  background: rgba(255,255,255,0.25);
+  color: #FFFFFF;
+}
+
+/* --- Onglets principaux (tabs) --- */
+.obat-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 20px;
+}
+
+.obat-tab {
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.obat-tab:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-selection);
+}
+
+.obat-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* --- Badges de statut Obat (remplacement des .badge) --- */
+.obat-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.obat-status-badge.pending  { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+.obat-status-badge.active   { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+.obat-status-badge.danger   { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+.obat-status-badge.info     { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.obat-status-badge.neutral  { background: var(--color-surface-sunken); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+
+:root[data-theme='dark'] .obat-status-badge.pending { background: rgba(251,176,66,0.12); color: #FBB042; border-color: rgba(251,176,66,0.25); }
+:root[data-theme='dark'] .obat-status-badge.active  { background: rgba(52,211,153,0.12); color: #34D399; border-color: rgba(52,211,153,0.25); }
+:root[data-theme='dark'] .obat-status-badge.danger  { background: rgba(251,113,133,0.12); color: #FB7185; border-color: rgba(251,113,133,0.25); }
+:root[data-theme='dark'] .obat-status-badge.info    { background: rgba(59,170,232,0.14); color: #3BAAE8; border-color: rgba(59,170,232,0.25); }
+
+/* --- Boutons Obat primaires / secondaires (alias globaux) --- */
+.obat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.obat-btn:active { transform: translateY(1px); }
+.obat-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.obat-btn-pri {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 4px var(--color-glow);
+}
+
+.obat-btn-pri:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--color-glow);
+}
+
+.obat-btn-sec {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.obat-btn-sec:hover {
+  background: var(--color-primary-selection);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.obat-btn-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: rgba(239,68,68,0.25);
+}
+
+.obat-btn-danger:hover {
+  background: var(--color-danger);
+  color: #FFFFFF;
+}
+
+/* --- Modal overlay Obat global --- */
+.obat-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+  animation: obatFadeIn 0.15s ease;
+}
+
+.obat-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  width: 90%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: obatScaleIn 0.15s ease;
+}
+
+.obat-modal-head {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.obat-modal-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+}
+
+.obat-modal-body {
+  padding: 24px;
+}
+
+.obat-modal-foot {
+  padding: 14px 24px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@keyframes obatFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes obatScaleIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* --- Vide / Empty state Obat --- */
+.obat-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--color-text-muted);
+}
+
+.obat-empty-icon  { font-size: 36px; margin-bottom: 12px; }
+.obat-empty-title { font-size: 15px; font-weight: 700; color: var(--color-primary-dark); margin: 0 0 6px; }
+.obat-empty-text  { font-size: 13px; margin: 0 auto 16px; max-width: 360px; }
+
+/* --- Dark mode pour inputs (global) --- */
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea {
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] .obat-filter-select,
+:root[data-theme='dark'] .obat-search-box input {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+

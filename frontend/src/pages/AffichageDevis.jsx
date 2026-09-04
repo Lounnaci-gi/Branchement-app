@@ -104,6 +104,7 @@ export default function AffichageDevis() {
                   <td style={{ textAlign: 'left' }}>
                     <strong>{art.libelle}</strong>
                     {art.code ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{art.code}</small> : null}
+                    {(art.matiere || art.couleur) ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
                   </td>
                   {aUnDiametre && <td style={{ textAlign: 'center' }}>{art.diametre || '—'}</td>}
                   <td style={{ textAlign: 'center' }}>{art.unite || 'U'}</td>

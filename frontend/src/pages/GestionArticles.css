@@ -1,0 +1,569 @@
+/* ============================================================
+   Gestion des Articles & Référentiel — Thème & Design Obat
+   ============================================================ */
+
+.obat-articles-wrapper {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1F2937;
+}
+
+/* ---------- 1. EN-TÊTE DE PAGE ---------- */
+.obat-articles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.obat-articles-title-block h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 6px 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.obat-articles-subtitle {
+  color: #64748B;
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.obat-articles-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.obat-btn-primary {
+  background: #1991EB;
+  color: #FFFFFF;
+  border: 1px solid #1991EB;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(25, 145, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.obat-btn-primary:hover {
+  background: #147ad4;
+  border-color: #147ad4;
+  transform: translateY(-1px);
+}
+
+.obat-btn-secondary {
+  background: #FFFFFF;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+/* ---------- 2. CARTES STATISTIQUES ---------- */
+.obat-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.obat-stat-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.obat-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.obat-stat-icon.blue { background: #EFF6FF; color: #1991EB; }
+.obat-stat-icon.green { background: #ECFDF5; color: #10B981; }
+.obat-stat-icon.amber { background: #FFFBEB; color: #F59E0B; }
+.obat-stat-icon.purple { background: #F5F3FF; color: #8B5CF6; }
+
+.obat-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.obat-stat-lbl {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+/* ---------- 3. BARRE DE RECHERCHE ET FILTRES (STYLE OBAT) ---------- */
+.obat-filter-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.obat-search-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.obat-search-input-wrap {
+  flex: 1;
+  position: relative;
+  min-width: 280px;
+}
+
+.obat-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94A3B8;
+  font-size: 14px;
+}
+
+.obat-search-input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: #1F2937;
+  transition: all 0.15s ease;
+}
+
+.obat-search-input:focus {
+  outline: none;
+  border-color: #1991EB;
+  box-shadow: 0 0 0 3px rgba(25, 145, 235, 0.15);
+}
+
+.obat-mode-select {
+  padding: 8px 12px;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #FFFFFF;
+  color: #374151;
+}
+
+/* Familles tags pills */
+.obat-tags-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.obat-tag-pill {
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.obat-tag-pill:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1991EB;
+}
+
+.obat-tag-pill.active {
+  background: #1991EB;
+  border-color: #1991EB;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.obat-tag-count {
+  font-size: 10.5px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.obat-tag-pill.active .obat-tag-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
+}
+
+/* ---------- 4. ONGLETS CATALOGUE VS FAMILLES ---------- */
+.obat-main-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #E2E8F0;
+  margin-bottom: 20px;
+}
+
+.obat-main-tab {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748B;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obat-main-tab:hover {
+  color: #1991EB;
+}
+
+.obat-main-tab.active {
+  color: #1991EB;
+  border-bottom-color: #1991EB;
+}
+
+/* ---------- 5. TABLEAU D'ARTICLES OBAT ---------- */
+.obat-card-block {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+}
+
+.obat-card-header {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.obat-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obat-articles-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.obat-articles-table th {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 10px 16px;
+  font-weight: 600;
+  color: #475569;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.obat-articles-table th.center { text-align: center; }
+.obat-articles-table th.right { text-align: right; }
+
+.obat-articles-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.obat-articles-table tr:hover td {
+  background: #F8FAFC;
+}
+
+.obat-code-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1E293B;
+  background: #F1F5F9;
+  padding: 3px 7px;
+  border-radius: 4px;
+  border: 1px solid #E2E8F0;
+}
+
+.obat-article-desc-cell strong {
+  color: #0F172A;
+  display: block;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
+
+.obat-article-submeta {
+  font-size: 11.5px;
+  color: #64748B;
+  display: flex;
+  gap: 8px;
+}
+
+.obat-unite-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #EFF6FF;
+  color: #1991EB;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #DBEAFE;
+}
+
+.obat-type-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.obat-type-badge.fourn-pose {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.obat-type-badge.prestation {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.obat-price-cell {
+  font-weight: 600;
+  color: #0F172A;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.obat-price-total {
+  font-weight: 700;
+  color: #1991EB;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.obat-btn-action-sm {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.obat-btn-action-sm:hover {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #1D4ED8;
+}
+
+/* ---------- 6. MODALES DE GESTION (ARTICLE / FAMILLE / TARIF) ---------- */
+.obat-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: obatFadeIn 0.15s ease;
+}
+
+.obat-modal-card {
+  background: #FFFFFF;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: obatScaleUp 0.15s ease;
+}
+
+@keyframes obatScaleUp {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.obat-modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.obat-modal-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.obat-modal-body {
+  padding: 24px;
+}
+
+.obat-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.obat-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.obat-form-group label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.obat-form-group input,
+.obat-form-group select,
+.obat-form-group textarea {
+  padding: 8px 12px;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: #1F2937;
+  transition: all 0.15s ease;
+}
+
+.obat-form-group input:focus,
+.obat-form-group select:focus,
+.obat-form-group textarea:focus {
+  outline: none;
+  border-color: #1991EB;
+  box-shadow: 0 0 0 3px rgba(25, 145, 235, 0.15);
+}
+
+/* Encadré calcul en direct du prix (Signature Obat) */
+.obat-live-price-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.obat-live-price-header {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748B;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.obat-live-price-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #475569;
+  padding: 3px 0;
+}
+
+.obat-live-price-row strong {
+  color: #0F172A;
+  font-family: ui-monospace, monospace;
+}
+
+.obat-live-price-total-banner {
+  background: #1991EB;
+  color: #FFFFFF;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+}
+
+.obat-live-price-total-banner .amount {
+  font-size: 17px;
+  font-family: ui-monospace, monospace;
+}
+
+.obat-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #F8FAFC;
+}
+
+/* Erreurs de champ */
+.obat-field-error {
+  color: #DC2626;
+  font-size: 12px;
+  margin-top: 3px;
+}

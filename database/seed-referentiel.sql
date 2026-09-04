@@ -40,40 +40,40 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM ArticlesDevis)
 BEGIN
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, prix_unitaire)
-        SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.prix_unitaire
+        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
+        SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
         FROM (VALUES
-            (N'RACCORDEMENTS', N'RAC-110', N'Raccord 110 mm', N'u', CAST(25000 AS DECIMAL(12,2))),
-            (N'RACCORDEMENTS', N'RAC-160', N'Raccord 160 mm', N'u', CAST(32000 AS DECIMAL(12,2))),
-            (N'RACCORDEMENTS', N'VAN-050', N'Vanne 50 mm', N'u', CAST(18000 AS DECIMAL(12,2))),
-            (N'RACCORDEMENTS', N'VAN-100', N'Vanne 100 mm', N'u', CAST(26000 AS DECIMAL(12,2))),
-            (N'MATERIEL', N'MAT-C', N'Coffret de branchement', N'u', CAST(14500 AS DECIMAL(12,2))),
-            (N'MATERIEL', N'MAT-P', N'Pieds / supports', N'u', CAST(7000 AS DECIMAL(12,2))),
-            (N'MATERIEL', N'MAT-S', N'Système de sécurité', N'u', CAST(12000 AS DECIMAL(12,2))),
-            (N'TRAVAUX', N'TR-FO', N'Fouille / terrassement', N'ML', CAST(5500 AS DECIMAL(12,2))),
-            (N'TRAVAUX', N'TR-RE', N'Réseau et branchement', N'ML', CAST(4200 AS DECIMAL(12,2))),
-            (N'TRAVAUX', N'TR-PO', N'Pose / raccordement', N'u', CAST(18000 AS DECIMAL(12,2)))
-        ) a(code_famille, code_article, libelle, unite, prix_unitaire)
+            (N'RACCORDEMENTS', N'RAC-110', N'Raccord 110 mm', N'U', N'FOURNITURE_POSE', CAST(25000 AS DECIMAL(12,2)), CAST(25000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'RACCORDEMENTS', N'RAC-160', N'Raccord 160 mm', N'U', N'FOURNITURE_POSE', CAST(32000 AS DECIMAL(12,2)), CAST(32000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'RACCORDEMENTS', N'VAN-050', N'Vanne 50 mm', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'RACCORDEMENTS', N'VAN-100', N'Vanne 100 mm', N'U', N'FOURNITURE_POSE', CAST(26000 AS DECIMAL(12,2)), CAST(26000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'MATERIEL', N'MAT-C', N'Coffret de branchement', N'U', N'FOURNITURE_POSE', CAST(14500 AS DECIMAL(12,2)), CAST(14500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'MATERIEL', N'MAT-P', N'Pieds / supports', N'U', N'FOURNITURE_POSE', CAST(7000 AS DECIMAL(12,2)), CAST(7000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'MATERIEL', N'MAT-S', N'Système de sécurité', N'U', N'FOURNITURE_POSE', CAST(12000 AS DECIMAL(12,2)), CAST(12000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+            (N'TRAVAUX', N'TR-FO', N'Fouille / terrassement', N'ML', N'FOURNITURE_POSE', CAST(5500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(5500 AS DECIMAL(12,2))),
+            (N'TRAVAUX', N'TR-RE', N'Réseau et branchement', N'ML', N'FOURNITURE_POSE', CAST(4200 AS DECIMAL(12,2)), CAST(2500 AS DECIMAL(12,2)), CAST(1700 AS DECIMAL(12,2))),
+            (N'TRAVAUX', N'TR-PO', N'Pose / raccordement', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)))
+        ) a(code_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
         INNER JOIN FamillesArticles f ON f.code_famille = a.code_famille;
 END
 GO
 
     IF NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE code_article = N'MAT-DA')
     BEGIN
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, prix_unitaire)
-        SELECT id_famille, N'MAT-DA', N'Dalle de protection', N'M²', 2800
+        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
+        SELECT id_famille, N'MAT-DA', N'Dalle de protection', N'M²', N'FOURNITURE_POSE', 2800, 1800, 1000
         FROM FamillesArticles WHERE code_famille = N'MATERIEL';
     END
     IF NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE code_article = N'MAT-SB')
     BEGIN
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, prix_unitaire)
-        SELECT id_famille, N'MAT-SB', N'Sable de remblai', N'M3', 3200
+        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
+        SELECT id_famille, N'MAT-SB', N'Sable de remblai', N'M3', N'FOURNITURE_POSE', 3200, 3200, 0
         FROM FamillesArticles WHERE code_famille = N'MATERIEL';
     END
     IF NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE code_article = N'MAT-CI')
     BEGIN
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, prix_unitaire)
-        SELECT id_famille, N'MAT-CI', N'Ciment', N'KG', 95
+        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
+        SELECT id_famille, N'MAT-CI', N'Ciment', N'KG', N'FOURNITURE_POSE', 95, 95, 0
         FROM FamillesArticles WHERE code_famille = N'MATERIEL';
     END
     GO

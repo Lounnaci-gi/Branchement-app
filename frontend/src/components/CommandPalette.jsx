@@ -17,6 +17,7 @@ export default function CommandPalette({ isOpen, onClose }) {
     { title: 'Nouvelle demande', path: '/demandes/nouvelle', icon: '➕', description: 'Enregistrer une demande de branchement' },
     { title: 'Liste des demandes', path: '/demandes', icon: '📋', description: 'Explorer et filtrer toutes les demandes' },
     { title: 'Gestion des communes', path: '/referentiels/communes', icon: '⌖', description: 'Référentiel des agences et communes' },
+    { title: 'Articles de devis', path: '/referentiels/articles', icon: '▤', description: 'Créer et consulter les articles de chiffrage' },
     { title: 'Mon profil', path: '/profil', icon: '⚙', description: 'Modifier mot de passe et informations' }
   ];
 

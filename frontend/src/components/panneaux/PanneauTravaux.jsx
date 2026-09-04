@@ -155,35 +155,37 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
   const travauxTermines = Boolean(travaux?.date_fin || form.date_fin);
 
   return (
-    <div className="card" style={{ padding: 24 }}>
-      <div className="panneau-entete">
-        <h3>Exécution des travaux</h3>
+    <div className="obat-section-card">
+      <div className="obat-section-card-header">
+        <div className="obat-section-card-title">
+          <span>🛠️</span> Exécution des travaux & Pose compteur
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!ouvert && travaux && (
             <>
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="obat-btn obat-btn-sec"
                 onClick={() => handleImprimer(travaux || form)}
                 title="Imprimer l'ordre d'exécution"
               >
-                <span>🖨</span> Imprimer ordre d'exécution
+                <span>🖨</span> Ordre d'exécution
               </button>
               {travauxTermines && (
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="obat-btn obat-btn-sec"
                   onClick={() => handleImprimerContrat(travaux || form)}
                   title="Imprimer le contrat d'abonnement"
                 >
-                  <span>🖨</span> Contrat d'abonnement
+                  <span>🖨</span> Contrat
                 </button>
               )}
             </>
           )}
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             disabled={!devisPaye || demandeVerrouillee}
             onClick={ouvrirEdition}
             aria-expanded={ouvert}
@@ -196,10 +198,12 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
                   : undefined
             }
           >
-            {demandeVerrouillee ? 'Demande scellée' : travaux ? 'Modifier' : 'Renseigner'}
+            {demandeVerrouillee ? '🔒 Demande scellée' : travaux ? '✎ Modifier' : '➕ Renseigner'}
           </button>
         </div>
       </div>
+
+      <div className="obat-section-card-body">
 
       {!devisPaye && <p style={{ color: 'var(--color-text-muted)', marginTop: 12 }}>Le devis doit être payé avant de renseigner l’exécution des travaux.</p>}
       {!ouvert && travaux && (
@@ -289,9 +293,12 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             <label>Observations</label>
             <textarea rows={2} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
           </div>
-          <button className="btn btn-primary" disabled={envoi}>{envoi ? 'Enregistrement...' : 'Enregistrer'}</button>
+          <button className="obat-btn obat-btn-pri" disabled={envoi}>
+            {envoi ? 'Enregistrement...' : '✓ Enregistrer les travaux'}
+          </button>
         </form>
       )}
+      </div>
     </div>
   );
 }

@@ -18,7 +18,7 @@ router.get('/articles', async (req, res) => {
     const pool = await getPool();
     const result = await pool.request().query(`
                   SELECT f.code_famille AS code, f.libelle AS libelle_famille,
-                    a.code_article AS code_article, a.libelle, a.unite,
+                    a.code_article AS code_article, a.libelle, a.matiere, a.couleur, a.unite,
                     COALESCE(t.mode_prix, a.mode_prix) AS mode_prix,
                     COALESCE(t.prix_unitaire, a.prix_unitaire) AS prix,
                     COALESCE(t.prix_fourniture, a.prix_fourniture) AS prix_fourniture,
@@ -49,6 +49,8 @@ router.get('/articles', async (req, res) => {
       famille.articles.push({
         code: article.code_article,
         libelle: article.libelle,
+        matiere: article.matiere,
+        couleur: article.couleur,
         unite: article.unite,
         modePrix: article.mode_prix,
         prix: Number(article.prix),
@@ -64,6 +66,200 @@ router.get('/articles', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: 'Erreur lors du chargement du référentiel des articles.' });
+  }
+});
+
+router.get('/articles/familles', autoriserRoles('admin'), async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT id_famille, code_famille, libelle
+      FROM FamillesArticles
+      WHERE actif = 1
+      ORDER BY libelle
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors du chargement des familles d’articles.' });
+  }
+});
+
+router.post('/articles/familles', autoriserRoles('admin'), async (req, res) => {
+  const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
+
+  if (!texteValide(libelle, { maxLength: 100, obligatoire: true })) {
+    return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    try {
+      const creation = await new sql.Request(transaction)
+        .input('libelle', sql.NVarChar(100), libelle)
+        .query(`INSERT INTO FamillesArticles (code_famille, libelle)
+                OUTPUT INSERTED.id_famille
+                VALUES (CONCAT(N'__FAM_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle)`);
+      const familleId = creation.recordset[0].id_famille;
+      const result = await new sql.Request(transaction)
+        .input('id_famille', sql.Int, familleId)
+        .query(`UPDATE FamillesArticles
+                SET code_famille = CONCAT(N'FAM-', id_famille)
+                OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle
+                WHERE id_famille = @id_famille`);
+      await transaction.commit();
+      res.status(201).json(result.recordset[0]);
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({ erreur: 'Le code automatique de cette famille existe déjà.' });
+    }
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la création de la famille d’articles.' });
+  }
+});
+
+router.put('/articles/familles/:id_famille', autoriserRoles('admin'), async (req, res) => {
+  const familleId = Number(req.params.id_famille);
+  const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
+
+  if (!Number.isInteger(familleId) || familleId <= 0 || !texteValide(libelle, { maxLength: 100, obligatoire: true })) {
+    return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id_famille', sql.Int, familleId)
+      .input('libelle', sql.NVarChar(100), libelle)
+      .query(`UPDATE FamillesArticles
+              SET libelle = @libelle
+              OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle
+              WHERE id_famille = @id_famille AND actif = 1`);
+    if (!result.recordset[0]) return res.status(404).json({ erreur: 'Famille d’articles introuvable.' });
+    res.json(result.recordset[0]);
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({ erreur: 'Ce code de famille existe déjà.' });
+    }
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la modification de la famille d’articles.' });
+  }
+});
+
+router.post('/articles', autoriserRoles('admin'), async (req, res) => {
+  const {
+    id_famille,
+    libelle,
+    matiere,
+    couleur,
+    unite,
+    mode_prix,
+    prix_unitaire,
+    prix_fourniture,
+    prix_pose,
+    type_tva,
+    taux_tva,
+    avec_diametre
+  } = req.body;
+
+  const familleId = Number(id_famille);
+  const matiereArticle = typeof matiere === 'string' ? matiere.trim() : '';
+  const couleurArticle = typeof couleur === 'string' ? couleur.trim() : '';
+  const prix = Number(prix_unitaire);
+  const fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
+  const pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
+  const taux = Number(taux_tva);
+  const avecDiametre = avec_diametre === true || avec_diametre === 1 || avec_diametre === 'true';
+
+  if (
+    !Number.isInteger(familleId) || familleId <= 0 ||
+    !texteValide(libelle, { maxLength: 150, obligatoire: true }) ||
+    !texteValide(matiereArticle, { maxLength: 50 }) ||
+    !texteValide(couleurArticle, { maxLength: 50 }) ||
+    !['U', 'ML', 'M²', 'M3', 'KG'].includes(unite) ||
+    !['PRESTATION', 'FOURNITURE_POSE'].includes(mode_prix) ||
+    !['PRESTATION', 'TRAVAUX'].includes(type_tva) ||
+    taux_tva === null || taux_tva === undefined || String(taux_tva).trim() === '' ||
+    !Number.isFinite(taux) || taux < 0 || taux > 100
+  ) {
+    return res.status(400).json({ erreur: 'Les informations de l’article sont invalides.' });
+  }
+
+  if (mode_prix === 'PRESTATION' && (!Number.isFinite(prix) || prix < 0)) {
+    return res.status(400).json({ erreur: 'Le prix unitaire doit être un montant positif ou nul.' });
+  }
+  if (mode_prix === 'FOURNITURE_POSE' && (!Number.isFinite(fourniture) || fourniture < 0 || !Number.isFinite(pose) || pose < 0)) {
+    return res.status(400).json({ erreur: 'Les prix de fourniture et de pose sont obligatoires.' });
+  }
+
+  const prixFinal = mode_prix === 'FOURNITURE_POSE' ? fourniture + pose : prix;
+  const fournitureFinale = mode_prix === 'FOURNITURE_POSE' ? fourniture : null;
+  const poseFinale = mode_prix === 'FOURNITURE_POSE' ? pose : null;
+
+  try {
+    const pool = await getPool();
+    const famille = await pool.request()
+      .input('id_famille', sql.Int, familleId)
+      .query('SELECT id_famille FROM FamillesArticles WHERE id_famille = @id_famille AND actif = 1');
+    if (!famille.recordset[0]) return res.status(404).json({ erreur: 'Famille d’article introuvable.' });
+
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    try {
+      const creation = await new sql.Request(transaction)
+        .input('id_famille', sql.Int, familleId)
+        .input('libelle', sql.NVarChar(150), libelle.trim())
+        .input('matiere', sql.NVarChar(50), matiereArticle || null)
+        .input('couleur', sql.NVarChar(50), couleurArticle || null)
+        .input('unite', sql.NVarChar(20), unite)
+        .input('mode_prix', sql.NVarChar(20), mode_prix)
+        .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
+        .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
+        .input('prix_pose', sql.Decimal(12, 2), poseFinale)
+        .input('type_tva', sql.NVarChar(20), type_tva)
+        .input('taux_tva', sql.Decimal(5, 2), taux)
+        .input('avec_diametre', sql.Bit, avecDiametre)
+        .query(`INSERT INTO ArticlesDevis
+          (id_famille, code_article, libelle, matiere, couleur, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, avec_diametre)
+          OUTPUT INSERTED.id_article
+          VALUES (@id_famille, CONCAT(N'__ART_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @matiere, @couleur, @unite, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, @avec_diametre)`);
+
+      const article = await new sql.Request(transaction)
+        .input('id_article', sql.Int, creation.recordset[0].id_article)
+        .query(`UPDATE ArticlesDevis
+                SET code_article = CONCAT(N'ART-', RIGHT(REPLICATE(N'0', 8) + CONVERT(NVARCHAR(10), id_article), 8))
+                OUTPUT INSERTED.id_article, INSERTED.code_article, INSERTED.libelle
+                WHERE id_article = @id_article`);
+
+      await new sql.Request(transaction)
+        .input('id_article', sql.Int, article.recordset[0].id_article)
+        .input('mode_prix', sql.NVarChar(20), mode_prix)
+        .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
+        .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
+        .input('prix_pose', sql.Decimal(12, 2), poseFinale)
+        .input('type_tva', sql.NVarChar(20), type_tva)
+        .input('taux_tva', sql.Decimal(5, 2), taux)
+        .query(`INSERT INTO TarifsArticlesDevis
+          (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
+          VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, CONVERT(date, GETDATE()))`);
+      await transaction.commit();
+      res.status(201).json(article.recordset[0]);
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({ erreur: 'Le code automatique de cet article existe déjà.' });
+    }
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la création de l’article.' });
   }
 });
 
@@ -84,6 +280,10 @@ router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
     return res.status(400).json({ erreur: 'Les prix Fourniture et Pose sont obligatoires.' });
   }
 
+  const prixFinal = mode_prix === 'FOURNITURE_POSE' ? fourniture + pose : prix;
+  const fournitureFinale = mode_prix === 'FOURNITURE_POSE' ? fourniture : null;
+  const poseFinale = mode_prix === 'FOURNITURE_POSE' ? pose : null;
+
   try {
     const pool = await getPool();
     const article = await pool.request()
@@ -101,9 +301,9 @@ router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
       await new sql.Request(transaction)
         .input('id_article', sql.Int, article.recordset[0].id_article)
         .input('mode_prix', sql.NVarChar(20), mode_prix)
-        .input('prix_unitaire', sql.Decimal(12, 2), Number.isFinite(prix) ? prix : 0)
-        .input('prix_fourniture', sql.Decimal(12, 2), fourniture)
-        .input('prix_pose', sql.Decimal(12, 2), pose)
+        .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
+        .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
+        .input('prix_pose', sql.Decimal(12, 2), poseFinale)
         .input('type_tva', sql.NVarChar(20), type_tva)
         .input('taux_tva', sql.Decimal(5, 2), taux)
         .input('date_debut', sql.Date, debut)

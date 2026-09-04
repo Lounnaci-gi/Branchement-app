@@ -84,8 +84,10 @@ async function verifierEtMigrerBase(pool) {
           id_famille INT NOT NULL REFERENCES FamillesArticles(id_famille),
           code_article NVARCHAR(50) NOT NULL UNIQUE,
           libelle NVARCHAR(150) NOT NULL,
+          matiere NVARCHAR(50) NULL,
+          couleur NVARCHAR(50) NULL,
           unite NVARCHAR(20) NOT NULL,
-          mode_prix NVARCHAR(20) NOT NULL DEFAULT N'PRESTATION' CONSTRAINT CK_ArticlesDevis_ModePrix CHECK (mode_prix IN (N'PRESTATION', N'FOURNITURE_POSE')),
+          mode_prix NVARCHAR(20) NOT NULL DEFAULT N'FOURNITURE_POSE' CONSTRAINT CK_ArticlesDevis_ModePrix CHECK (mode_prix IN (N'PRESTATION', N'FOURNITURE_POSE')),
           prix_unitaire DECIMAL(12,2) NOT NULL CONSTRAINT CK_ArticlesDevis_Prix CHECK (prix_unitaire >= 0),
           prix_fourniture DECIMAL(12,2) NULL,
           prix_pose DECIMAL(12,2) NULL,
@@ -94,6 +96,10 @@ async function verifierEtMigrerBase(pool) {
           actif BIT NOT NULL DEFAULT 1
         );
       END;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'matiere')
+        ALTER TABLE ArticlesDevis ADD matiere NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'couleur')
+        ALTER TABLE ArticlesDevis ADD couleur NVARCHAR(50) NULL;
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'mode_prix')
         ALTER TABLE ArticlesDevis ADD mode_prix NVARCHAR(20) NOT NULL CONSTRAINT DF_ArticlesDevis_ModePrix DEFAULT N'PRESTATION';
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'prix_fourniture')
@@ -113,20 +119,20 @@ async function verifierEtMigrerBase(pool) {
           (N'MATERIEL', N'Matériel de pose'),
           (N'TRAVAUX', N'Travaux / main d’œuvre');
 
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, prix_unitaire)
-        SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.prix_unitaire
+        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
+        SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
         FROM (VALUES
-          (N'RACCORDEMENTS', N'RAC-110', N'Raccord 110 mm', N'u', CAST(25000 AS DECIMAL(12,2))),
-          (N'RACCORDEMENTS', N'RAC-160', N'Raccord 160 mm', N'u', CAST(32000 AS DECIMAL(12,2))),
-          (N'RACCORDEMENTS', N'VAN-050', N'Vanne 50 mm', N'u', CAST(18000 AS DECIMAL(12,2))),
-          (N'RACCORDEMENTS', N'VAN-100', N'Vanne 100 mm', N'u', CAST(26000 AS DECIMAL(12,2))),
-          (N'MATERIEL', N'MAT-C', N'Coffret de branchement', N'u', CAST(14500 AS DECIMAL(12,2))),
-          (N'MATERIEL', N'MAT-P', N'Pieds / supports', N'u', CAST(7000 AS DECIMAL(12,2))),
-          (N'MATERIEL', N'MAT-S', N'Système de sécurité', N'u', CAST(12000 AS DECIMAL(12,2))),
-          (N'TRAVAUX', N'TR-FO', N'Fouille / terrassement', N'ML', CAST(5500 AS DECIMAL(12,2))),
-          (N'TRAVAUX', N'TR-RE', N'Réseau et branchement', N'ML', CAST(4200 AS DECIMAL(12,2))),
-          (N'TRAVAUX', N'TR-PO', N'Pose / raccordement', N'u', CAST(18000 AS DECIMAL(12,2)))
-        ) a(code_famille, code_article, libelle, unite, prix_unitaire)
+          (N'RACCORDEMENTS', N'RAC-110', N'Raccord 110 mm', N'U', N'FOURNITURE_POSE', CAST(25000 AS DECIMAL(12,2)), CAST(25000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'RACCORDEMENTS', N'RAC-160', N'Raccord 160 mm', N'U', N'FOURNITURE_POSE', CAST(32000 AS DECIMAL(12,2)), CAST(32000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'RACCORDEMENTS', N'VAN-050', N'Vanne 50 mm', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'RACCORDEMENTS', N'VAN-100', N'Vanne 100 mm', N'U', N'FOURNITURE_POSE', CAST(26000 AS DECIMAL(12,2)), CAST(26000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'MATERIEL', N'MAT-C', N'Coffret de branchement', N'U', N'FOURNITURE_POSE', CAST(14500 AS DECIMAL(12,2)), CAST(14500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'MATERIEL', N'MAT-P', N'Pieds / supports', N'U', N'FOURNITURE_POSE', CAST(7000 AS DECIMAL(12,2)), CAST(7000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'MATERIEL', N'MAT-S', N'Système de sécurité', N'U', N'FOURNITURE_POSE', CAST(12000 AS DECIMAL(12,2)), CAST(12000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+          (N'TRAVAUX', N'TR-FO', N'Fouille / terrassement', N'ML', N'FOURNITURE_POSE', CAST(5500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(5500 AS DECIMAL(12,2))),
+          (N'TRAVAUX', N'TR-RE', N'Réseau et branchement', N'ML', N'FOURNITURE_POSE', CAST(4200 AS DECIMAL(12,2)), CAST(2500 AS DECIMAL(12,2)), CAST(1700 AS DECIMAL(12,2))),
+          (N'TRAVAUX', N'TR-PO', N'Pose / raccordement', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)))
+        ) a(code_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
         INNER JOIN FamillesArticles f ON f.code_famille = a.code_famille;
       END;
       UPDATE ArticlesDevis
@@ -152,8 +158,8 @@ async function verifierEtMigrerBase(pool) {
       SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
       FROM (VALUES
         (N'MATERIEL', N'MAT-DA', N'Dalle de protection', N'M²', N'FOURNITURE_POSE', CAST(2800 AS DECIMAL(12,2)), CAST(1800 AS DECIMAL(12,2)), CAST(1000 AS DECIMAL(12,2))),
-        (N'MATERIEL', N'MAT-SB', N'Sable de remblai', N'M3', N'PRESTATION', CAST(3200 AS DECIMAL(12,2)), NULL, NULL),
-        (N'MATERIEL', N'MAT-CI', N'Ciment', N'KG', N'PRESTATION', CAST(95 AS DECIMAL(12,2)), NULL, NULL)
+        (N'MATERIEL', N'MAT-SB', N'Sable de remblai', N'M3', N'FOURNITURE_POSE', CAST(3200 AS DECIMAL(12,2)), CAST(3200 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
+        (N'MATERIEL', N'MAT-CI', N'Ciment', N'KG', N'FOURNITURE_POSE', CAST(95 AS DECIMAL(12,2)), CAST(95 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)))
       ) a(code_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
       INNER JOIN FamillesArticles f ON f.code_famille = a.code_famille
       WHERE NOT EXISTS (SELECT 1 FROM ArticlesDevis d WHERE d.code_article = a.code_article);

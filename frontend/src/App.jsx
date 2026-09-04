@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Link, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Connexion from './pages/Connexion';
 import TableauDeBord from './pages/TableauDeBord';
@@ -9,6 +9,7 @@ import DetailDemande from './pages/DetailDemande';
 import CreationDevis from './pages/CreationDevis';
 import AffichageDevis from './pages/AffichageDevis';
 import GestionCommunes from './pages/GestionCommunes';
+import GestionArticles from './pages/GestionArticles';
 import Profil from './pages/Profil';
 
 import CommandPalette from './components/CommandPalette';
@@ -42,11 +43,23 @@ function EspaceProtege({ children }) {
   const agent = JSON.parse(localStorage.getItem('agent') || '{}');
 
   return (
-    <div style={{ display: 'flex' }}>
+    <div className="app-shell">
       <Sidebar agent={agent} onOpenSearch={() => setPaletteOuverte(true)} />
-      <main style={{ flex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        {children}
-      </main>
+      <div className="app-content">
+        <header className="app-topbar">
+          <div className="app-topbar-context">
+            <strong>Suivi des branchements</strong>
+            <span>Algérienne Des Eaux</span>
+          </div>
+          <div className="app-topbar-actions">
+            <button type="button" className="app-topbar-search" onClick={() => setPaletteOuverte(true)}>
+              Rechercher une demande… <kbd>Ctrl K</kbd>
+            </button>
+            <Link to="/demandes/nouvelle" className="btn btn-primary">Nouvelle demande</Link>
+          </div>
+        </header>
+        <main>{children}</main>
+      </div>
       <CommandPalette isOpen={paletteOuverte} onClose={() => setPaletteOuverte(false)} />
     </div>
   );
@@ -64,6 +77,7 @@ export default function App() {
       <Route path="/demandes/:id/devis/:idDevis" element={<EspaceProtege><AffichageDevis /></EspaceProtege>} />
       <Route path="/demandes/:id" element={<EspaceProtege><DetailDemande /></EspaceProtege>} />
       <Route path="/referentiels/communes" element={<EspaceProtege><GestionCommunes /></EspaceProtege>} />
+      <Route path="/referentiels/articles" element={<EspaceProtege><GestionArticles /></EspaceProtege>} />
       <Route path="/profil" element={<EspaceProtege><Profil /></EspaceProtege>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

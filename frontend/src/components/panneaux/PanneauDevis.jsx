@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import InputDate from '../InputDate';
@@ -72,6 +73,7 @@ export default function PanneauDevis({
   afficherResumeDemande = true,
   masquerArticlesSelectionnes = false
 }) {
+  const navigate = useNavigate();
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const etudeRenseignee = Boolean(
     etude && (
@@ -142,7 +144,7 @@ export default function PanneauDevis({
     }
     const q = valeur.toLowerCase();
     const filtres = tousLesArticles.filter(
-      (a) => a.libelle.toLowerCase().includes(q) || a.code.toLowerCase().includes(q)
+      (a) => [a.libelle, a.code, a.matiere, a.couleur].some((valeurArticle) => valeurArticle?.toLowerCase().includes(q))
     ).slice(0, 10);
     setSuggestionsFiltrees(filtres);
     setSuggestionVisible(true);
@@ -365,15 +367,25 @@ export default function PanneauDevis({
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {afficherActionsCreation && !demandeVerrouillee && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => navigate(`/demandes/${idDemande}/devis/nouveau`)}
+              title="Ouvrir l'éditeur de devis structuré inspiré d'Obat"
+            >
+              <span>✨</span> Éditeur Devis Obat
+            </button>
+          )}
           {afficherActionsCreation && !demandeVerrouillee && devisListe.length > 0 && !ouvert && (
-            <button type="button" className="btn btn-primary" onClick={ouvrirAjoutDevisComplementaire}>
+            <button type="button" className="btn btn-secondary" onClick={ouvrirAjoutDevisComplementaire}>
               <span>+</span> Devis complémentaire
             </button>
           )}
           {afficherActionsCreation && !demandeVerrouillee && devisListe.length === 0 && !ouvert && (
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-secondary"
               onClick={() => {
                 setDevisSelectionne(null);
                 setForm({ montant: '' });
@@ -381,7 +393,7 @@ export default function PanneauDevis({
                 setOuvert(true);
               }}
             >
-              <span>✎</span> Émettre un devis
+              <span>✎</span> Saisie rapide
             </button>
           )}
           {ouvert && (
@@ -449,14 +461,24 @@ export default function PanneauDevis({
                     <span>👁</span> Afficher
                   </button>
                   {!demandeVerrouillee && !estPaye && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => ouvrirModification(item)}
-                      title="Modifier ou régler ce devis impayé"
-                    >
-                      <span>✎</span> Régler / Modifier
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => navigate(`/demandes/${idDemande}/devis/nouveau?id_devis=${item.id_devis}`)}
+                        title="Ouvrir dans l'éditeur de devis complet inspiré d'Obat"
+                      >
+                        <span>✏️</span> Éditeur complet
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => ouvrirModification(item)}
+                        title="Modifier ou régler ce devis impayé"
+                      >
+                        <span>💳</span> Régler / Rapide
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -619,6 +641,8 @@ export default function PanneauDevis({
                         </div>
                         <small style={{ color: 'var(--color-text-muted)' }}>
                           {article.code} · {LIBELLES_UNITES[article.unite] || article.unite}
+                          {article.matiere ? ` · ${article.matiere}` : ''}
+                          {article.couleur ? ` · ${article.couleur}` : ''}
                         </small>
                       </div>
                       <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: 'var(--color-primary)' }}>

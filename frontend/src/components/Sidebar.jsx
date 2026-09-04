@@ -50,6 +50,7 @@ export default function Sidebar({ agent, onOpenSearch }) {
       </button>
 
       <nav className="sidebar-nav">
+        <div className="sidebar-nav-label">Espace de travail</div>
         <NavLink to="/" end className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
           <span className="sidebar-lien-icone" aria-hidden="true">⌂</span>
           <span>Tableau de bord</span>
@@ -63,10 +64,17 @@ export default function Sidebar({ agent, onOpenSearch }) {
           <span>Nouvelle demande</span>
         </NavLink>
         {agentCourant?.role === 'admin' && (
-          <NavLink to="/referentiels/communes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-            <span className="sidebar-lien-icone" aria-hidden="true">⌖</span>
-            <span>Communes</span>
-          </NavLink>
+          <>
+            <div className="sidebar-nav-label sidebar-nav-label-admin">Référentiels</div>
+            <NavLink to="/referentiels/communes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
+              <span className="sidebar-lien-icone" aria-hidden="true">⌖</span>
+              <span>Communes</span>
+            </NavLink>
+            <NavLink to="/referentiels/articles" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
+              <span className="sidebar-lien-icone" aria-hidden="true">▤</span>
+              <span>Articles de devis</span>
+            </NavLink>
+          </>
         )}
       </nav>
 

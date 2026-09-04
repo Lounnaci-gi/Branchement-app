@@ -106,17 +106,18 @@ export default function TableauDeBord() {
     <div className="page">
       <Breadcrumbs items={[{ label: 'Tableau de bord', icon: '📊' }]} />
 
-      <header className="page-header">
+      <header className="obat-page-header">
         <div>
-          <h1>Tableau de bord</h1>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>
-            Vue d'ensemble du réseau de branchements et indicateurs clés en temps réel
+          <span className="obat-section-badge">ADE • SUIVI TECHNIQUE</span>
+          <h1 className="obat-page-title">Tableau de bord de gestion</h1>
+          <p className="obat-page-subtitle">
+            Indicateurs d'activité, suivi des chantiers et pilotage du réseau de branchements en temps réel.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div className="obat-page-actions">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={actualiser}
             disabled={rafraichissement}
             title="Actualiser les données"
@@ -126,104 +127,120 @@ export default function TableauDeBord() {
             </span>
             <span>Actualiser</span>
           </button>
-          <Link to="/demandes/nouvelle" className="btn btn-primary">
-            <span>➕</span> Nouvelle demande
+          <Link to="/demandes/nouvelle" className="obat-btn obat-btn-pri">
+            <span>✨</span> Nouvelle demande
           </Link>
         </div>
       </header>
 
-      {/* Cartes KPI interactives cliquables */}
-      <div className="grille-kpi">
+      {/* Cartes KPI Obat avec icônes colorées */}
+      <div className="obat-kpi-grid">
         <div
-          className="card kpi kpi-interactive"
+          className="obat-kpi-card"
           onClick={() => navigate('/demandes')}
           onKeyDown={(e) => activerClavier(e, () => navigate('/demandes'))}
           role="button"
           tabIndex={0}
           title="Voir toutes les demandes actives"
+          style={{ cursor: 'pointer' }}
         >
-          <div className="kpi-valeur">
-            <CompteurAnime cible={total} />
+          <div className="obat-kpi-icon blue">📋</div>
+          <div>
+            <div className="obat-kpi-value">
+              <CompteurAnime cible={total} />
+            </div>
+            <div className="obat-kpi-label">Demandes actives</div>
           </div>
-          <div className="kpi-label">Demandes actives</div>
-          <div className="kpi-footer-hint">Explorer la liste →</div>
         </div>
 
         <div
-          className="card kpi kpi-interactive"
+          className="obat-kpi-card"
           onClick={() => navigate('/demandes?statut=TRAVAUX_TERMINES')}
           onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=TRAVAUX_TERMINES'))}
           role="button"
           tabIndex={0}
           title="Voir les demandes achevées"
+          style={{ cursor: 'pointer' }}
         >
-          <div className="kpi-valeur" style={{ color: 'var(--color-success)' }}>
-            <CompteurAnime cible={demandesAchevees} />
+          <div className="obat-kpi-icon green">✅</div>
+          <div>
+            <div className="obat-kpi-value" style={{ color: 'var(--color-success)' }}>
+              <CompteurAnime cible={demandesAchevees} />
+            </div>
+            <div className="obat-kpi-label">Demandes achevées</div>
           </div>
-          <div className="kpi-label">Demandes achevées</div>
-          <div className="kpi-footer-hint">Travaux terminés →</div>
         </div>
 
         <div
-          className="card kpi kpi-interactive"
+          className="obat-kpi-card"
           onClick={() => navigate('/demandes')}
           onKeyDown={(e) => activerClavier(e, () => navigate('/demandes'))}
           role="button"
           tabIndex={0}
           title="Voir les demandes de ce mois"
+          style={{ cursor: 'pointer' }}
         >
-          <div className="kpi-valeur">
-            <CompteurAnime cible={donnees.demandesCeMois} />
+          <div className="obat-kpi-icon purple">📅</div>
+          <div>
+            <div className="obat-kpi-value">
+              <CompteurAnime cible={donnees.demandesCeMois} />
+            </div>
+            <div className="obat-kpi-label">Déposées ce mois-ci</div>
           </div>
-          <div className="kpi-label">Déposées ce mois-ci</div>
-          <div className="kpi-footer-hint">Voir ce mois →</div>
         </div>
 
         <div
-          className="card kpi kpi-interactive"
+          className="obat-kpi-card"
           onClick={() => navigate('/demandes?statut=DEVIS_EMIS')}
           onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=DEVIS_EMIS'))}
           role="button"
           tabIndex={0}
           title="Voir les devis en attente de paiement"
+          style={{ cursor: 'pointer' }}
         >
-          <div className="kpi-valeur" style={{ color: 'var(--color-accent)' }}>
-            <CompteurAnime cible={donnees.enAttentePaiement.total} />
-          </div>
-          <div className="kpi-label">Devis impayés</div>
-          <div style={{ fontSize: 12, color: 'var(--color-accent)', marginTop: 4, fontWeight: 600 }}>
-            {Number(donnees.enAttentePaiement.montant_total || 0).toLocaleString('fr-DZ')} DA
+          <div className="obat-kpi-icon amber">💳</div>
+          <div>
+            <div className="obat-kpi-value" style={{ color: 'var(--color-accent)' }}>
+              <CompteurAnime cible={donnees.enAttentePaiement.total} />
+            </div>
+            <div className="obat-kpi-label">Devis impayés</div>
+            <div style={{ fontSize: 11.5, color: 'var(--color-accent)', marginTop: 2, fontWeight: 700 }}>
+              {Number(donnees.enAttentePaiement.montant_total || 0).toLocaleString('fr-DZ')} DA
+            </div>
           </div>
         </div>
 
         <div
-          className="card kpi kpi-interactive"
+          className="obat-kpi-card"
           onClick={() => navigate('/demandes?statut=TRAVAUX_TERMINES')}
           onKeyDown={(e) => activerClavier(e, () => navigate('/demandes?statut=TRAVAUX_TERMINES'))}
           role="button"
           tabIndex={0}
           title="Délai moyen constaté de réalisation"
+          style={{ cursor: 'pointer' }}
         >
-          <div className="kpi-valeur">
-            <CompteurAnime cible={Math.round(donnees.delaiMoyenJours)} suffixe=" j" />
+          <div className="obat-kpi-icon cyan">⏱️</div>
+          <div>
+            <div className="obat-kpi-value">
+              <CompteurAnime cible={Math.round(donnees.delaiMoyenJours)} suffixe=" j" />
+            </div>
+            <div className="obat-kpi-label">Délai moyen réalisation</div>
           </div>
-          <div className="kpi-label">Délai moyen dépôt → travaux terminés</div>
-          <div className="kpi-footer-hint">Historique global →</div>
         </div>
       </div>
 
-      {/* Répartition interactive par étape du pipeline */}
-      <div className="card" style={{ padding: 24, marginTop: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div>
-            <h3 style={{ fontSize: 17 }}>Répartition par étape du pipeline</h3>
-            <p style={{ fontSize: 12.5, color: 'var(--color-text-muted)', marginTop: 2 }}>
-              Cliquez sur une étape pour filtrer instantanément les demandes correspondantes
-            </p>
+      {/* Répartition interactive par étape du pipeline dans une carte Obat */}
+      <div className="obat-section-card" style={{ marginTop: 20 }}>
+        <div className="obat-section-card-header">
+          <div className="obat-section-card-title">
+            <span>📊</span> Répartition des dossiers par étape du pipeline
           </div>
+          <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+            Cliquez pour filtrer les demandes
+          </span>
         </div>
-
-        <div className="repartition-pipeline">
+        <div className="obat-section-card-body">
+          <div className="repartition-pipeline">
           {donnees.parStatut
             .filter((s) => ETAPES_PIPELINE.some((e) => e.code === s.code_statut))
             .map((s) => {
@@ -277,5 +294,6 @@ export default function TableauDeBord() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

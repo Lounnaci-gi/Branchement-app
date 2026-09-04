@@ -268,10 +268,11 @@ export default function DetailDemande() {
         ]}
       />
 
-      <header className="page-header">
+      <header className="obat-page-header">
         <div>
+          <span className="obat-section-badge">ADE • DOSSIER TECHNIQUE</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <h1 className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <h1 className="obat-page-title mono">
               <span>{demande.numero_demande}</span>
               <button
                 type="button"
@@ -285,42 +286,42 @@ export default function DetailDemande() {
             </h1>
             <StatutBadge code={demande.statut_actuel} />
           </div>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>
+          <p className="obat-page-subtitle">
             {nomDemandeur} · {demande.telephone || demande.telephone_secondaire || 'Téléphone non renseigné'} · Déposée le {new Date(demande.date_depot).toLocaleDateString('fr-FR')}
           </p>
         </div>
 
         {/* Boutons d'actions et d'impression */}
-        <div className="page-actions">
+        <div className="obat-page-actions">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={() => imprimerDemande(demande)}
             title="Imprimer la demande de branchement"
           >
-            <span>🖨</span> Imprimer demande
+            <span>🖨</span> Demande
           </button>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={() => imprimerAccuse(demande)}
             title="Imprimer l'accusé de réception (2 coupons A4)"
           >
-            <span>🖨</span> Imprimer accusé
+            <span>🖨</span> Accusé
           </button>
           {!demandeEstVerrouillee && devisListe.length === 0 && (
             <button
               type="button"
-              className="btn btn-primary"
+              className="obat-btn obat-btn-pri"
               onClick={ouvrirCreateurDevis}
               title="Créer un devis pour cette demande"
             >
-              <span>📄</span> Créer un devis
+              <span>✨</span> Devis Obat
             </button>
           )}
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={handleImprimerDevis}
             style={{ opacity: estEtudeTerminee ? 1 : 0.6 }}
             title={estEtudeTerminee ? "Imprimer la demande d'établissement de devis" : "L'étude technique doit être terminée pour imprimer la demande de devis"}
@@ -329,7 +330,7 @@ export default function DetailDemande() {
           </button>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={handleImprimerOrdreExecution}
             style={{ opacity: estDevisPayeOuTravaux ? 1 : 0.6 }}
             title={estDevisPayeOuTravaux ? "Imprimer l'ordre d'exécution des travaux" : "Le devis doit être payé pour imprimer l'ordre d'exécution"}
@@ -338,7 +339,7 @@ export default function DetailDemande() {
           </button>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={handleImprimerContratAbonnement}
             style={{ opacity: estTravauxTermines ? 1 : 0.6 }}
             title={estTravauxTermines ? "Imprimer le contrat d'abonnement" : "Les travaux doivent être terminés pour imprimer le contrat d'abonnement"}
@@ -347,26 +348,26 @@ export default function DetailDemande() {
           </button>
           <button
             type="button"
-            className="btn btn-secondary"
+            className="obat-btn obat-btn-sec"
             onClick={exporterHistoriqueCSV}
             title="Exporter l'historique de la demande au format CSV"
             disabled={!historique || historique.length === 0}
           >
-            <span>📄</span> Exporter historique
+            <span>📄</span> CSV
           </button>
           {demande.statut_actuel === 'TRAVAUX_TERMINES' && !demandeEstVerrouillee && (
-            <button type="button" className="btn btn-primary" onClick={scellerDemande}>
-              <span>🔒</span> Sceller la demande
+            <button type="button" className="obat-btn obat-btn-pri" onClick={scellerDemande}>
+              <span>🔒</span> Sceller
             </button>
           )}
           {!demandeEstVerrouillee && (
-            <Link to={`/demandes/${id}/modifier`} className="btn btn-secondary">
+            <Link to={`/demandes/${id}/modifier`} className="obat-btn obat-btn-sec">
               <span>✎</span> Modifier
             </Link>
           )}
           {demandeEstVerrouillee && (
-            <button type="button" className="btn btn-secondary" disabled style={{ opacity: 0.8 }}>
-              <span>🔒</span> Demande scellée
+            <button type="button" className="obat-btn obat-btn-sec" disabled style={{ opacity: 0.8 }}>
+              <span>🔒</span> Scellée
             </button>
           )}
         </div>

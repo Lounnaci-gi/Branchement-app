@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,45 +10,54 @@
    ============================================================ */
 
 :root {
-  /* Thème Clair */
-  --color-bg: #F4F8FA;
+  /* =========================================
+     Thème Clair — Palette Obat ADE
+     Couleur primaire : #1991EB (Bleu Obat)
+     ========================================= */
+  --color-bg: #F8FAFC;
   --color-surface: #FFFFFF;
-  --color-surface-sunken: #EAF2F6;
-  --color-primary: #2599FB;
-  --color-primary-dark: #1D506B;
-  --color-primary-light: #72BCFC;
-  --color-primary-hover: #007CE6;
-  --color-primary-active: #0062B8;
-  --color-primary-selection: #E9F5FF;
-  --color-accent: #F07857;
-  --color-accent-light: #FDE8E2;
-  --color-text: #1E384D;
-  --color-text-muted: #627F92;
-  --color-border: #DCEBF2;
-  --color-border-subtle: rgba(29, 80, 107, 0.08);
-  --color-success: #16A34A;
-  --color-success-bg: #DCFCE7;
-  --color-danger: #DC2626;
-  --color-danger-bg: #FEE2E2;
-  --color-warning: #D97706;
-  --color-warning-bg: #FEF3C7;
-  --color-glow: rgba(37, 153, 251, 0.15);
+  --color-surface-sunken: #F1F5F9;
+  --color-surface-hover: #F8FAFC;
+  --color-primary: #1991EB;
+  --color-primary-dark: #0F172A;
+  --color-primary-light: #60B4F5;
+  --color-primary-hover: #147AD4;
+  --color-primary-active: #1065B8;
+  --color-primary-selection: #EFF6FF;
+  --color-accent: #F59E0B;
+  --color-accent-light: #FFFBEB;
+  --color-text: #1E293B;
+  --color-text-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-border-subtle: rgba(15, 23, 42, 0.07);
+  --color-success: #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEF2F2;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-glow: rgba(25, 145, 235, 0.18);
 
-  --color-sidebar-bg: #2599FB;
-  --color-sidebar-text: #FFFFFF;
-  --color-sidebar-border: rgba(255, 255, 255, 0.12);
+  /* Info / neutral badge */
+  --color-info: #0EA5E9;
+  --color-info-bg: #F0F9FF;
+
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-text: #1E293B;
+  --color-sidebar-border: #E2E8F0;
 
   /* Typographie */
-  --font-display: 'Poppins', sans-serif;
-  --font-body: 'Poppins', sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   /* Rayon / ombres */
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --shadow-card: 0 1px 3px rgba(29, 80, 107, 0.04), 0 10px 28px rgba(29, 80, 107, 0.06);
-  --shadow-elevated: 0 16px 34px rgba(29, 80, 107, 0.14);
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 8px rgba(15, 23, 42, 0.04);
+  --shadow-elevated: 0 10px 30px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-modal: 0 20px 25px -5px rgba(0,0,0,0.10), 0 8px 10px -6px rgba(0,0,0,0.06);
 
   /* Espacements */
   --space-xs: 4px;
@@ -69,36 +78,40 @@
 }
 
 :root[data-theme='dark'] {
-  /* Thème Sombre Moderne (Deep Obsidian / Aquatic Cyan) */
-  --color-bg: #090F16;
-  --color-surface: #111D2A;
-  --color-surface-sunken: #0B141E;
-  --color-primary: #38BDF8;
+  /* Thème Sombre — Dark ADE Obat */
+  --color-bg: #0F1623;
+  --color-surface: #1A2235;
+  --color-surface-sunken: #141B2A;
+  --color-surface-hover: #1F2A40;
+  --color-primary: #3BAAE8;
   --color-primary-dark: #F1F5F9;
-  --color-primary-light: #7DD3FC;
-  --color-primary-hover: #0EA5E9;
-  --color-primary-active: #0284C7;
-  --color-primary-selection: rgba(56, 189, 248, 0.14);
-  --color-accent: #FB923C;
-  --color-accent-light: rgba(251, 146, 60, 0.15);
-  --color-text: #F1F5F9;
-  --color-text-muted: #94A3B8;
-  --color-border: #1E3247;
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
-  --color-success: #4ADE80;
-  --color-success-bg: rgba(74, 222, 128, 0.14);
-  --color-danger: #F87171;
-  --color-danger-bg: rgba(248, 113, 113, 0.14);
-  --color-warning: #FBBF24;
-  --color-warning-bg: rgba(251, 191, 36, 0.14);
-  --color-glow: rgba(56, 189, 248, 0.25);
+  --color-primary-light: #7CCAF2;
+  --color-primary-hover: #5BBCEE;
+  --color-primary-active: #2A95D4;
+  --color-primary-selection: rgba(59, 170, 232, 0.14);
+  --color-accent: #FBB042;
+  --color-accent-light: rgba(251, 176, 66, 0.14);
+  --color-text: #E8EDF5;
+  --color-text-muted: #8B99B3;
+  --color-border: #2A3550;
+  --color-border-subtle: rgba(255, 255, 255, 0.07);
+  --color-success: #34D399;
+  --color-success-bg: rgba(52, 211, 153, 0.12);
+  --color-danger: #FB7185;
+  --color-danger-bg: rgba(251, 113, 133, 0.12);
+  --color-warning: #FBB042;
+  --color-warning-bg: rgba(251, 176, 66, 0.12);
+  --color-glow: rgba(59, 170, 232, 0.22);
+  --color-info: #38BDF8;
+  --color-info-bg: rgba(56, 189, 248, 0.12);
 
-  --color-sidebar-bg: #0C1622;
-  --color-sidebar-text: #F1F5F9;
-  --color-sidebar-border: rgba(255, 255, 255, 0.08);
+  --color-sidebar-bg: #141B2A;
+  --color-sidebar-text: #E8EDF5;
+  --color-sidebar-border: #2A3550;
 
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --shadow-elevated: 0 20px 40px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(56, 189, 248, 0.18);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-elevated: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(59, 170, 232, 0.15);
+  --shadow-modal: 0 25px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(59, 170, 232, 0.12);
 }
 
 /* View Transition API Circular Reveal Support */
@@ -131,10 +144,7 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-:root[data-theme='dark'] body {
-  background: radial-gradient(circle at 85% 15%, #0e1c2a 0%, #090f16 100%);
-  background-attachment: fixed;
-}
+:root[data-theme='dark'] body { background: var(--color-bg); }
 
 /* Scrollbars modernes personnalisées */
 ::-webkit-scrollbar {
@@ -187,37 +197,30 @@ input, select, textarea {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 16px;
+  min-height: 40px;
+  padding: 9px 15px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   font-weight: 500;
   font-size: 14px;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
 }
-.btn:active { transform: scale(0.98); }
+.btn:active { transform: translateY(1px); }
 
 .btn-primary {
   background: var(--color-primary);
   color: #FFFFFF;
-  box-shadow: 0 2px 8px var(--color-glow);
+  box-shadow: 0 2px 6px var(--color-glow);
 }
 .btn-primary:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 4px 14px var(--color-glow);
+  box-shadow: 0 3px 10px var(--color-glow);
 }
 .btn-primary:active {
   background: var(--color-primary-active);
 }
 
-:root[data-theme='dark'] .btn-primary {
-  color: #06111B;
-  font-weight: 600;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
-}
-:root[data-theme='dark'] .btn-primary:hover {
-  background: #7DD3FC;
-  box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
-}
+:root[data-theme='dark'] .btn-primary { color: #FFFFFF; font-weight: 600; }
 
 .btn-secondary {
   background: var(--color-surface);
@@ -251,15 +254,11 @@ input, select, textarea {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  overflow: hidden;
+  overflow: clip;
   transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-:root[data-theme='dark'] .card {
-  border: 1px solid var(--color-border);
-  background: linear-gradient(180deg, rgba(17, 29, 42, 0.95) 0%, rgba(14, 25, 36, 0.95) 100%);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
+:root[data-theme='dark'] .card { background: var(--color-surface); }
 
 .ligne-demande {
   cursor: pointer;
@@ -279,13 +278,14 @@ input, select, textarea {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--color-text-muted);
   margin-bottom: 6px;
 }
 .champ input, .champ select, .champ textarea {
   width: 100%;
+  min-height: 42px;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);

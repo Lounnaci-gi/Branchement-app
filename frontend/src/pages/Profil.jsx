@@ -114,13 +114,14 @@ export default function Profil() {
   return (
     <section className="page">
       <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Mon profil' }]} />
-      <header className="page-header">
+      <header className="obat-page-header">
         <div>
-          <h1>Mon profil</h1>
-          <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>Paramètres du compte et identifiants de connexion</p>
+          <span className="obat-section-badge">ADE • ESPACE AGENT</span>
+          <h1 className="obat-page-title">Mon profil agent</h1>
+          <p className="obat-page-subtitle">Paramètres du compte ADE et identifiants de connexion</p>
         </div>
       </header>
-      <form onSubmit={soumettre} className="card" style={{ maxWidth: 520, padding: 24 }}>
+      <form onSubmit={soumettre} className="obat-section-card" style={{ maxWidth: 540, padding: 24 }}>
         <fieldset style={{ border: 'none', padding: 0, margin: '0 0 20px' }}>
           <legend style={{ fontWeight: 600, marginBottom: 12 }}>Nom affiché</legend>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -207,8 +208,8 @@ export default function Profil() {
           </div>
         </fieldset>
 
-        <button type="submit" className="btn btn-primary" disabled={chargement}>
-          {chargement ? 'Enregistrement...' : 'Enregistrer les modifications'}
+        <button type="submit" className="obat-btn obat-btn-pri" disabled={chargement}>
+          {chargement ? 'Enregistrement...' : '✓ Enregistrer les modifications'}
         </button>
       </form>
     </section>

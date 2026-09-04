@@ -64,12 +64,14 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, dem
   }
 
   return (
-    <div className="card" style={{ padding: 24 }}>
-      <div className="panneau-entete">
-        <h3>Étude technique</h3>
+    <div className="obat-section-card">
+      <div className="obat-section-card-header">
+        <div className="obat-section-card-title">
+          <span>📐</span> Étude technique & Faisabilité
+        </div>
         <button
           type="button"
-          className="btn btn-secondary"
+          className="obat-btn obat-btn-sec"
           disabled={lectureSeule}
           onClick={() => setOuvert((o) => !o)}
           aria-expanded={ouvert}
@@ -82,10 +84,11 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, dem
                 : undefined
           }
         >
-          {demandeVerrouillee ? 'Demande scellée' : devisPaye ? 'Étude verrouillée' : etude ? 'Modifier' : 'Renseigner'}
+          {demandeVerrouillee ? '🔒 Demande scellée' : devisPaye ? '🔒 Étude verrouillée' : etude ? '✎ Modifier' : '➕ Renseigner'}
         </button>
       </div>
 
+      <div className="obat-section-card-body">
       {!ouvert && etude && (
         <div className="grille-info" style={{ marginTop: 16 }}>
           <div><span className="info-label">Date de visite</span><div>{etude.date_visite ? new Date(etude.date_visite).toLocaleDateString('fr-FR') : '—'}</div></div>
@@ -138,9 +141,12 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, dem
             <label>Observations</label>
             <textarea rows={2} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
           </div>
-          <button className="btn btn-primary" disabled={envoi}>{envoi ? 'Enregistrement...' : 'Enregistrer'}</button>
+          <button className="obat-btn obat-btn-pri" disabled={envoi}>
+            {envoi ? 'Enregistrement...' : '✓ Enregistrer l’étude'}
+          </button>
         </form>
       )}
+      </div>
     </div>
   );
 }
