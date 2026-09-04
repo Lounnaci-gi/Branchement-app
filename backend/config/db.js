@@ -153,7 +153,12 @@ async function verifierEtMigrerBase(pool) {
       SET mode_prix = N'FOURNITURE_POSE', prix_fourniture = 1800, prix_pose = 1000
       WHERE code_article = N'MAT-DA';
       IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_ArticlesDevis_Unite')
-        ALTER TABLE ArticlesDevis ADD CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG'));
+        ALTER TABLE ArticlesDevis ADD CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG', N'H', N'FF', N'ENS'));
+      IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_ArticlesDevis_Unite')
+      BEGIN
+        ALTER TABLE ArticlesDevis DROP CONSTRAINT CK_ArticlesDevis_Unite;
+        ALTER TABLE ArticlesDevis ADD CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG', N'H', N'FF', N'ENS'));
+      END;
       INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
       SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
       FROM (VALUES
@@ -243,11 +248,24 @@ async function verifierEtMigrerBase(pool) {
           montant_ht DECIMAL(12,2) NOT NULL DEFAULT 0,
           type_tva NVARCHAR(20) NULL,
           taux_tva DECIMAL(5,2) NOT NULL DEFAULT 19,
-          ordre INT NOT NULL DEFAULT 0
+          ordre INT NOT NULL DEFAULT 0,
+          choix_prix NVARCHAR(20) NULL,
+          type_ligne NVARCHAR(20) NULL,
+          prix_fourniture DECIMAL(12,2) NULL,
+          prix_pose DECIMAL(12,2) NULL
         );
 
         CREATE INDEX IX_LignesDevis_Devis ON LignesDevis(id_devis);
-      END
+      END;
+
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('LignesDevis') AND name = 'choix_prix')
+        ALTER TABLE LignesDevis ADD choix_prix NVARCHAR(20) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('LignesDevis') AND name = 'type_ligne')
+        ALTER TABLE LignesDevis ADD type_ligne NVARCHAR(20) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('LignesDevis') AND name = 'prix_fourniture')
+        ALTER TABLE LignesDevis ADD prix_fourniture DECIMAL(12,2) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('LignesDevis') AND name = 'prix_pose')
+        ALTER TABLE LignesDevis ADD prix_pose DECIMAL(12,2) NULL;
     `;
     await pool.request().query(migrationLignesDevisSQL);
 

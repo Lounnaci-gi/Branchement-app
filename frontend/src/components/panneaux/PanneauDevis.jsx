@@ -13,7 +13,73 @@ const LIBELLES_UNITES = {
   KG: 'KG (Kilogramme)'
 };
 
+export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
+  if (!ligne) return ['F/'];
+
+  const ref = Array.isArray(tousLesArticles)
+    ? tousLesArticles.find((a) => a.code === (ligne.code || ligne.code_article))
+    : null;
+
+  const fRaw = ligne.prixFourniture ?? ligne.prix_fourniture ?? ref?.prixFourniture ?? null;
+  const pRaw = ligne.prixPose ?? ligne.prix_pose ?? ref?.prixPose ?? null;
+  const mode = String(ligne.modePrix ?? ligne.mode_prix ?? ref?.modePrix ?? '').trim().toUpperCase();
+  const currentType = String(ligne.type ?? ligne.type_ligne ?? '').trim();
+
+  const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
+  const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
+
+  const aFourniture = f !== null && f > 0;
+  const aPose = p !== null && p > 0;
+  const aLesDeux = aFourniture && aPose;
+
+  const types = [];
+
+  if (aFourniture) types.push('F/');
+  if (aPose) types.push('P/');
+  if (aLesDeux) types.push('FP/');
+
+  const estPrestation = mode === 'PRESTATION' || (!aFourniture && !aPose && (currentType === 'PR/' || String(ligne.code || '').startsWith('PR') || String(ligne.typeTva).toUpperCase() === 'PRESTATION'));
+
+  if (estPrestation && !aFourniture && !aPose) {
+    types.push('PR/');
+  }
+
+  if (types.length === 0) {
+    if (['F/', 'P/', 'FP/', 'PR/'].includes(currentType)) {
+      types.push(currentType);
+    } else {
+      types.push('F/');
+    }
+  }
+
+  return types;
+}
+
+function normaliserTypeLigne(type, choixPrix, modePrix, article = null, tousLesArticles = []) {
+  const typesDispo = determinerTypesDisponibles(article || { type, choixPrix, modePrix }, tousLesArticles);
+  const str = String(type || '').trim();
+  if (typesDispo.includes(str)) return str;
+  if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) return 'F/';
+  if (choixPrix === 'POSE' && typesDispo.includes('P/')) return 'P/';
+  if (choixPrix === 'FOURNITURE_POSE' && typesDispo.includes('FP/')) return 'FP/';
+  if (typesDispo.includes('PR/')) return 'PR/';
+  return typesDispo[0] || 'F/';
+}
+
+function aTarifsFournitureEtPose(article) {
+  if (!article) return false;
+  const f = Number(article.prixFourniture ?? article.prix_fourniture ?? 0);
+  const p = Number(article.prixPose ?? article.prix_pose ?? 0);
+  return f > 0 && p > 0;
+}
+
 function prixArticle(article) {
+  if (!article) return 0;
+  if (aTarifsFournitureEtPose(article)) {
+    if (article.choixPrix === 'FOURNITURE' || article.type === 'F/') return Number(article.prixFourniture || 0);
+    if (article.choixPrix === 'POSE' || article.type === 'P/') return Number(article.prixPose || 0);
+    return Number(article.prixFourniture || 0) + Number(article.prixPose || 0);
+  }
   if (article.modePrix === 'FOURNITURE_POSE') {
     return Number(article.prixFourniture || 0) + Number(article.prixPose || 0);
   }
@@ -158,11 +224,51 @@ export default function PanneauDevis({
           l.code === article.code ? { ...l, quantite: String(Number(l.quantite || 0) + 1) } : l
         );
       }
-      return [...prev, { ...article, quantite: '1', diametre: '' }];
+      const aLesDeux = aTarifsFournitureEtPose(article);
+      const choixInitial = article.choixPrix || (aLesDeux ? 'FOURNITURE_POSE' : null);
+      const typeInitial = normaliserTypeLigne(article.type, choixInitial, article.modePrix);
+      return [
+        ...prev,
+        {
+          ...article,
+          quantite: '1',
+          diametre: '',
+          choixPrix: choixInitial,
+          type: typeInitial
+        }
+      ];
     });
     setRechercheArticle('');
     setSuggestionsFiltrees([]);
     setSuggestionVisible(false);
+  }
+
+  function changerChoixPrix(code, nouveauChoix) {
+    setLignesDevis((prev) =>
+      prev.map((l) => {
+        if (l.code !== code) return l;
+        let nouveauType = l.type;
+        if (nouveauChoix === 'FOURNITURE') nouveauType = 'F/';
+        else if (nouveauChoix === 'POSE') nouveauType = 'P/';
+        else if (nouveauChoix === 'FOURNITURE_POSE') nouveauType = 'FP/';
+        return { ...l, choixPrix: nouveauChoix, type: nouveauType };
+      })
+    );
+  }
+
+  function changerTypeLigne(code, nouveauType) {
+    setLignesDevis((prev) =>
+      prev.map((l) => {
+        if (l.code !== code) return l;
+        let nouveauChoix = l.choixPrix;
+        if (aTarifsFournitureEtPose(l)) {
+          if (nouveauType === 'F/') nouveauChoix = 'FOURNITURE';
+          else if (nouveauType === 'P/') nouveauChoix = 'POSE';
+          else if (nouveauType === 'FP/') nouveauChoix = 'FOURNITURE_POSE';
+        }
+        return { ...l, type: nouveauType, choixPrix: nouveauChoix };
+      })
+    );
   }
 
   function supprimerLigne(code) {
@@ -224,7 +330,26 @@ export default function PanneauDevis({
       return;
     }
     setForm({ montant: devisActuel.montant || '' });
-    setLignesDevis(Array.isArray(devisActuel.articles) ? devisActuel.articles : []);
+    setLignesDevis(
+      Array.isArray(devisActuel.articles)
+        ? devisActuel.articles.map((art) => {
+            const ref = tousLesArticles.find((a) => a.code === (art.code || art.code_article));
+            const f = art.prixFourniture ?? art.prix_fourniture ?? ref?.prixFourniture ?? null;
+            const p = art.prixPose ?? art.prix_pose ?? ref?.prixPose ?? null;
+            const aLesDeux = f !== null && p !== null && Number(f) > 0 && Number(p) > 0;
+            const choix = art.choixPrix || art.choix_prix || (aLesDeux ? 'FOURNITURE_POSE' : null);
+            const typeLigne = normaliserTypeLigne(art.type || art.type_ligne, choix, art.modePrix || art.mode_prix);
+            return {
+              ...art,
+              modePrix: art.modePrix || art.mode_prix || (aLesDeux ? 'FOURNITURE_POSE' : 'PRESTATION'),
+              prixFourniture: f != null ? Number(f) : null,
+              prixPose: p != null ? Number(p) : null,
+              choixPrix: choix,
+              type: typeLigne
+            };
+          })
+        : []
+    );
     setEnregistrerPaiement(devisActuel.statut_paiement === 'PAYE');
     setPaiement({
       mode_paiement: devisActuel.mode_paiement === 'Virement' ? 'Versement_bancaire' : (devisActuel.mode_paiement || 'Especes'),
@@ -235,6 +360,30 @@ export default function PanneauDevis({
       banque: devisActuel.banque?.toUpperCase() || ''
     });
   }, [devisActuel, ouvert]);
+
+  useEffect(() => {
+    if (tousLesArticles.length === 0 || lignesDevis.length === 0) return;
+    setLignesDevis((prev) =>
+      prev.map((l) => {
+        if (l.prixFourniture != null && l.prixPose != null) return l;
+        const ref = tousLesArticles.find((a) => a.code === l.code);
+        if (!ref || ref.prixFourniture == null || ref.prixPose == null) return l;
+        const f = Number(ref.prixFourniture);
+        const p = Number(ref.prixPose);
+        const aLesDeux = f > 0 && p > 0;
+        const choix = l.choixPrix || (aLesDeux ? 'FOURNITURE_POSE' : null);
+        const typeLigne = normaliserTypeLigne(l.type || l.type_ligne, choix, ref.modePrix || l.modePrix);
+        return {
+          ...l,
+          modePrix: ref.modePrix || l.modePrix,
+          prixFourniture: f,
+          prixPose: p,
+          choixPrix: choix,
+          type: typeLigne
+        };
+      })
+    );
+  }, [articleFamilles]);
 
   useEffect(() => {
     if (!ouvert || devisActuel?.statut_paiement === 'PAYE') return;
@@ -316,10 +465,33 @@ export default function PanneauDevis({
     }
     setEnvoi(true);
     try {
+      const articlesPayload = lignesDevis.map((l) => {
+        const pu = prixArticle(l);
+        const qte = Number(l.quantite) || 1;
+        const aLesDeux = aTarifsFournitureEtPose(l);
+        const typeLigne = l.type || normaliserTypeLigne(l.type, l.choixPrix, l.modePrix);
+        return {
+          code: l.code,
+          libelle: l.libelle,
+          unite: l.unite,
+          diametre: l.diametre || null,
+          quantite: qte,
+          prix: pu,
+          montantLigne: qte * pu,
+          type: typeLigne,
+          type_ligne: typeLigne,
+          typeTva: l.typeTva || 'PRESTATION',
+          tauxTva: Number(l.tauxTva ?? 19),
+          choixPrix: l.choixPrix || (aLesDeux ? 'FOURNITURE_POSE' : null),
+          prixFourniture: l.prixFourniture != null ? Number(l.prixFourniture) : null,
+          prixPose: l.prixPose != null ? Number(l.prixPose) : null
+        };
+      });
+
       const resDevis = await client.put(`/demandes/${idDemande}/devis`, {
         montant: montantTotalArticles,
         id_devis: devisActuel?.id_devis,
-        articles: lignesDevis
+        articles: articlesPayload
       });
 
       const idDevisEnregistre = devisActuel?.id_devis || resDevis.data?.id_devis;
@@ -643,6 +815,11 @@ export default function PanneauDevis({
                           {article.code} · {LIBELLES_UNITES[article.unite] || article.unite}
                           {article.matiere ? ` · ${article.matiere}` : ''}
                           {article.couleur ? ` · ${article.couleur}` : ''}
+                          {aTarifsFournitureEtPose(article) ? (
+                            <span style={{ display: 'block', color: 'var(--color-primary)' }}>
+                              F {Number(article.prixFourniture).toLocaleString('fr-DZ')} + P {Number(article.prixPose).toLocaleString('fr-DZ')} DA
+                            </span>
+                          ) : null}
                         </small>
                       </div>
                       <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: 'var(--color-primary)' }}>
@@ -667,8 +844,8 @@ export default function PanneauDevis({
             {lignesDevis.length > 0 ? (() => {
               const auMoinsUnAvecDiametre = lignesDevis.some((l) => l.avecDiametre);
               const colonnesGrille = auMoinsUnAvecDiametre
-                ? 'minmax(160px, 1fr) 95px 90px 80px 110px 36px'
-                : 'minmax(160px, 1fr) 90px 80px 110px 36px';
+                ? 'minmax(150px, 1fr) 68px 90px 80px 85px 110px 36px'
+                : 'minmax(150px, 1fr) 68px 80px 85px 110px 36px';
 
               return (
               <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
@@ -680,6 +857,7 @@ export default function PanneauDevis({
                   fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em'
                 }}>
                   <span>Article</span>
+                  <span style={{ textAlign: 'center' }}>Type</span>
                   {auMoinsUnAvecDiametre && <span style={{ textAlign: 'center' }}>Diamètre</span>}
                   <span style={{ textAlign: 'center' }}>Qté</span>
                   <span style={{ textAlign: 'right' }}>P.U.</span>
@@ -705,10 +883,51 @@ export default function PanneauDevis({
                         <div style={{ fontWeight: 600, fontSize: 13.5 }}>{ligne.libelle}</div>
                         <small style={{ color: 'var(--color-text-muted)' }}>
                           {ligne.code} · {LIBELLES_UNITES[ligne.unite] || ligne.unite}
-                          {ligne.modePrix === 'FOURNITURE_POSE'
+                          {ligne.modePrix === 'FOURNITURE_POSE' && !aTarifsFournitureEtPose(ligne)
                             ? ` · F ${Number(ligne.prixFourniture || 0).toLocaleString('fr-DZ')} + P ${Number(ligne.prixPose || 0).toLocaleString('fr-DZ')} DA`
                             : null}
                         </small>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {(() => {
+                          const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
+                          const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
+                          return (
+                            <select
+                              value={typeActuel}
+                              disabled={typesDispo.length <= 1}
+                              onChange={(e) => changerTypeLigne(ligne.code, e.target.value)}
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                padding: '3px 4px',
+                                borderRadius: 4,
+                                border: '1px solid var(--color-border)',
+                                background:
+                                  typeActuel === 'F/' ? '#EFF6FF' :
+                                  typeActuel === 'P/' ? '#FFFBEB' :
+                                  typeActuel === 'FP/' ? '#ECFDF5' : '#F5F3FF',
+                                color:
+                                  typeActuel === 'F/' ? '#1D4ED8' :
+                                  typeActuel === 'P/' ? '#B45309' :
+                                  typeActuel === 'FP/' ? '#047857' : '#6D28D9',
+                                cursor: typesDispo.length > 1 ? 'pointer' : 'default',
+                                opacity: 1
+                              }}
+                              title={
+                                typesDispo.length <= 1
+                                  ? `Tarif unique disponible : ${typeActuel}`
+                                  : 'Changer le type de tarif appliqué'
+                              }
+                            >
+                              {typesDispo.map((t) => (
+                                <option key={t} value={t}>
+                                  {t}
+                                </option>
+                              ))}
+                            </select>
+                          );
+                        })()}
                       </div>
                       {auMoinsUnAvecDiametre && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

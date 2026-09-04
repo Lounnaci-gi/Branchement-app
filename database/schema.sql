@@ -193,7 +193,11 @@ CREATE TABLE LignesDevis (
     montant_ht          DECIMAL(12,2) NOT NULL DEFAULT 0,
     type_tva            NVARCHAR(20) NULL,
     taux_tva            DECIMAL(5,2) NOT NULL DEFAULT 19,
-    ordre               INT NOT NULL DEFAULT 0
+    ordre               INT NOT NULL DEFAULT 0,
+    choix_prix          NVARCHAR(20) NULL,
+    type_ligne          NVARCHAR(20) NULL,
+    prix_fourniture     DECIMAL(12,2) NULL,
+    prix_pose           DECIMAL(12,2) NULL
 );
 
 /* ------------------------------------------------------------

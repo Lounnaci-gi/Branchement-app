@@ -1817,3 +1817,160 @@
   font-size: 14px;
   color: #6B7280;
 }
+
+/* Articles et packs déjà présents dans le devis */
+.obat-drawer-item.deja-ajoute {
+  background: #F8FAFC;
+  opacity: 0.8;
+  border-color: #E2E8F0;
+}
+
+.obat-badge-deja-ajoute {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.obat-pack-card.deja-ajoute {
+  background: #F8FAFC;
+  border-color: #FECACA;
+}
+
+/* Modale Création d'un nouvel article */
+.obat-modal-nouvel-article {
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.obat-modal-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.obat-form-group {
+  margin-bottom: 14px;
+}
+
+.obat-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 5px;
+}
+
+.obat-form-group input,
+.obat-form-group select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #CBD5E1;
+  border-radius: 5px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.obat-form-group input:focus,
+.obat-form-group select:focus {
+  border-color: #1991EB;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 145, 235, 0.15);
+}
+
+.obat-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.obat-form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.obat-form-error {
+  color: #DC2626;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.obat-mode-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.obat-mode-pill-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid #CBD5E1;
+  background: #F8FAFC;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  transition: all 0.15s ease;
+}
+
+.obat-mode-pill-btn.active {
+  border-color: #1991EB;
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.obat-btn-creer-article {
+  background: #F0FDF4 !important;
+  color: #15803D !important;
+  border-color: #BBF7D0 !important;
+}
+
+.obat-btn-creer-article:hover {
+  background: #DCFCE7 !important;
+  border-color: #86EFAC !important;
+}
+
+.obat-btn-creer-article-biblio {
+  background: #1991EB;
+  color: #FFFFFF;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.obat-btn-creer-article-biblio:hover {
+  background: #1377C4;
+}
+
+.obat-btn-primary-add {
+  background: #0284C7 !important;
+  color: #FFFFFF !important;
+  border-color: #0284C7 !important;
+  font-weight: 600 !important;
+}
+
+.obat-btn-primary-add:hover {
+  background: #0369A1 !important;
+  border-color: #0369A1 !important;
+  color: #FFFFFF !important;
+}
+
+

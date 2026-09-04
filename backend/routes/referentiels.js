@@ -17,8 +17,8 @@ router.get('/articles', async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-                  SELECT f.code_famille AS code, f.libelle AS libelle_famille,
-                    a.code_article AS code_article, a.libelle, a.matiere, a.couleur, a.unite,
+                  SELECT f.id_famille, f.code_famille AS code, f.libelle AS libelle_famille,
+                    a.id_article, a.code_article AS code_article, a.libelle, a.matiere, a.couleur, a.unite,
                     COALESCE(t.mode_prix, a.mode_prix) AS mode_prix,
                     COALESCE(t.prix_unitaire, a.prix_unitaire) AS prix,
                     COALESCE(t.prix_fourniture, a.prix_fourniture) AS prix_fourniture,
@@ -43,10 +43,11 @@ router.get('/articles', async (req, res) => {
     const familles = result.recordset.reduce((acc, article) => {
       let famille = acc.find((item) => item.code === article.code);
       if (!famille) {
-        famille = { code: article.code, libelle: article.libelle_famille, articles: [] };
+        famille = { id_famille: article.id_famille, code: article.code, libelle: article.libelle_famille, articles: [] };
         acc.push(famille);
       }
       famille.articles.push({
+        id_article: article.id_article,
         code: article.code_article,
         libelle: article.libelle,
         matiere: article.matiere,
@@ -69,7 +70,7 @@ router.get('/articles', async (req, res) => {
   }
 });
 
-router.get('/articles/familles', autoriserRoles('admin'), async (req, res) => {
+router.get('/articles/familles', autoriserRoles('admin', 'chef_agence', 'agent_technique'), async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
@@ -152,7 +153,7 @@ router.put('/articles/familles/:id_famille', autoriserRoles('admin'), async (req
   }
 });
 
-router.post('/articles', autoriserRoles('admin'), async (req, res) => {
+router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique'), async (req, res) => {
   const {
     id_famille,
     libelle,
@@ -182,7 +183,7 @@ router.post('/articles', autoriserRoles('admin'), async (req, res) => {
     !texteValide(libelle, { maxLength: 150, obligatoire: true }) ||
     !texteValide(matiereArticle, { maxLength: 50 }) ||
     !texteValide(couleurArticle, { maxLength: 50 }) ||
-    !['U', 'ML', 'M²', 'M3', 'KG'].includes(unite) ||
+    !['U', 'ML', 'M²', 'M3', 'KG', 'H', 'FF', 'ENS'].includes(unite) ||
     !['PRESTATION', 'FOURNITURE_POSE'].includes(mode_prix) ||
     !['PRESTATION', 'TRAVAUX'].includes(type_tva) ||
     taux_tva === null || taux_tva === undefined || String(taux_tva).trim() === '' ||
@@ -206,7 +207,7 @@ router.post('/articles', autoriserRoles('admin'), async (req, res) => {
     const pool = await getPool();
     const famille = await pool.request()
       .input('id_famille', sql.Int, familleId)
-      .query('SELECT id_famille FROM FamillesArticles WHERE id_famille = @id_famille AND actif = 1');
+      .query('SELECT id_famille, code_famille, libelle FROM FamillesArticles WHERE id_famille = @id_famille AND actif = 1');
     if (!famille.recordset[0]) return res.status(404).json({ erreur: 'Famille d’article introuvable.' });
 
     const transaction = new sql.Transaction(pool);
@@ -234,11 +235,11 @@ router.post('/articles', autoriserRoles('admin'), async (req, res) => {
         .input('id_article', sql.Int, creation.recordset[0].id_article)
         .query(`UPDATE ArticlesDevis
                 SET code_article = CONCAT(N'ART-', RIGHT(REPLICATE(N'0', 8) + CONVERT(NVARCHAR(10), id_article), 8))
-                OUTPUT INSERTED.id_article, INSERTED.code_article, INSERTED.libelle
+                OUTPUT INSERTED.*
                 WHERE id_article = @id_article`);
 
       await new sql.Request(transaction)
-        .input('id_article', sql.Int, article.recordset[0].id_article)
+        .input('id_article', sql.Int, creation.recordset[0].id_article)
         .input('mode_prix', sql.NVarChar(20), mode_prix)
         .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
@@ -249,7 +250,34 @@ router.post('/articles', autoriserRoles('admin'), async (req, res) => {
           (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
           VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, CONVERT(date, GETDATE()))`);
       await transaction.commit();
-      res.status(201).json(article.recordset[0]);
+
+      const artCree = article.recordset[0];
+      const famInfo = famille.recordset[0];
+      res.status(201).json({
+        id_article: artCree.id_article,
+        code_article: artCree.code_article,
+        code: artCree.code_article,
+        libelle: artCree.libelle,
+        matiere: artCree.matiere,
+        couleur: artCree.couleur,
+        unite: artCree.unite,
+        mode_prix: artCree.mode_prix,
+        modePrix: artCree.mode_prix,
+        prix: Number(artCree.prix_unitaire),
+        prix_unitaire: Number(artCree.prix_unitaire),
+        prixFourniture: artCree.prix_fourniture !== null ? Number(artCree.prix_fourniture) : null,
+        prix_fourniture: artCree.prix_fourniture !== null ? Number(artCree.prix_fourniture) : null,
+        prixPose: artCree.prix_pose !== null ? Number(artCree.prix_pose) : null,
+        prix_pose: artCree.prix_pose !== null ? Number(artCree.prix_pose) : null,
+        type_tva: artCree.type_tva,
+        typeTva: artCree.type_tva,
+        taux_tva: Number(artCree.taux_tva),
+        tauxTva: Number(artCree.taux_tva),
+        avec_diametre: Boolean(artCree.avec_diametre),
+        avecDiametre: Boolean(artCree.avec_diametre),
+        id_famille: familleId,
+        famille: famInfo.libelle || famInfo.code_famille
+      });
     } catch (err) {
       await transaction.rollback();
       throw err;

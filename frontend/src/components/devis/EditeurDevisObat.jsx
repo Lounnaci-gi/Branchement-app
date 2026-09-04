@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './EditeurDevisObat.css';
+import client from '../../api/client';
+import { notifierErreur, notifierSucces } from '../../utils/notifications';
 
 const LIBELLES_UNITES = {
   U: 'U (Unité)',
@@ -16,6 +18,71 @@ function formaterNombre(val) {
   return n.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function aTarifsFournitureEtPose(article) {
+  if (!article) return false;
+  const f = Number(article.prixFourniture ?? article.prix_fourniture ?? 0);
+  const p = Number(article.prixPose ?? article.prix_pose ?? 0);
+  return f > 0 && p > 0;
+}
+
+export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
+  if (!ligne) return ['FP/', 'F/', 'P/', 'PR/'];
+
+  const ref = Array.isArray(tousLesArticles)
+    ? tousLesArticles.find((a) => a.code === (ligne.code || ligne.code_article))
+    : null;
+
+  // Si c'est une ligne saisie librement (hors catalogue prédéfini), tous les types sont éditables
+  if (!ref || ligne.estLigneLibre) {
+    return ['FP/', 'F/', 'P/', 'PR/'];
+  }
+
+  const fRaw = ligne.prixFourniture ?? ligne.prix_fourniture ?? ref?.prixFourniture ?? null;
+  const pRaw = ligne.prixPose ?? ligne.prix_pose ?? ref?.prixPose ?? null;
+  const mode = String(ligne.modePrix ?? ligne.mode_prix ?? ref?.modePrix ?? '').trim().toUpperCase();
+  const currentType = String(ligne.type ?? ligne.type_ligne ?? '').trim();
+
+  const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
+  const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
+
+  const aFourniture = f !== null && f > 0;
+  const aPose = p !== null && p > 0;
+  const aLesDeux = aFourniture && aPose;
+
+  const types = [];
+
+  if (aFourniture) types.push('F/');
+  if (aPose) types.push('P/');
+  if (aLesDeux) types.push('FP/');
+
+  const estPrestation = mode === 'PRESTATION' || (!aFourniture && !aPose && (currentType === 'PR/' || String(ligne.code || '').startsWith('PR') || String(ligne.typeTva).toUpperCase() === 'PRESTATION'));
+
+  if (estPrestation && !aFourniture && !aPose) {
+    types.push('PR/');
+  }
+
+  if (types.length === 0) {
+    if (['F/', 'P/', 'FP/', 'PR/'].includes(currentType)) {
+      types.push(currentType);
+    } else {
+      types.push('F/');
+    }
+  }
+
+  return types;
+}
+
+function normaliserTypeLigne(type, choixPrix, modePrix, article = null, tousLesArticles = []) {
+  const typesDispo = determinerTypesDisponibles(article || { type, choixPrix, modePrix }, tousLesArticles);
+  const t = String(type || '').trim();
+  if (typesDispo.includes(t)) return t;
+  if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) return 'F/';
+  if (choixPrix === 'POSE' && typesDispo.includes('P/')) return 'P/';
+  if (choixPrix === 'FOURNITURE_POSE' && typesDispo.includes('FP/')) return 'FP/';
+  if (typesDispo.includes('PR/')) return 'PR/';
+  return typesDispo[0] || 'F/';
+}
+
 // Modèles d'ouvrages types AEP (Spécifiques ADE pour eau potable)
 const PACKS_OUVRAGES_AEP = [
   {
@@ -24,13 +91,13 @@ const PACKS_OUVRAGES_AEP = [
     description: 'Tranchée ordinaire 5m, PEHD Ø25, collier de prise en charge, vanne d’arrêt, compteur DN15 et mise en eau.',
     sectionCible: 'Travaux de branchement standard',
     lignes: [
-      { code: 'TERR-01', libelle: 'Fouille en tranchée ordinaire (larg. 0.40m, prof. 0.80m)', type: 'Main d’œuvre', quantite: 5, unite: 'ML', prix: 1400, marge: 15, tauxTva: 19 },
-      { code: 'PEHD-25', libelle: 'Fourniture et pose de tube PEHD PN16 Ø25 mm', type: 'Fourniture', quantite: 5, unite: 'ML', prix: 450, marge: 20, tauxTva: 19, diametre: '25' },
-      { code: 'COL-PRISE', libelle: 'Collier de prise en charge avec robinet de prise en charge', type: 'Fourniture', quantite: 1, unite: 'U', prix: 3800, marge: 18, tauxTva: 19 },
-      { code: 'VANN-20', libelle: 'Vanne d’arrêt quart de tour avant compteur Ø20', type: 'Fourniture', quantite: 1, unite: 'U', prix: 2200, marge: 20, tauxTva: 19, diametre: '20' },
-      { code: 'COMPT-15', libelle: 'Fourniture et pose compteur de vitesse DN15 avec clapet anti-pollution', type: 'Ouvrage', quantite: 1, unite: 'U', prix: 7500, marge: 15, tauxTva: 19, diametre: '15' },
-      { code: 'REG-NICHE', libelle: 'Fourniture et scellement d’une niche/regard de comptage préfabriqué', type: 'Fourniture', quantite: 1, unite: 'U', prix: 6800, marge: 15, tauxTva: 19 },
-      { code: 'MO-ESSAI', libelle: 'Raccordement sur conduite principale, mise en eau et épreuve d’étanchéité', type: 'Main d’œuvre', quantite: 1, unite: 'FF', prix: 5000, marge: 10, tauxTva: 19 }
+      { code: 'TERR-01', libelle: 'Fouille en tranchée ordinaire (larg. 0.40m, prof. 0.80m)', type: 'P/', quantite: 5, unite: 'ML', prix: 1400, marge: 15, tauxTva: 19 },
+      { code: 'PEHD-25', libelle: 'Fourniture et pose de tube PEHD PN16 Ø25 mm', type: 'FP/', quantite: 5, unite: 'ML', prix: 450, marge: 20, tauxTva: 19, diametre: '25' },
+      { code: 'COL-PRISE', libelle: 'Collier de prise en charge avec robinet de prise en charge', type: 'F/', quantite: 1, unite: 'U', prix: 3800, marge: 18, tauxTva: 19 },
+      { code: 'VANN-20', libelle: 'Vanne d’arrêt quart de tour avant compteur Ø20', type: 'F/', quantite: 1, unite: 'U', prix: 2200, marge: 20, tauxTva: 19, diametre: '20' },
+      { code: 'COMPT-15', libelle: 'Fourniture et pose compteur de vitesse DN15 avec clapet anti-pollution', type: 'FP/', quantite: 1, unite: 'U', prix: 7500, marge: 15, tauxTva: 19, diametre: '15' },
+      { code: 'REG-NICHE', libelle: 'Fourniture et scellement d’une niche/regard de comptage préfabriqué', type: 'F/', quantite: 1, unite: 'U', prix: 6800, marge: 15, tauxTva: 19 },
+      { code: 'MO-ESSAI', libelle: 'Raccordement sur conduite principale, mise en eau et épreuve d’étanchéité', type: 'P/', quantite: 1, unite: 'FF', prix: 5000, marge: 10, tauxTva: 19 }
     ]
   },
   {
@@ -39,11 +106,11 @@ const PACKS_OUVRAGES_AEP = [
     description: 'Tranchée, conduite PEHD Ø40/50, vanne de sectionnement enterrée sous bouche à clé et batterie de compteurs.',
     sectionCible: 'Branchement gros calibre',
     lignes: [
-      { code: 'TERR-02', libelle: 'Fouille en tranchée avec évacuation des déblais excédentaires', type: 'Main d’œuvre', quantite: 8, unite: 'ML', prix: 1800, marge: 15, tauxTva: 19 },
-      { code: 'PEHD-40', libelle: 'Tube PEHD PN16 Ø40 mm bandes bleues AEP', type: 'Fourniture', quantite: 8, unite: 'ML', prix: 820, marge: 20, tauxTva: 19, diametre: '40' },
-      { code: 'VANN-BAC', libelle: 'Vanne d’arrêt à opercule avec bouche à clé et tube allonge', type: 'Fourniture', quantite: 1, unite: 'U', prix: 14500, marge: 15, tauxTva: 19 },
-      { code: 'CLAP-40', libelle: 'Clapet de non-retour à brides DN40', type: 'Fourniture', quantite: 1, unite: 'U', prix: 9200, marge: 18, tauxTva: 19, diametre: '40' },
-      { code: 'MO-COLL', libelle: 'Pose spécialisée, percement et épreuve sous pression 10 bars', type: 'Main d’œuvre', quantite: 1, unite: 'FF', prix: 12000, marge: 10, tauxTva: 19 }
+      { code: 'TERR-02', libelle: 'Fouille en tranchée avec évacuation des déblais excédentaires', type: 'P/', quantite: 8, unite: 'ML', prix: 1800, marge: 15, tauxTva: 19 },
+      { code: 'PEHD-40', libelle: 'Tube PEHD PN16 Ø40 mm bandes bleues AEP', type: 'F/', quantite: 8, unite: 'ML', prix: 820, marge: 20, tauxTva: 19, diametre: '40' },
+      { code: 'VANN-BAC', libelle: 'Vanne d’arrêt à opercule avec bouche à clé et tube allonge', type: 'F/', quantite: 1, unite: 'U', prix: 14500, marge: 15, tauxTva: 19 },
+      { code: 'CLAP-40', libelle: 'Clapet de non-retour à brides DN40', type: 'F/', quantite: 1, unite: 'U', prix: 9200, marge: 18, tauxTva: 19, diametre: '40' },
+      { code: 'MO-COLL', libelle: 'Pose spécialisée, percement et épreuve sous pression 10 bars', type: 'P/', quantite: 1, unite: 'FF', prix: 12000, marge: 10, tauxTva: 19 }
     ]
   },
   {
@@ -52,9 +119,9 @@ const PACKS_OUVRAGES_AEP = [
     description: 'Découpe d’enrobé à la scie, remblai en tout-venant compacté et couche de roulement enrobé.',
     sectionCible: 'Voirie et génie civil',
     lignes: [
-      { code: 'VOIR-DEC', libelle: 'Découpage du revêtement bitumineux à la disqueuse diamantée', type: 'Main d’œuvre', quantite: 6, unite: 'ML', prix: 650, marge: 15, tauxTva: 19 },
-      { code: 'VOIR-REM', libelle: 'Remblaiement méthodique en tout-venant 0/31.5 et compactage par couches', type: 'Fourniture', quantite: 3, unite: 'M3', prix: 3200, marge: 20, tauxTva: 19 },
-      { code: 'VOIR-ENR', libelle: 'Réfection définitive de la chaussée en béton bitumineux (enrobé à chaud)', type: 'Ouvrage', quantite: 4, unite: 'M²', prix: 4800, marge: 15, tauxTva: 19 }
+      { code: 'VOIR-DEC', libelle: 'Découpage du revêtement bitumineux à la disqueuse diamantée', type: 'P/', quantite: 6, unite: 'ML', prix: 650, marge: 15, tauxTva: 19 },
+      { code: 'VOIR-REM', libelle: 'Remblaiement méthodique en tout-venant 0/31.5 et compactage par couches', type: 'F/', quantite: 3, unite: 'M3', prix: 3200, marge: 20, tauxTva: 19 },
+      { code: 'VOIR-ENR', libelle: 'Réfection définitive de la chaussée en béton bitumineux (enrobé à chaud)', type: 'FP/', quantite: 4, unite: 'M²', prix: 4800, marge: 15, tauxTva: 19 }
     ]
   }
 ];
@@ -97,6 +164,16 @@ export default function EditeurDevisObat({
   // Modal de configuration d'un ouvrage (Obat 3:12)
   const [ouvrageEnConfig, setOuvrageEnConfig] = useState(null);
 
+  // Modal de sélection de famille pour les articles libres (avant sauvegarde)
+  const [modalFamilleOuvert, setModalFamilleOuvert] = useState(false);
+  // { id_ligne, libelle, unite, prix, type, tauxTva } pour chaque ligne libre
+  const [lignesLibresAPersister, setLignesLibresAPersister] = useState([]);
+  // { [id_ligne]: id_famille }
+  const [famillesChoisies, setFamillesChoisies] = useState({});
+  // callback à appeler une fois les articles enregistrés
+  const [callbackApresEnregistrement, setCallbackApresEnregistrement] = useState(null);
+  const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+
   // Données du document
   const [numeroDevis, setNumeroDevis] = useState(
     devisInitial?.numero_devis || numeroDevisPreview || 'DEV/2026/00001'
@@ -138,22 +215,32 @@ export default function EditeurDevisObat({
         {
           id_section: 'sec_1',
           titre: `Travaux : ${natureDefaut}`,
-          lignes: devisInitial.articles.map((art) => ({
-            id_ligne: art.id_ligne || Math.random().toString(),
-            code: art.code || art.code_article || '',
-            libelle: art.libelle || '',
-            type: art.type || (art.code?.includes('MO') ? 'Main d’œuvre' : 'Fourniture'),
-            quantite: Number(art.quantite) || 1,
-            unite: art.unite || 'U',
-            prix: Number(art.prix ?? art.prix_unitaire ?? 0),
-            marge: Number(art.marge || 0),
-            tauxTva: Number(art.tauxTva ?? art.taux_tva ?? 19),
-            typeTva: art.typeTva || 'PRESTATION',
-            matiere: art.matiere || '',
-            couleur: art.couleur || '',
-            diametre: art.diametre || '',
-            sousElements: art.sousElements || []
-          }))
+          lignes: devisInitial.articles.map((art) => {
+            const typesDispo = determinerTypesDisponibles(art);
+            const typeLigne = typesDispo.includes(art.type || art.type_ligne)
+              ? (art.type || art.type_ligne)
+              : typesDispo[0];
+            return {
+              id_ligne: art.id_ligne || Math.random().toString(),
+              code: art.code || art.code_article || '',
+              libelle: art.libelle || '',
+              type: typeLigne,
+              quantite: Number(art.quantite) || 1,
+              unite: art.unite || 'U',
+              prix: Number(art.prix ?? art.prix_unitaire ?? 0),
+              marge: Number(art.marge || 0),
+              tauxTva: Number(art.tauxTva ?? art.taux_tva ?? 19),
+              typeTva: art.typeTva || 'PRESTATION',
+              matiere: art.matiere || '',
+              couleur: art.couleur || '',
+              diametre: art.diametre || '',
+              modePrix: art.modePrix || art.mode_prix || 'PRESTATION',
+              prixFourniture: art.prixFourniture != null ? Number(art.prixFourniture) : (art.prix_fourniture != null ? Number(art.prix_fourniture) : null),
+              prixPose: art.prixPose != null ? Number(art.prixPose) : (art.prix_pose != null ? Number(art.prix_pose) : null),
+              choixPrix: art.choixPrix || art.choix_prix || 'FOURNITURE_POSE',
+              sousElements: art.sousElements || []
+            };
+          })
         }
       ];
     }
@@ -228,10 +315,72 @@ export default function EditeurDevisObat({
     }
   }, [numeroDevisPreview, devisInitial]);
 
+  // Familles locales synchronisées avec les props et mises à jour en direct lors d'ajouts
+  const [famillesLocales, setFamillesLocales] = useState(articleFamilles);
+
+  useEffect(() => {
+    setFamillesLocales(articleFamilles);
+  }, [articleFamilles]);
+
   // Tous les articles aplatis du référentiel
-  const tousLesArticles = articleFamilles.flatMap((f) =>
+  const tousLesArticles = famillesLocales.flatMap((f) =>
     (f.articles || []).map((art) => ({ ...art, famille: f.libelle || f.code }))
   );
+
+  // -------------------------------------------------------------
+  // AJOUT D'UNE NOUVELLE LIGNE / ARTICLE VIDE DANS LE DEVIS
+  // -------------------------------------------------------------
+  function ajouterLigneVide(idSection) {
+    let targetId = idSection || idSectionActive;
+
+    setSections((prev) => {
+      let updated = [...prev];
+      if (updated.length === 0) {
+        const nouvelleSec = {
+          id_section: `sec_${Date.now()}`,
+          titre: 'Section 1',
+          description: '',
+          lignes: []
+        };
+        updated = [nouvelleSec];
+        targetId = nouvelleSec.id_section;
+      } else if (!targetId || !updated.some((s) => s.id_section === targetId)) {
+        targetId = updated[0].id_section;
+      }
+
+      const refUnique = `ART-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      const nouvelleLigne = {
+        id_ligne: `lig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        code: refUnique,
+        libelle: '',
+        type: 'FP/',
+        quantite: 1,
+        unite: 'U',
+        prix: 0,
+        marge: 0,
+        tauxTva: autoliquidationTva ? 0 : 19,
+        typeTva: 'TRAVAUX',
+        matiere: '',
+        couleur: '',
+        diametre: '',
+        modePrix: 'FOURNITURE_POSE',
+        prixFourniture: 0,
+        prixPose: 0,
+        choixPrix: 'FOURNITURE_POSE',
+        id_famille: '',
+        sousElements: [],
+        estLigneLibre: true
+      };
+
+      return updated.map((s) =>
+        s.id_section === targetId ? { ...s, lignes: [...s.lignes, nouvelleLigne] } : s
+      );
+    });
+
+    if (targetId) {
+      setIdSectionActive(targetId);
+    }
+  }
 
   // Filtrage du tiroir bibliothèques
   const articlesFiltres = tousLesArticles.filter((art) => {
@@ -243,18 +392,54 @@ export default function EditeurDevisObat({
     return matchFamille && matchTexte;
   });
 
+  // Ensemble des codes d'articles déjà présents dans l'ensemble du devis
+  const codesArticlesDansDevis = new Set(
+    sections
+      .flatMap((s) => s.lignes.map((l) => (l.code || l.code_article || '').trim().toUpperCase()))
+      .filter(Boolean)
+  );
+
+  // Enrichir les lignes existantes si les tarifs fourniture/pose manquaient
+  useEffect(() => {
+    if (tousLesArticles.length === 0) return;
+    setSections((prev) =>
+      prev.map((s) => ({
+        ...s,
+        lignes: s.lignes.map((l) => {
+          const ref = tousLesArticles.find((a) => a.code === l.code);
+          if (!ref) return l;
+          const f = ref.prixFourniture != null ? Number(ref.prixFourniture) : (l.prixFourniture != null ? Number(l.prixFourniture) : null);
+          const p = ref.prixPose != null ? Number(ref.prixPose) : (l.prixPose != null ? Number(l.prixPose) : null);
+          const aLesDeux = f !== null && p !== null && f > 0 && p > 0;
+          const mode = ref.modePrix || l.modePrix;
+          const temp = { ...l, prixFourniture: f, prixPose: p, modePrix: mode };
+          const typesDispo = determinerTypesDisponibles(temp, tousLesArticles);
+          const typeLigne = typesDispo.includes(l.type) ? l.type : typesDispo[0];
+          return {
+            ...l,
+            modePrix: mode,
+            prixFourniture: f,
+            prixPose: p,
+            choixPrix: l.choixPrix || (aLesDeux ? 'FOURNITURE_POSE' : null),
+            type: typeLigne
+          };
+        })
+      }))
+    );
+  }, [articleFamilles]);
+
   // -------------------------------------------------------------
   // ACTIONS SUR LES SECTIONS ET LIGNES
   // -------------------------------------------------------------
   function ajouterSection() {
     const nouveauNum = sections.length + 1;
-    const nouvelle = {
+    const nouvelleSec = {
       id_section: `sec_${Date.now()}`,
       titre: `${nouveauNum}. Nouvelle section de travaux`,
       lignes: []
     };
-    setSections((prev) => [...prev, nouvelle]);
-    setIdSectionActive(nouvelle.id_section);
+    setSections((prev) => [...prev, nouvelleSec]);
+    setIdSectionActive(nouvelleSec.id_section);
   }
 
   function supprimerSection(idSection) {
@@ -271,28 +456,142 @@ export default function EditeurDevisObat({
     );
   }
 
-  function ajouterLigneDansSection(idSection, article, categorie = 'Fourniture') {
+  function ajouterLigneDansSection(idSection, article, categorie = 'Fourniture', choixPrixInitial = null) {
+    const codeArticle = (article?.code || article?.code_article || '').trim().toUpperCase();
+    if (codeArticle) {
+      const dejaPresent = sections.some((s) =>
+        s.lignes.some((l) => (l.code || l.code_article || '').trim().toUpperCase() === codeArticle)
+      );
+      if (dejaPresent) {
+        notifierErreur(`L'article « ${article?.libelle || codeArticle} » est déjà présent dans le devis. Un devis ne peut pas comporter le même article plusieurs fois.`);
+        return;
+      }
+    }
+
     const targetId = idSection || idSectionActive || sections[0]?.id_section;
+    const ref = tousLesArticles.find((a) => a.code === (article?.code || article?.code_article));
+    let f = article?.prixFourniture != null ? Number(article.prixFourniture) : (article?.prix_fourniture != null ? Number(article.prix_fourniture) : (ref?.prixFourniture != null ? Number(ref.prixFourniture) : null));
+    let p = article?.prixPose != null ? Number(article.prixPose) : (article?.prix_pose != null ? Number(article.prix_pose) : (ref?.prixPose != null ? Number(ref.prixPose) : null));
+    let modePrix = article?.modePrix || article?.mode_prix || ref?.modePrix || null;
+
+    if (categorie === 'PR/' || article?.modePrix === 'PRESTATION' || categorie === 'Prestation') {
+      modePrix = 'PRESTATION';
+      f = null;
+      p = null;
+    } else if (categorie === 'P/' && p == null) {
+      p = Number(article?.prix || 3500);
+      modePrix = 'FOURNITURE_POSE';
+    } else if (categorie === 'F/' && f == null) {
+      f = Number(article?.prix || 1000);
+      modePrix = 'FOURNITURE_POSE';
+    } else if (categorie === 'FP/' && (f == null || p == null)) {
+      const basePrix = Number(article?.prix || 15000);
+      f = Math.round(basePrix * 0.65);
+      p = basePrix - f;
+      modePrix = 'FOURNITURE_POSE';
+    }
+
+    const aLesDeux = f !== null && p !== null && f > 0 && p > 0;
+    if (!modePrix) {
+      modePrix = aLesDeux ? 'FOURNITURE_POSE' : (f > 0 || p > 0 ? 'FOURNITURE_POSE' : 'PRESTATION');
+    }
+
+    const tempArticle = {
+      ...article,
+      prixFourniture: f,
+      prixPose: p,
+      modePrix: modePrix,
+      code: article?.code || article?.code_article || ref?.code
+    };
+    const typesDispo = determinerTypesDisponibles(tempArticle, tousLesArticles);
+
+    let choixPrix = choixPrixInitial || article?.choixPrix || (aLesDeux ? 'FOURNITURE_POSE' : null);
+    let prixCalcule = Number(article?.prix || 0);
+    let typeCalcule = typesDispo[0] || 'F/';
+
+    if (aLesDeux) {
+      if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) {
+        prixCalcule = f;
+        typeCalcule = 'F/';
+      } else if (choixPrix === 'POSE' && typesDispo.includes('P/')) {
+        prixCalcule = p;
+        typeCalcule = 'P/';
+      } else {
+        choixPrix = 'FOURNITURE_POSE';
+        prixCalcule = f + p;
+        typeCalcule = 'FP/';
+      }
+    } else if (typesDispo.includes('PR/')) {
+      typeCalcule = 'PR/';
+      prixCalcule = Number(article?.prix || ref?.prix || 5000);
+    } else if (typesDispo.includes(categorie)) {
+      typeCalcule = categorie;
+      prixCalcule = categorie === 'P/' ? (p || prixCalcule) : (f || prixCalcule);
+    } else if (typesDispo.length > 0) {
+      typeCalcule = typesDispo[0];
+    }
+
     const nouvelleLigne = {
       id_ligne: `lig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      code: article?.code || (categorie === 'Main d’œuvre' ? 'MO-GEN' : `ART-${Date.now()}`),
-      libelle: article?.libelle || `${categorie} standard`,
-      type: article?.type || categorie,
+      code: article?.code || (typeCalcule === 'P/' ? 'MO-GEN' : `ART-${Date.now()}`),
+      libelle: article?.libelle || `${typeCalcule === 'P/' ? 'Pose' : typeCalcule === 'PR/' ? 'Prestation' : 'Fourniture'} standard`,
+      type: typeCalcule,
       quantite: Number(article?.quantite) || 1,
-      unite: article?.unite || (categorie === 'Main d’œuvre' ? 'H' : 'U'),
-      prix: Number(article?.prix || 0),
+      unite: article?.unite || (typeCalcule === 'P/' ? 'H' : 'U'),
+      prix: prixCalcule,
       marge: Number(article?.marge || 0),
       tauxTva: autoliquidationTva ? 0 : Number(article?.tauxTva || 19),
       typeTva: article?.typeTva || 'PRESTATION',
       matiere: article?.matiere || '',
       couleur: article?.couleur || '',
       diametre: article?.diametre || '',
+      modePrix: article?.modePrix || article?.mode_prix || (aLesDeux ? 'FOURNITURE_POSE' : 'PRESTATION'),
+      prixFourniture: f,
+      prixPose: p,
+      choixPrix: choixPrix,
       sousElements: article?.sousElements || []
     };
 
     setSections((prev) =>
       prev.map((s) =>
         s.id_section === targetId ? { ...s, lignes: [...s.lignes, nouvelleLigne] } : s
+      )
+    );
+  }
+
+  function changerChoixPrixLigne(idSection, idLigne, nouveauChoix) {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id_section === idSection
+          ? {
+              ...s,
+              lignes: s.lignes.map((l) => {
+                if (l.id_ligne !== idLigne) return l;
+                const f = Number(l.prixFourniture || 0);
+                const p = Number(l.prixPose || 0);
+                let nouveauPrix = f + p;
+                let nouveauType = 'FP/';
+
+                if (nouveauChoix === 'FOURNITURE') {
+                  nouveauPrix = f;
+                  nouveauType = 'F/';
+                } else if (nouveauChoix === 'POSE') {
+                  nouveauPrix = p;
+                  nouveauType = 'P/';
+                } else {
+                  nouveauPrix = f + p;
+                  nouveauType = 'FP/';
+                }
+
+                return {
+                  ...l,
+                  choixPrix: nouveauChoix,
+                  prix: nouveauPrix,
+                  type: nouveauType
+                };
+              })
+            }
+          : s
       )
     );
   }
@@ -313,7 +612,30 @@ export default function EditeurDevisObat({
         s.id_section === idSection
           ? {
               ...s,
-              lignes: s.lignes.map((l) => (l.id_ligne === idLigne ? { ...l, [champ]: valeur } : l))
+              lignes: s.lignes.map((l) => {
+                if (l.id_ligne !== idLigne) return l;
+                const maj = { ...l, [champ]: valeur };
+                if (champ === 'type') {
+                  if (valeur === 'PR/') {
+                    maj.modePrix = 'PRESTATION';
+                    maj.typeTva = 'PRESTATION';
+                    maj.choixPrix = null;
+                  } else if (valeur === 'F/') {
+                    maj.modePrix = 'FOURNITURE_POSE';
+                    maj.typeTva = 'TRAVAUX';
+                    maj.choixPrix = 'FOURNITURE';
+                  } else if (valeur === 'P/') {
+                    maj.modePrix = 'FOURNITURE_POSE';
+                    maj.typeTva = 'TRAVAUX';
+                    maj.choixPrix = 'POSE';
+                  } else if (valeur === 'FP/') {
+                    maj.modePrix = 'FOURNITURE_POSE';
+                    maj.typeTva = 'TRAVAUX';
+                    maj.choixPrix = 'FOURNITURE_POSE';
+                  }
+                }
+                return maj;
+              })
             }
           : s
       )
@@ -322,6 +644,21 @@ export default function EditeurDevisObat({
 
   // Insérer un pack complet d'ouvrages types AEP
   function insererPackOuvrage(pack) {
+    const codesExistants = new Set(
+      sections
+        .flatMap((s) => s.lignes.map((l) => (l.code || l.code_article || '').trim().toUpperCase()))
+        .filter(Boolean)
+    );
+    const doublons = pack.lignes.filter((l) =>
+      codesExistants.has((l.code || '').trim().toUpperCase())
+    );
+
+    if (doublons.length > 0) {
+      const liste = doublons.map((d) => d.libelle || d.code).join(', ');
+      notifierErreur(`Impossible d'insérer ce pack : les articles suivants sont déjà présents dans le devis : ${liste}.`);
+      return;
+    }
+
     const secCible = {
       id_section: `sec_pack_${Date.now()}`,
       titre: pack.titre,
@@ -442,6 +779,53 @@ export default function EditeurDevisObat({
       return;
     }
 
+    // Vérification que tous les articles ont une désignation
+    const ligneSansLibelle = toutesLesLignes.find((l) => !l.libelle || !l.libelle.trim());
+    if (ligneSansLibelle) {
+      notifierErreur("Veuillez renseigner la désignation de tous les articles du devis avant d'enregistrer.");
+      return;
+    }
+
+    // Unicité des articles dans le devis
+    const codesRencontres = new Set();
+    const doublons = [];
+    for (const l of toutesLesLignes) {
+      const code = (l.code || l.code_article || '').trim().toUpperCase();
+      if (code) {
+        if (codesRencontres.has(code)) {
+          doublons.push(l.libelle || code);
+        } else {
+          codesRencontres.add(code);
+        }
+      }
+    }
+    if (doublons.length > 0) {
+      notifierErreur(`Le devis contient des articles en double (${doublons.join(', ')}). Un même article ne peut pas figurer plusieurs fois dans le devis.`);
+      return;
+    }
+
+    // Détection des lignes libres à enregistrer dans le référentiel
+    const libres = toutesLesLignes.filter((l) => l.estLigneLibre && l.libelle?.trim());
+    if (libres.length > 0) {
+      // Initialiser les familles choisies (reprendre id_famille si déjà sélectionné sur la ligne)
+      const init = {};
+      libres.forEach((l) => { init[l.id_ligne] = l.id_famille || ''; });
+      setLignesLibresAPersister(libres);
+      setFamillesChoisies(init);
+      setCallbackApresEnregistrement(() => (sectionsUpdated) => {
+        // POINT CLÉ DE LA VIDÉO OBAT (Timestamp 1:24 / 84s) :
+        const manqueMentions = !debutTravaux?.trim() || !dureeEstimee?.trim();
+        if (manqueMentions) {
+          setActionApresAvertissement(() => () => executerSauvegarde(estFinalisation, sectionsUpdated));
+          setModalAvertissementMentions(true);
+          return;
+        }
+        executerSauvegarde(estFinalisation, sectionsUpdated);
+      });
+      setModalFamilleOuvert(true);
+      return;
+    }
+
     // POINT CLÉ DE LA VIDÉO OBAT (Timestamp 1:24 / 84s) :
     const manqueMentions = !debutTravaux?.trim() || !dureeEstimee?.trim();
 
@@ -454,13 +838,123 @@ export default function EditeurDevisObat({
     executerSauvegarde(estFinalisation);
   }
 
-  function executerSauvegarde(estFinalisation = false) {
+  // Enregistre les articles libres dans le référentiel puis appelle le callback
+  async function enregistrerArticlesLibresPuisSauvegarder() {
+    // Vérifier que toutes les familles sont choisies
+    const nonChoisies = lignesLibresAPersister.filter((l) => !famillesChoisies[l.id_ligne]);
+    if (nonChoisies.length > 0) {
+      notifierErreur(`Veuillez choisir une famille pour : ${nonChoisies.map((l) => l.libelle).join(', ')}`);
+      return;
+    }
+
+    setEnregistrementEnCours(true);
+    const codesNouveaux = {}; // id_ligne -> code_article retourné par l'API
+
+    try {
+      for (const ligne of lignesLibresAPersister) {
+        const idFamille = Number(famillesChoisies[ligne.id_ligne]);
+        const type = (ligne.type || 'FP/').trim();
+        let mode_prix = 'FOURNITURE_POSE';
+        let type_tva = 'TRAVAUX';
+        if (type === 'PR/' || ligne.typeTva === 'PRESTATION') {
+          mode_prix = 'PRESTATION';
+          type_tva = 'PRESTATION';
+        }
+
+        const uniteNorm = ['U','ML','M²','M3','KG','H','FF','ENS'].includes(ligne.unite)
+          ? ligne.unite : 'U';
+
+        const prix = Number(ligne.prix) || 0;
+        let prix_fourniture = null;
+        let prix_pose = null;
+
+        if (mode_prix === 'FOURNITURE_POSE') {
+          if (type === 'F/') {
+            prix_fourniture = prix;
+            prix_pose = 0;
+          } else if (type === 'P/') {
+            prix_fourniture = 0;
+            prix_pose = prix;
+          } else {
+            // FP/
+            const f = Number(ligne.prixFourniture);
+            const p = Number(ligne.prixPose);
+            if (!isNaN(f) && !isNaN(p) && f >= 0 && p >= 0 && (f + p === prix)) {
+              prix_fourniture = f;
+              prix_pose = p;
+            } else {
+              prix_fourniture = Math.round(prix * 0.6 * 100) / 100;
+              prix_pose = Math.round((prix - prix_fourniture) * 100) / 100;
+            }
+          }
+        }
+
+        const payload = {
+          id_famille: idFamille,
+          libelle: ligne.libelle.trim(),
+          matiere: ligne.matiere || '',
+          couleur: '',
+          unite: uniteNorm,
+          mode_prix,
+          prix_unitaire: prix,
+          prix_fourniture,
+          prix_pose,
+          type_tva,
+          taux_tva: Number(ligne.tauxTva) || 19,
+          avec_diametre: Boolean(ligne.diametre)
+        };
+
+        const res = await client.post('/referentiels/articles', payload);
+        if (res.data?.code_article) {
+          codesNouveaux[ligne.id_ligne] = res.data.code_article;
+          // Ajouter également au catalogue local
+          setFamillesLocales((prev) =>
+            prev.map((f) =>
+              f.id_famille === idFamille
+                ? { ...f, articles: [...(f.articles || []), res.data] }
+                : f
+            )
+          );
+        }
+      }
+
+      // Mettre à jour les codes des lignes libres dans les sections
+      let sectionsAjour = sections;
+      if (Object.keys(codesNouveaux).length > 0) {
+        sectionsAjour = sections.map((sec) => ({
+          ...sec,
+          lignes: sec.lignes.map((l) =>
+            codesNouveaux[l.id_ligne]
+              ? { ...l, code: codesNouveaux[l.id_ligne], estLigneLibre: false, id_famille: famillesChoisies[l.id_ligne] }
+              : l
+          )
+        }));
+        setSections(sectionsAjour);
+      }
+
+      setModalFamilleOuvert(false);
+      notifierSucces(`${lignesLibresAPersister.length} article(s) enregistré(s) dans le référentiel.`);
+
+      // Poursuivre immédiatement la sauvegarde du devis avec les codes officiels
+      if (callbackApresEnregistrement) {
+        callbackApresEnregistrement(sectionsAjour);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.erreur || "Erreur lors de l'enregistrement d'un article.";
+      notifierErreur(msg);
+    } finally {
+      setEnregistrementEnCours(false);
+    }
+  }
+
+  function executerSauvegarde(estFinalisation = false, sectionsOverride = null) {
     setModalAvertissementMentions(false);
 
     let ordreGlobal = 1;
     const articlesPayload = [];
+    const sourceSections = sectionsOverride || sections;
 
-    sections.forEach((sec) => {
+    sourceSections.forEach((sec) => {
       sec.lignes.forEach((l) => {
         articlesPayload.push({
           code: l.code,
@@ -471,7 +965,12 @@ export default function EditeurDevisObat({
           prix: Number(l.prix) || 0,
           montantLigne: (Number(l.quantite) || 1) * (Number(l.prix) || 0),
           tauxTva: autoliquidationTva ? 0 : Number(l.tauxTva) || 19,
+          type: l.type || 'F/',
+          type_ligne: l.type || 'F/',
           typeTva: l.typeTva || 'PRESTATION',
+          choixPrix: l.choixPrix || (aTarifsFournitureEtPose(l) ? 'FOURNITURE_POSE' : null),
+          prixFourniture: l.prixFourniture != null ? Number(l.prixFourniture) : null,
+          prixPose: l.prixPose != null ? Number(l.prixPose) : null,
           ordre: ordreGlobal++
         });
       });
@@ -697,13 +1196,26 @@ export default function EditeurDevisObat({
               <h3>
                 <span>📚</span> Bibliothèque d'éléments
               </h3>
-              <button
-                type="button"
-                className="obat-btn-close"
-                onClick={() => setDrawerBiblioOuvert(false)}
-              >
-                ✕
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  className="obat-btn-creer-article-biblio"
+                  onClick={() => {
+                    ajouterLigneVide(idSectionActive);
+                    setDrawerBiblioOuvert(false);
+                  }}
+                  title="Ajouter une nouvelle ligne vide dans le devis"
+                >
+                  + Ligne vide dans devis
+                </button>
+                <button
+                  type="button"
+                  className="obat-btn-close"
+                  onClick={() => setDrawerBiblioOuvert(false)}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Onglets Articles vs Packs AEP */}
@@ -759,39 +1271,104 @@ export default function EditeurDevisObat({
                 <div className="obat-drawer-list">
                   {articlesFiltres.length === 0 ? (
                     <div style={{ textAlign: 'center', color: '#9CA3AF', padding: '30px 10px', fontSize: 13 }}>
-                      Aucun article trouvé pour cette recherche.
+                      <p style={{ margin: '0 0 12px' }}>Aucun article trouvé pour cette recherche.</p>
+                      <button
+                        type="button"
+                        className="obat-btn-creer-article-biblio"
+                        onClick={() => {
+                          ajouterLigneVide(idSectionActive);
+                          setDrawerBiblioOuvert(false);
+                        }}
+                      >
+                        + Insérer une ligne vide dans le devis
+                      </button>
                     </div>
                   ) : (
-                    articlesFiltres.map((art) => (
-                      <div key={art.code} className="obat-drawer-item">
-                        <div className="obat-item-info">
-                          <div className="obat-item-name" title={art.libelle}>
-                            {art.libelle}
+                    articlesFiltres.map((art) => {
+                      const aLesDeux = aTarifsFournitureEtPose(art);
+                      const prixTotalFP = aLesDeux ? (Number(art.prixFourniture) + Number(art.prixPose)) : Number(art.prix);
+                      const codeArt = (art.code || art.code_article || '').trim().toUpperCase();
+                      const estDejaDansDevis = Boolean(codeArt && codesArticlesDansDevis.has(codeArt));
+
+                      return (
+                        <div key={art.code} className={`obat-drawer-item ${estDejaDansDevis ? 'deja-ajoute' : ''}`}>
+                          <div className="obat-item-info">
+                            <div className="obat-item-name" title={art.libelle}>
+                              {art.libelle}
+                            </div>
+                            <div className="obat-item-sub">
+                              {art.code} · {LIBELLES_UNITES[art.unite] || art.unite || 'U'}
+                              {art.matiere ? ` · ${art.matiere}` : ''}
+                              {art.diametre ? ` · Ø ${art.diametre}` : ''}
+                            </div>
+                            {aLesDeux && (
+                              <div className="obat-item-tarifs-breakdown">
+                                <span>Fourniture : {formaterNombre(art.prixFourniture)} DA</span>
+                                <span> · </span>
+                                <span>Pose : {formaterNombre(art.prixPose)} DA</span>
+                              </div>
+                            )}
                           </div>
-                          <div className="obat-item-sub">
-                            {art.code} · {LIBELLES_UNITES[art.unite] || art.unite || 'U'}
-                            {art.matiere ? ` · ${art.matiere}` : ''}
-                            {art.diametre ? ` · Ø ${art.diametre}` : ''}
+                          <div className="obat-item-action">
+                            <div className="obat-item-price">{formaterNombre(prixTotalFP)} DA</div>
+                            {estDejaDansDevis ? (
+                              <span className="obat-badge-deja-ajoute" title="Cet article est déjà présent dans le devis">
+                                ✓ Déjà dans le devis
+                              </span>
+                            ) : aLesDeux ? (
+                              <div className="obat-drawer-split-actions">
+                                <button
+                                  type="button"
+                                  className="obat-item-add-btn"
+                                  onClick={() =>
+                                    ajouterLigneDansSection(idSectionActive, art, 'FP/', 'FOURNITURE_POSE')
+                                  }
+                                  title="Insérer avec fourniture et pose"
+                                >
+                                  + FP/ Les deux
+                                </button>
+                                <div className="obat-sub-actions">
+                                  <button
+                                    type="button"
+                                    className="obat-item-sub-btn"
+                                    onClick={() =>
+                                      ajouterLigneDansSection(idSectionActive, art, 'F/', 'FOURNITURE')
+                                    }
+                                    title="Insérer uniquement la fourniture"
+                                  >
+                                    + F/ Fourn.
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="obat-item-sub-btn"
+                                    onClick={() =>
+                                      ajouterLigneDansSection(idSectionActive, art, 'P/', 'POSE')
+                                    }
+                                    title="Insérer uniquement la pose"
+                                  >
+                                    + P/ Pose
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="obat-item-add-btn"
+                                onClick={() =>
+                                  ajouterLigneDansSection(
+                                    idSectionActive,
+                                    art,
+                                    art.modePrix === 'PRESTATION' ? 'PR/' : (art.prixPose && !art.prixFourniture ? 'P/' : 'F/')
+                                  )
+                                }
+                              >
+                                + Insérer
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div className="obat-item-action">
-                          <div className="obat-item-price">{formaterNombre(art.prix)} DA</div>
-                          <button
-                            type="button"
-                            className="obat-item-add-btn"
-                            onClick={() =>
-                              ajouterLigneDansSection(
-                                idSectionActive,
-                                art,
-                                art.famille?.includes('MO') ? 'Main d’œuvre' : 'Fourniture'
-                              )
-                            }
-                          >
-                            + Insérer
-                          </button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </>
@@ -800,33 +1377,46 @@ export default function EditeurDevisObat({
                 <div style={{ padding: '8px 14px', fontSize: 12, color: '#64748B', background: '#F8FAFC' }}>
                   Ces packs regroupent l’ensemble des fournitures et prestations standard d’un branchement eau potable selon les normes ADE.
                 </div>
-                {PACKS_OUVRAGES_AEP.map((pack) => (
-                  <div key={pack.id} className="obat-pack-card">
-                    <div className="obat-pack-header">
-                      <div className="obat-pack-title">📦 {pack.titre}</div>
-                      <span className="obat-pack-count">{pack.lignes.length} éléments</span>
-                    </div>
-                    <p className="obat-pack-desc">{pack.description}</p>
-                    <div className="obat-pack-footer">
-                      <div className="obat-pack-total">
-                        Total estimé :{' '}
-                        <strong>
-                          {formaterNombre(
-                            pack.lignes.reduce((acc, l) => acc + (l.quantite * l.prix), 0)
-                          )}{' '}
-                          DA HT
-                        </strong>
+                {PACKS_OUVRAGES_AEP.map((pack) => {
+                  const packDoublons = pack.lignes.filter((l) =>
+                    codesArticlesDansDevis.has((l.code || '').trim().toUpperCase())
+                  );
+                  const packADoublons = packDoublons.length > 0;
+                  return (
+                    <div key={pack.id} className={`obat-pack-card ${packADoublons ? 'deja-ajoute' : ''}`}>
+                      <div className="obat-pack-header">
+                        <div className="obat-pack-title">📦 {pack.titre}</div>
+                        <span className="obat-pack-count">{pack.lignes.length} éléments</span>
                       </div>
-                      <button
-                        type="button"
-                        className="obat-btn-add-pack"
-                        onClick={() => insererPackOuvrage(pack)}
-                      >
-                        + Insérer ce pack
-                      </button>
+                      <p className="obat-pack-desc">{pack.description}</p>
+                      {packADoublons && (
+                        <div style={{ fontSize: 11, color: '#DC2626', marginBottom: 8, fontWeight: 500 }}>
+                          ⚠️ Contient des articles déjà dans le devis ({packDoublons.length})
+                        </div>
+                      )}
+                      <div className="obat-pack-footer">
+                        <div className="obat-pack-total">
+                          Total estimé :{' '}
+                          <strong>
+                            {formaterNombre(
+                              pack.lignes.reduce((acc, l) => acc + (l.quantite * l.prix), 0)
+                            )}{' '}
+                            DA HT
+                          </strong>
+                        </div>
+                        <button
+                          type="button"
+                          className="obat-btn-add-pack"
+                          disabled={packADoublons}
+                          style={packADoublons ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                          onClick={() => insererPackOuvrage(pack)}
+                        >
+                          {packADoublons ? 'Articles déjà présents' : '+ Insérer ce pack'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </aside>
@@ -1084,14 +1674,53 @@ export default function EditeurDevisObat({
                                   <div>
                                     <input
                                       type="text"
+                                      placeholder="Désignation de l'article…"
                                       value={ligne.libelle}
                                       onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'libelle', e.target.value)}
                                       style={{ fontWeight: estOuvrage ? 700 : 500 }}
+                                      autoFocus={ligne.estLigneLibre && !ligne.libelle}
                                     />
-                                    <div className="obat-line-subdetail">
-                                      <small>{ligne.code}</small>
-                                      {ligne.matiere && <small> · {ligne.matiere}</small>}
-                                      {ligne.diametre && <small> · Ø {ligne.diametre}</small>}
+                                    <div className="obat-line-subdetail" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                                      <small style={{ color: '#94A3B8' }}>{ligne.code}</small>
+                                      {ligne.estLigneLibre && (
+                                        <select
+                                          value={ligne.id_famille || ''}
+                                          onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'id_famille', e.target.value)}
+                                          style={{
+                                            fontSize: 11,
+                                            padding: '1px 6px',
+                                            border: ligne.id_famille ? '1px solid #CBD5E1' : '1.5px solid #F97316',
+                                            borderRadius: 3,
+                                            background: ligne.id_famille ? '#FFF' : '#FFF7ED',
+                                            color: ligne.id_famille ? '#1E293B' : '#C2410C',
+                                            fontWeight: ligne.id_famille ? 400 : 600
+                                          }}
+                                          title="Préciser la famille de cet article avant l'enregistrement"
+                                        >
+                                          <option value="">🏷️ Famille de l'article *</option>
+                                          {famillesLocales.map((f) => (
+                                            <option key={f.id_famille} value={f.id_famille}>
+                                              {f.libelle || f.code}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
+                                      <input
+                                        type="text"
+                                        placeholder="Ø mm"
+                                        title="Diamètre en mm (optionnel)"
+                                        value={ligne.diametre || ''}
+                                        onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'diametre', e.target.value)}
+                                        style={{ width: 55, fontSize: 11, padding: '1px 4px', border: '1px solid #CBD5E1', borderRadius: 3 }}
+                                      />
+                                      <input
+                                        type="text"
+                                        placeholder="Matière"
+                                        title="Matière (optionnel)"
+                                        value={ligne.matiere || ''}
+                                        onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'matiere', e.target.value)}
+                                        style={{ width: 80, fontSize: 11, padding: '1px 4px', border: '1px solid #CBD5E1', borderRadius: 3 }}
+                                      />
                                       {estOuvrage && (
                                         <button
                                           type="button"
@@ -1105,12 +1734,23 @@ export default function EditeurDevisObat({
                                   </div>
                                 ) : (
                                   <div>
-                                    <strong>{ligne.libelle}</strong>
+                                    <strong>{ligne.libelle || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Sans désignation</span>}</strong>
                                     <div style={{ fontSize: 11.5, color: '#64748B' }}>
                                       {ligne.code}
                                       {ligne.diametre ? ` · Ø ${ligne.diametre} mm` : ''}
                                       {ligne.matiere ? ` · ${ligne.matiere}` : ''}
                                     </div>
+                                    {aTarifsFournitureEtPose(ligne) && (
+                                      <div style={{ marginTop: 3 }}>
+                                        <span className={`obat-badge-option-tarif ${ligne.choixPrix === 'FOURNITURE' ? 'fourn' : ligne.choixPrix === 'POSE' ? 'pose' : 'les-deux'}`}>
+                                          {ligne.choixPrix === 'FOURNITURE'
+                                            ? `Fourniture seule (${formaterNombre(ligne.prixFourniture)} DA)`
+                                            : ligne.choixPrix === 'POSE'
+                                            ? `Pose seule (${formaterNombre(ligne.prixPose)} DA)`
+                                            : `Fourniture & Pose (${formaterNombre(Number(ligne.prixFourniture) + Number(ligne.prixPose))} DA)`}
+                                        </span>
+                                      </div>
+                                    )}
                                     {!masquerDetailsOuvragesPreview && estOuvrage && ligne.sousElements?.length > 0 && (
                                       <div className="obat-preview-sous-elements">
                                         {ligne.sousElements.map((se) => (
@@ -1127,9 +1767,55 @@ export default function EditeurDevisObat({
                                 )}
                               </td>
                               <td className="center obat-col-type">
-                                <span className={`obat-type-tag ${ligne.type === 'Main d’œuvre' ? 'mo' : ligne.type === 'Ouvrage' ? 'ouv' : 'fourn'}`}>
-                                  {ligne.type === 'Main d’œuvre' ? 'MO' : ligne.type === 'Ouvrage' ? 'OUV' : 'FOURN'}
-                                </span>
+                                {modeOnglet === 'edition' ? (() => {
+                                  const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
+                                  const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
+                                  return (
+                                    <select
+                                      className={`obat-select-type-tag ${
+                                        typeActuel === 'P/' ? 'p' : typeActuel === 'PR/' ? 'pr' : typeActuel === 'FP/' ? 'fp' : 'f'
+                                      }`}
+                                      value={typeActuel}
+                                      disabled={typesDispo.length <= 1}
+                                      style={{
+                                        cursor: typesDispo.length > 1 ? 'pointer' : 'default',
+                                        opacity: 1
+                                      }}
+                                      onChange={(e) => {
+                                        const nType = e.target.value;
+                                        if (aTarifsFournitureEtPose(ligne)) {
+                                          if (nType === 'F/') changerChoixPrixLigne(section.id_section, ligne.id_ligne, 'FOURNITURE');
+                                          else if (nType === 'P/') changerChoixPrixLigne(section.id_section, ligne.id_ligne, 'POSE');
+                                          else if (nType === 'FP/') changerChoixPrixLigne(section.id_section, ligne.id_ligne, 'FOURNITURE_POSE');
+                                          else modifierChampLigne(section.id_section, ligne.id_ligne, 'type', nType);
+                                        } else {
+                                          modifierChampLigne(section.id_section, ligne.id_ligne, 'type', nType);
+                                        }
+                                      }}
+                                      title={
+                                        typesDispo.length <= 1
+                                          ? `Tarif unique disponible : ${typeActuel}`
+                                          : 'Changer le type de tarif appliqué'
+                                      }
+                                    >
+                                      {typesDispo.map((t) => (
+                                        <option key={t} value={t}>
+                                          {t}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  );
+                                })() : (() => {
+                                  const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
+                                  const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
+                                  return (
+                                    <span className={`obat-type-tag ${
+                                      typeActuel === 'P/' ? 'p' : typeActuel === 'PR/' ? 'pr' : typeActuel === 'FP/' ? 'fp' : 'f'
+                                    }`}>
+                                      {typeActuel}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                               <td className="center obat-col-qte">
                                 {modeOnglet === 'edition' ? (
@@ -1159,6 +1845,8 @@ export default function EditeurDevisObat({
                                       <option value="M3">M3</option>
                                       <option value="H">H</option>
                                       <option value="FF">FF</option>
+                                      <option value="KG">KG</option>
+                                      <option value="ENS">ENS</option>
                                     </select>
                                   ) : (
                                     <span>{ligne.unite}</span>
@@ -1235,40 +1923,21 @@ export default function EditeurDevisObat({
                     <div className="obat-section-add-actions">
                       <button
                         type="button"
+                        className="obat-btn-quick-add obat-btn-primary-add"
+                        onClick={() => ajouterLigneVide(section.id_section)}
+                        title="Ajouter une ligne vide à remplir directement dans le devis"
+                      >
+                        + Ajouter un article
+                      </button>
+                      <button
+                        type="button"
                         className="obat-btn-quick-add"
                         onClick={() => {
                           setIdSectionActive(section.id_section);
                           setDrawerBiblioOuvert(true);
                         }}
                       >
-                        + Insérer depuis la Bibliothèque
-                      </button>
-                      <button
-                        type="button"
-                        className="obat-btn-quick-add"
-                        onClick={() =>
-                          ajouterLigneDansSection(section.id_section, { libelle: 'Fourniture standard', prix: 1000, unite: 'U' }, 'Fourniture')
-                        }
-                      >
-                        + Fourniture libre
-                      </button>
-                      <button
-                        type="button"
-                        className="obat-btn-quick-add"
-                        onClick={() =>
-                          ajouterLigneDansSection(section.id_section, { libelle: 'Main d’œuvre de pose / raccordement', prix: 3500, unite: 'H' }, 'Main d’œuvre')
-                        }
-                      >
-                        + Main d'œuvre
-                      </button>
-                      <button
-                        type="button"
-                        className="obat-btn-quick-add"
-                        onClick={() =>
-                          ajouterLigneDansSection(section.id_section, { libelle: 'Ouvrage complet de raccordement', prix: 15000, unite: 'U' }, 'Ouvrage')
-                        }
-                      >
-                        + Ouvrage composé
+                        📚 Insérer depuis la Bibliothèque
                       </button>
                     </div>
                   )}
@@ -1653,6 +2322,84 @@ export default function EditeurDevisObat({
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #E5E7EB', paddingTop: 4, fontWeight: 700 }}>
               <span>Total TTC :</span>
               <strong>{formaterNombre(totalTTC)} DA</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7b. MODAL DE SÉLECTION DE FAMILLE POUR LES ARTICLES LIBRES */}
+      {modalFamilleOuvert && (
+        <div className="obat-modal-overlay">
+          <div className="obat-modal-card" style={{ maxWidth: 680, width: '95%' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 6 }}>🏷️ Classement des nouveaux articles</h3>
+            <p style={{ fontSize: 13, color: '#64748B', marginBottom: 16 }}>
+              {lignesLibresAPersister.length} article{lignesLibresAPersister.length > 1 ? 's' : ''} saisi{lignesLibresAPersister.length > 1 ? 's' : ''} manuellement sera enregistré dans le référentiel.
+              <br />Choisissez la <strong>famille</strong> de chaque article avant de continuer.
+            </p>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                  <th style={{ padding: '8px 10px', textAlign: 'left' }}>Désignation</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'center' }}>Unité</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>Prix U. HT</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', minWidth: 180 }}>Famille *</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lignesLibresAPersister.map((ligne) => (
+                  <tr key={ligne.id_ligne} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '8px 10px', fontWeight: 500 }}>{ligne.libelle}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'center', color: '#64748B' }}>{ligne.unite}</td>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', color: '#1E293B', fontWeight: 600 }}>
+                      {Number(ligne.prix).toLocaleString('fr-DZ', { minimumFractionDigits: 2 })} DA
+                    </td>
+                    <td style={{ padding: '6px 10px' }}>
+                      <select
+                        value={famillesChoisies[ligne.id_ligne] || ''}
+                        onChange={(e) => setFamillesChoisies((prev) => ({ ...prev, [ligne.id_ligne]: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          padding: '5px 8px',
+                          border: famillesChoisies[ligne.id_ligne] ? '1px solid #CBD5E1' : '2px solid #F97316',
+                          borderRadius: 4,
+                          fontSize: 12,
+                          background: '#FFF'
+                        }}
+                      >
+                        <option value="">— Choisir une famille —</option>
+                        {famillesLocales.map((f) => (
+                          <option key={f.id_famille} value={f.id_famille}>
+                            {f.libelle || f.code}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                className="obat-btn-annuler"
+                onClick={() => setModalFamilleOuvert(false)}
+                disabled={enregistrementEnCours}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="obat-btn-action-primary"
+                onClick={enregistrerArticlesLibresPuisSauvegarder}
+                disabled={enregistrementEnCours || lignesLibresAPersister.some((l) => !famillesChoisies[l.id_ligne])}
+                style={{ minWidth: 180 }}
+              >
+                {enregistrementEnCours
+                  ? '⏳ Enregistrement…'
+                  : `✅ Enregistrer et continuer`}
+              </button>
             </div>
           </div>
         </div>

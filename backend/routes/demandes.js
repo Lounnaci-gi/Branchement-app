@@ -617,10 +617,43 @@ router.get('/:id', async (req, res) => {
       const idsListe = devisIds.map((val) => Number(val)).filter((n) => Number.isInteger(n) && n > 0).join(',');
       if (idsListe) {
         const lignesRes = await pool.request().query(`
-          SELECT * FROM LignesDevis WHERE id_devis IN (${idsListe}) ORDER BY ordre ASC, id_ligne ASC
+          SELECT l.*, a.mode_prix, a.prix_fourniture AS art_prix_fourniture, a.prix_pose AS art_prix_pose
+          FROM LignesDevis l
+          LEFT JOIN ArticlesDevis a ON a.code_article = l.code_article
+          WHERE l.id_devis IN (${idsListe})
+          ORDER BY l.ordre ASC, l.id_ligne ASC
         `);
         for (const l of lignesRes.recordset) {
           if (!lignesMap[l.id_devis]) lignesMap[l.id_devis] = [];
+          const prixFourniture = l.prix_fourniture !== null && l.prix_fourniture !== undefined
+            ? Number(l.prix_fourniture)
+            : (l.art_prix_fourniture !== null && l.art_prix_fourniture !== undefined ? Number(l.art_prix_fourniture) : null);
+          const prixPose = l.prix_pose !== null && l.prix_pose !== undefined
+            ? Number(l.prix_pose)
+            : (l.art_prix_pose !== null && l.art_prix_pose !== undefined ? Number(l.art_prix_pose) : null);
+          const modePrix = l.mode_prix || (prixFourniture !== null && prixPose !== null ? 'FOURNITURE_POSE' : 'PRESTATION');
+
+          const aFourniture = prixFourniture !== null && prixFourniture > 0;
+          const aPose = prixPose !== null && prixPose > 0;
+          const aLesDeux = aFourniture && aPose;
+
+          let typeLigne = l.type_ligne;
+          if (aLesDeux) {
+            if (!['F/', 'P/', 'FP/'].includes(typeLigne)) {
+              if (l.choix_prix === 'FOURNITURE') typeLigne = 'F/';
+              else if (l.choix_prix === 'POSE') typeLigne = 'P/';
+              else typeLigne = 'FP/';
+            }
+          } else if (aFourniture && (!typeLigne || typeLigne === 'PR/')) {
+            typeLigne = 'F/';
+          } else if (aPose && (!typeLigne || typeLigne === 'PR/')) {
+            typeLigne = 'P/';
+          } else if (modePrix === 'PRESTATION' || (!aFourniture && !aPose)) {
+            typeLigne = 'PR/';
+          } else if (!typeLigne) {
+            typeLigne = 'F/';
+          }
+
           lignesMap[l.id_devis].push({
             id_ligne: l.id_ligne,
             code: l.code_article,
@@ -632,7 +665,13 @@ router.get('/:id', async (req, res) => {
             montantLigne: Number(l.montant_ht),
             typeTva: l.type_tva,
             tauxTva: Number(l.taux_tva),
-            avecDiametre: Boolean(l.diametre)
+            avecDiametre: Boolean(l.diametre),
+            choixPrix: l.choix_prix || 'FOURNITURE_POSE',
+            type: typeLigne,
+            type_ligne: typeLigne,
+            prixFourniture,
+            prixPose,
+            modePrix
           });
         }
       }
@@ -977,6 +1016,20 @@ router.put('/:id/devis', async (req, res) => {
     if (montant === undefined || montant === null || String(montant).trim() === '' || isNaN(Number(montant)) || Number(montant) < 0 || Number(montant) > 999999999.99) {
       return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif valide (max 999 999 999.99).' });
     }
+
+    if (Array.isArray(articles) && articles.length > 0) {
+      const codesVus = new Set();
+      for (const art of articles) {
+        const codeArticle = String(art.code || art.code_article || '').trim().toUpperCase();
+        if (!codeArticle) continue;
+        if (codesVus.has(codeArticle)) {
+          return res.status(400).json({
+            erreur: `L'article "${codeArticle}" apparaît plusieurs fois dans le devis. Un même article ne peut être présent qu'une seule fois dans le devis.`
+          });
+        }
+        codesVus.add(codeArticle);
+      }
+    }
     const pool = await getPool();
     const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
@@ -1053,6 +1106,33 @@ router.put('/:id/devis', async (req, res) => {
         const typeTva = String(art.typeTva || art.type_tva || '').trim() || null;
         const tauxTva = Number.isFinite(Number(art.tauxTva ?? art.taux_tva)) ? Number(art.tauxTva ?? art.taux_tva) : 19;
 
+        const choixPrix = String(art.choixPrix || art.choix_prix || '').trim() || null;
+        const prixFourniture = art.prixFourniture !== null && art.prixFourniture !== undefined && art.prixFourniture !== ''
+          ? Number(art.prixFourniture)
+          : (art.prix_fourniture !== null && art.prix_fourniture !== undefined && art.prix_fourniture !== '' ? Number(art.prix_fourniture) : null);
+        const prixPose = art.prixPose !== null && art.prixPose !== undefined && art.prixPose !== ''
+          ? Number(art.prixPose)
+          : (art.prix_pose !== null && art.prix_pose !== undefined && art.prix_pose !== '' ? Number(art.prix_pose) : null);
+
+        let typeLigne = String(art.type || art.type_ligne || '').trim() || null;
+        const aFourniture = prixFourniture !== null && prixFourniture > 0;
+        const aPose = prixPose !== null && prixPose > 0;
+        const aLesDeux = aFourniture && aPose;
+
+        if (aLesDeux) {
+          if (!['F/', 'P/', 'FP/'].includes(typeLigne)) {
+            if (choixPrix === 'FOURNITURE') typeLigne = 'F/';
+            else if (choixPrix === 'POSE') typeLigne = 'P/';
+            else typeLigne = 'FP/';
+          }
+        } else if (aFourniture && (!typeLigne || typeLigne === 'PR/')) {
+          typeLigne = 'F/';
+        } else if (aPose && (!typeLigne || typeLigne === 'PR/')) {
+          typeLigne = 'P/';
+        } else if (!typeLigne || !['F/', 'P/', 'FP/', 'PR/'].includes(typeLigne)) {
+          typeLigne = 'PR/';
+        }
+
         await pool.request()
           .input('id_devis', sql.Int, idDevisFinal)
           .input('code_article', sql.NVarChar(50), codeArticle)
@@ -1065,8 +1145,12 @@ router.put('/:id/devis', async (req, res) => {
           .input('type_tva', sql.NVarChar(20), typeTva)
           .input('taux_tva', sql.Decimal(5, 2), tauxTva)
           .input('ordre', sql.Int, i + 1)
-          .query(`INSERT INTO LignesDevis (id_devis, code_article, libelle, unite, diametre, quantite, prix_unitaire, montant_ht, type_tva, taux_tva, ordre)
-                  VALUES (@id_devis, @code_article, @libelle, @unite, @diametre, @quantite, @prix_unitaire, @montant_ht, @type_tva, @taux_tva, @ordre)`);
+          .input('choix_prix', sql.NVarChar(20), choixPrix)
+          .input('type_ligne', sql.NVarChar(20), typeLigne)
+          .input('prix_fourniture', sql.Decimal(12, 2), prixFourniture)
+          .input('prix_pose', sql.Decimal(12, 2), prixPose)
+          .query(`INSERT INTO LignesDevis (id_devis, code_article, libelle, unite, diametre, quantite, prix_unitaire, montant_ht, type_tva, taux_tva, ordre, choix_prix, type_ligne, prix_fourniture, prix_pose)
+                  VALUES (@id_devis, @code_article, @libelle, @unite, @diametre, @quantite, @prix_unitaire, @montant_ht, @type_tva, @taux_tva, @ordre, @choix_prix, @type_ligne, @prix_fourniture, @prix_pose)`);
       }
     }
 

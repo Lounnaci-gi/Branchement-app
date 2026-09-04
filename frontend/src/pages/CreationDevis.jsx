@@ -94,6 +94,15 @@ export default function CreationDevis() {
       return;
     }
 
+    const codes = (payload.articles || [])
+      .map((a) => String(a.code || a.code_article || '').trim().toUpperCase())
+      .filter(Boolean);
+    const doublon = codes.find((code, index) => codes.indexOf(code) !== index);
+    if (doublon) {
+      notifierErreur(`Impossible d'enregistrer le devis : l'article [${doublon}] est présent plusieurs fois. Un devis ne peut pas comporter le même article plusieurs fois.`);
+      return;
+    }
+
     setSauvegardeEnCours(true);
     try {
       const res = await client.put(`/demandes/${id}/devis`, {

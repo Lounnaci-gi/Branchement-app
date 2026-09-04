@@ -9,6 +9,55 @@ function nomAbonne(demande) {
   return `${demande.demandeur_nom || ''} ${demande.demandeur_prenom || ''}`.trim() || '—';
 }
 
+export function determinerTypesDisponibles(ligne) {
+  if (!ligne) return ['F/'];
+
+  const fRaw = ligne.prixFourniture ?? ligne.prix_fourniture ?? null;
+  const pRaw = ligne.prixPose ?? ligne.prix_pose ?? null;
+  const mode = String(ligne.modePrix ?? ligne.mode_prix ?? '').trim().toUpperCase();
+  const currentType = String(ligne.type ?? ligne.type_ligne ?? '').trim();
+
+  const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
+  const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
+
+  const aFourniture = f !== null && f > 0;
+  const aPose = p !== null && p > 0;
+  const aLesDeux = aFourniture && aPose;
+
+  const types = [];
+
+  if (aFourniture) types.push('F/');
+  if (aPose) types.push('P/');
+  if (aLesDeux) types.push('FP/');
+
+  const estPrestation = mode === 'PRESTATION' || (!aFourniture && !aPose && (currentType === 'PR/' || String(ligne.code || '').startsWith('PR') || String(ligne.typeTva).toUpperCase() === 'PRESTATION'));
+
+  if (estPrestation && !aFourniture && !aPose) {
+    types.push('PR/');
+  }
+
+  if (types.length === 0) {
+    if (['F/', 'P/', 'FP/', 'PR/'].includes(currentType)) {
+      types.push(currentType);
+    } else {
+      types.push('F/');
+    }
+  }
+
+  return types;
+}
+
+function normaliserTypeLigne(type, choixPrix, modePrix, article = null) {
+  const typesDispo = determinerTypesDisponibles(article || { type, choixPrix, modePrix });
+  const str = String(type || '').trim();
+  if (typesDispo.includes(str)) return str;
+  if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) return 'F/';
+  if (choixPrix === 'POSE' && typesDispo.includes('P/')) return 'P/';
+  if (choixPrix === 'FOURNITURE_POSE' && typesDispo.includes('FP/')) return 'FP/';
+  if (typesDispo.includes('PR/')) return 'PR/';
+  return typesDispo[0] || 'F/';
+}
+
 export default function AffichageDevis() {
   const { id, idDevis } = useParams();
   const [fiche, setFiche] = useState(null);
@@ -89,38 +138,64 @@ export default function AffichageDevis() {
         <table className="devis-articles-table">
           <thead>
             <tr>
-              <th>Désignation des travaux / fournitures</th>
-              {aUnDiametre && <th>Diamètre</th>}
-              <th>Unité</th>
-              <th>Qtité</th>
-              <th>P.U.</th>
-              <th>Montant HT</th>
+              <th className="col-desig">Désignation des travaux / fournitures</th>
+              <th className="col-type">Type</th>
+              {aUnDiametre && <th className="col-diam">Diamètre</th>}
+              <th className="col-unite">Unité</th>
+              <th className="col-qte">Qtité</th>
+              <th className="col-pu">P.U.</th>
+              <th className="col-total">Montant HT</th>
             </tr>
           </thead>
           <tbody>
             {aDesArticles ? (
-              devis.articles.map((art) => (
-                <tr key={art.id_ligne || art.code}>
-                  <td style={{ textAlign: 'left' }}>
-                    <strong>{art.libelle}</strong>
-                    {art.code ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{art.code}</small> : null}
-                    {(art.matiere || art.couleur) ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
-                  </td>
-                  {aUnDiametre && <td style={{ textAlign: 'center' }}>{art.diametre || '—'}</td>}
-                  <td style={{ textAlign: 'center' }}>{art.unite || 'U'}</td>
-                  <td style={{ textAlign: 'center', fontWeight: 600 }}>{art.quantite}</td>
-                  <td style={{ textAlign: 'right' }}>{Number(art.prix).toLocaleString('fr-DZ')} DA</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(art.montantLigne || (art.quantite * art.prix)).toLocaleString('fr-DZ')} DA</td>
-                </tr>
-              ))
+              devis.articles.map((art) => {
+                const codeType = normaliserTypeLigne(art.type || art.type_ligne, art.choixPrix || art.choix_prix, art.modePrix || art.mode_prix, art);
+                const typeClass = codeType === 'P/' ? 'p' : codeType === 'PR/' ? 'pr' : codeType === 'FP/' ? 'fp' : 'f';
+                return (
+                  <tr key={art.id_ligne || art.code}>
+                    <td className="col-desig">
+                      <strong>{art.libelle}</strong>
+                      {art.code ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{art.code}</small> : null}
+                      {(art.matiere || art.couleur) ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
+                      {art.choixPrix && art.choixPrix !== 'FOURNITURE_POSE' && (
+                        <span style={{
+                          display: 'inline-block',
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: 3,
+                          marginTop: 3,
+                          backgroundColor: art.choixPrix === 'FOURNITURE' ? '#EBF5FF' : '#FEF3C7',
+                          color: art.choixPrix === 'FOURNITURE' ? '#1E40AF' : '#92400E',
+                          border: art.choixPrix === 'FOURNITURE' ? '1px solid #BFDBFE' : '1px solid #FDE68A'
+                        }}>
+                          {art.choixPrix === 'FOURNITURE' ? 'Fourniture seule' : 'Pose seule'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="col-type">
+                      <span className={`badge-type-devis ${typeClass}`}>{codeType}</span>
+                    </td>
+                    {aUnDiametre && <td className="col-diam">{art.diametre || '—'}</td>}
+                    <td className="col-unite">{art.unite || 'U'}</td>
+                    <td className="col-qte">{art.quantite}</td>
+                    <td className="col-pu">{Number(art.prix).toLocaleString('fr-DZ')} DA</td>
+                    <td className="col-total">{Number(art.montantLigne || (art.quantite * art.prix)).toLocaleString('fr-DZ')} DA</td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td style={{ textAlign: 'left' }}>Prestations et fournitures relatives aux travaux</td>
-                {aUnDiametre && <td style={{ textAlign: 'center' }}>—</td>}
-                <td style={{ textAlign: 'center' }}>U</td>
-                <td style={{ textAlign: 'center', fontWeight: 600 }}>1</td>
-                <td style={{ textAlign: 'right' }}>{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>
-                <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>
+                <td className="col-desig">Prestations et fournitures relatives aux travaux</td>
+                <td className="col-type">
+                  <span className="badge-type-devis fp">FP/</span>
+                </td>
+                {aUnDiametre && <td className="col-diam">—</td>}
+                <td className="col-unite">U</td>
+                <td className="col-qte">1</td>
+                <td className="col-pu">{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>
+                <td className="col-total">{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>
               </tr>
             )}
           </tbody>
@@ -166,13 +241,28 @@ export default function AffichageDevis() {
       .devis-objet { margin: 14px 0 17px; font-size: 13px; }
       .devis-objet b { text-decoration: underline; }
       .devis-articles-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
-      .devis-articles-table th, .devis-articles-table td { border: 1px solid #111; padding: 7px 6px; }
+      .devis-articles-table th, .devis-articles-table td { border: 1px solid #111; padding: 7px 6px; vertical-align: middle; }
       .devis-articles-table th { background: #e9e9e9; font-weight: 800; text-align: center; }
-      .devis-articles-table th:first-child, .devis-articles-table td:first-child { width: 46%; text-align: left; }
-      .devis-articles-table th:nth-child(2) { width: 11%; }
-      .devis-articles-table th:nth-child(3) { width: 9%; }
-      .devis-articles-table th:nth-child(4), .devis-articles-table th:nth-child(5) { width: 17%; }
-      .devis-articles-table td:not(:first-child) { text-align: right; }
+      .devis-articles-table .col-desig { text-align: left; }
+      .devis-articles-table .col-type { width: 48px; text-align: center; }
+      .devis-articles-table .col-diam { width: 70px; text-align: center; }
+      .devis-articles-table .col-unite { width: 46px; text-align: center; }
+      .devis-articles-table .col-qte { width: 48px; text-align: center; }
+      .devis-articles-table .col-pu { width: 100px; text-align: right; }
+      .devis-articles-table .col-total { width: 110px; text-align: right; }
+      .badge-type-devis {
+        display: inline-block;
+        font-weight: 800;
+        font-size: 11px;
+        padding: 2px 4px;
+        border-radius: 4px;
+        letter-spacing: 0.05em;
+        text-align: center;
+      }
+      .badge-type-devis.f { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+      .badge-type-devis.p { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+      .badge-type-devis.fp { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+      .badge-type-devis.pr { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
       .devis-totaux { width: 55%; margin-left: auto; border-left: 1px solid #111; border-right: 1px solid #111; border-bottom: 1px solid #111; font-size: 12px; }
       .devis-totaux div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-top: 1px solid #111; }
       .devis-totaux strong { text-align: right; }
