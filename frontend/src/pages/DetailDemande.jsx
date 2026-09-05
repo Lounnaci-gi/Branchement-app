@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import Pipeline from '../components/Pipeline';
-import StatutBadge from '../components/StatutBadge';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { LIBELLES_STATUT } from '../constants/statuts';
 import PanneauEtude from '../components/panneaux/PanneauEtude';
@@ -270,7 +269,7 @@ export default function DetailDemande() {
 
       <header className="obat-page-header">
         <div>
-          <span className="obat-section-badge">ADE • DOSSIER TECHNIQUE</span>
+          <span>ADE • DOSSIER TECHNIQUE</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <h1 className="obat-page-title mono">
               <span>{demande.numero_demande}</span>
@@ -284,7 +283,7 @@ export default function DetailDemande() {
                 {copieChamp === 'numero' ? '✓ Copié' : '📋'}
               </button>
             </h1>
-            <StatutBadge code={demande.statut_actuel} />
+            <span>{LIBELLES_STATUT[demande.statut_actuel] || demande.statut_actuel}</span>
           </div>
           <p className="obat-page-subtitle">
             {nomDemandeur} · {demande.telephone || demande.telephone_secondaire || 'Téléphone non renseigné'} · Déposée le {new Date(demande.date_depot).toLocaleDateString('fr-FR')}
@@ -387,7 +386,7 @@ export default function DetailDemande() {
         </div>
         <Pipeline statutActuel={demande.statut_actuel} showLegend />
         <div className="pipeline-statut-actuel">
-          <StatutBadge code={demande.statut_actuel} />
+          <span>{LIBELLES_STATUT[demande.statut_actuel] || demande.statut_actuel}</span>
           <span>— {LIBELLES_STATUT[demande.statut_actuel]}</span>
         </div>
       </div>

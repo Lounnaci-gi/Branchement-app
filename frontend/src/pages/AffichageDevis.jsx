@@ -175,7 +175,7 @@ export default function AffichageDevis() {
                       )}
                     </td>
                     <td className="col-type">
-                      <span className={`badge-type-devis ${typeClass}`}>{codeType}</span>
+                      <span>{codeType}</span>
                     </td>
                     {aUnDiametre && <td className="col-diam">{art.diametre || '—'}</td>}
                     <td className="col-unite">{art.unite || 'U'}</td>
@@ -189,7 +189,7 @@ export default function AffichageDevis() {
               <tr>
                 <td className="col-desig">Prestations et fournitures relatives aux travaux</td>
                 <td className="col-type">
-                  <span className="badge-type-devis fp">FP/</span>
+                  <span>FP/</span>
                 </td>
                 {aUnDiametre && <td className="col-diam">—</td>}
                 <td className="col-unite">U</td>
@@ -250,19 +250,6 @@ export default function AffichageDevis() {
       .devis-articles-table .col-qte { width: 48px; text-align: center; }
       .devis-articles-table .col-pu { width: 100px; text-align: right; }
       .devis-articles-table .col-total { width: 110px; text-align: right; }
-      .badge-type-devis {
-        display: inline-block;
-        font-weight: 800;
-        font-size: 11px;
-        padding: 2px 4px;
-        border-radius: 4px;
-        letter-spacing: 0.05em;
-        text-align: center;
-      }
-      .badge-type-devis.f { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-      .badge-type-devis.p { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-      .badge-type-devis.fp { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-      .badge-type-devis.pr { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
       .devis-totaux { width: 55%; margin-left: auto; border-left: 1px solid #111; border-right: 1px solid #111; border-bottom: 1px solid #111; font-size: 12px; }
       .devis-totaux div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-top: 1px solid #111; }
       .devis-totaux strong { text-align: right; }

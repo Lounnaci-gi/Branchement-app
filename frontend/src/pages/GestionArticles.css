@@ -330,17 +330,6 @@
   background: #F8FAFC;
 }
 
-.obat-code-badge {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #1E293B;
-  background: #F1F5F9;
-  padding: 3px 7px;
-  border-radius: 4px;
-  border: 1px solid #E2E8F0;
-}
-
 .obat-article-desc-cell strong {
   color: #0F172A;
   display: block;
@@ -353,36 +342,6 @@
   color: #64748B;
   display: flex;
   gap: 8px;
-}
-
-.obat-unite-badge {
-  font-size: 11px;
-  font-weight: 700;
-  background: #EFF6FF;
-  color: #1991EB;
-  padding: 2px 7px;
-  border-radius: 4px;
-  border: 1px solid #DBEAFE;
-}
-
-.obat-type-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 12px;
-  display: inline-block;
-}
-
-.obat-type-badge.fourn-pose {
-  background: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
-}
-
-.obat-type-badge.prestation {
-  background: #FEF3C7;
-  color: #B45309;
-  border: 1px solid #FDE68A;
 }
 
 .obat-price-cell {
@@ -566,4 +525,59 @@
   color: #DC2626;
   font-size: 12px;
   margin-top: 3px;
+}
+
+/* ---------- Formulaires en thème sombre ---------- */
+:root[data-theme='dark'] .obat-articles-wrapper {
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-filter-panel,
+:root[data-theme='dark'] .obat-card-block,
+:root[data-theme='dark'] .obat-modal-card,
+:root[data-theme='dark'] .obat-stat-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-search-input,
+:root[data-theme='dark'] .obat-mode-select,
+:root[data-theme='dark'] .obat-form-group input,
+:root[data-theme='dark'] .obat-form-group select,
+:root[data-theme='dark'] .obat-form-group textarea {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] .obat-form-group label,
+:root[data-theme='dark'] .obat-articles-title-block h1,
+:root[data-theme='dark'] .obat-card-title,
+:root[data-theme='dark'] .obat-modal-header h3,
+:root[data-theme='dark'] .obat-article-desc-cell strong,
+:root[data-theme='dark'] .obat-price-cell {
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-modal-header,
+:root[data-theme='dark'] .obat-modal-footer,
+:root[data-theme='dark'] .obat-card-header {
+  border-color: var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+:root[data-theme='dark'] .obat-form-group input:focus,
+:root[data-theme='dark'] .obat-form-group select:focus,
+:root[data-theme='dark'] .obat-form-group textarea:focus,
+:root[data-theme='dark'] .obat-search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-glow);
+}
+
+:root[data-theme='dark'] .obat-btn-secondary,
+:root[data-theme='dark'] .obat-btn-action-sm {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }

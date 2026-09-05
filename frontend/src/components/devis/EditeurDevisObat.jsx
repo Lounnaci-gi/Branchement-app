@@ -1044,7 +1044,7 @@ export default function EditeurDevisObat({
       <header className="obat-topbar">
         <div className="obat-topbar-left">
           <div className="obat-doc-title">
-            <span className="obat-ade-badge">ADE</span>
+            <span>ADE</span>
             {modeOnglet === 'edition' ? 'Édition de Devis' : 'Aperçu du Devis'}
           </div>
 
@@ -1067,7 +1067,7 @@ export default function EditeurDevisObat({
         </div>
 
         <div className="obat-topbar-right">
-          {/* Badge statut mentions t=84s */}
+          {/* Statut des mentions d'execution */}
           <div
             className={`obat-mention-status-pill ${debutTravaux && dureeEstimee ? 'ok' : 'warn'}`}
             title="Mentions d’exécution recommandées (début et durée)"
@@ -1312,7 +1312,7 @@ export default function EditeurDevisObat({
                           <div className="obat-item-action">
                             <div className="obat-item-price">{formaterNombre(prixTotalFP)} DA</div>
                             {estDejaDansDevis ? (
-                              <span className="obat-badge-deja-ajoute" title="Cet article est déjà présent dans le devis">
+                              <span title="Cet article est déjà présent dans le devis">
                                 ✓ Déjà dans le devis
                               </span>
                             ) : aLesDeux ? (
@@ -1473,7 +1473,7 @@ export default function EditeurDevisObat({
                   Début des travaux <span className="obat-req-star">*</span>
                 </span>
                 <span
-                  className="obat-tooltip-badge"
+                  className="obat-tooltip"
                   onMouseEnter={() => setSurvolDebutTravaux(true)}
                   onMouseLeave={() => setSurvolDebutTravaux(false)}
                 >
@@ -1565,7 +1565,7 @@ export default function EditeurDevisObat({
               <div className="obat-client-box">
                 <div className="obat-client-box-header">
                   <span>DESTINATAIRE</span>
-                  <span className="obat-client-badge">Dossier N° {numDemandeRef}</span>
+                  <span>Dossier N° {numDemandeRef}</span>
                 </div>
                 <div className="obat-client-name">{nomClient}</div>
                 <div className="obat-client-line">{adresseClient}</div>
@@ -1613,7 +1613,7 @@ export default function EditeurDevisObat({
                     </div>
 
                     <div className="obat-section-bar-right">
-                      <span className="obat-section-subtotal-badge">
+                      <span>
                         Sous-total : <strong>{formaterNombre(totalSectionHT)} DA HT</strong>
                       </span>
                       {modeOnglet === 'edition' && sections.length > 1 && (
@@ -1742,7 +1742,7 @@ export default function EditeurDevisObat({
                                     </div>
                                     {aTarifsFournitureEtPose(ligne) && (
                                       <div style={{ marginTop: 3 }}>
-                                        <span className={`obat-badge-option-tarif ${ligne.choixPrix === 'FOURNITURE' ? 'fourn' : ligne.choixPrix === 'POSE' ? 'pose' : 'les-deux'}`}>
+                                        <span>
                                           {ligne.choixPrix === 'FOURNITURE'
                                             ? `Fourniture seule (${formaterNombre(ligne.prixFourniture)} DA)`
                                             : ligne.choixPrix === 'POSE'
@@ -2463,7 +2463,7 @@ export default function EditeurDevisObat({
           <div className="obat-modal-card obat-config-ouvrage-card">
             <div className="obat-config-header">
               <div>
-                <span className="obat-tag-badge">Ouvrage composé</span>
+                <span>Ouvrage composé</span>
                 <h3>{ouvrageEnConfig.libelle}</h3>
               </div>
               <button

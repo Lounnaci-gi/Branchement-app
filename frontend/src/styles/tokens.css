@@ -38,7 +38,7 @@
   --color-warning-bg: #FFFBEB;
   --color-glow: rgba(25, 145, 235, 0.18);
 
-  /* Info / neutral badge */
+  /* Info / neutral state */
   --color-info: #0EA5E9;
   --color-info-bg: #F0F9FF;
 
@@ -66,7 +66,7 @@
   --space-lg: 24px;
   --space-xl: 32px;
 
-  /* Bordures sémantiques (badges, états) */
+  /* Bordures sémantiques (états) */
   --color-border-success: rgba(22, 163, 74, 0.25);
   --color-border-warning: rgba(217, 119, 6, 0.25);
   --color-border-danger: rgba(220, 38, 38, 0.25);
@@ -179,6 +179,21 @@ button {
 input, select, textarea {
   font-family: var(--font-body);
   font-size: 14px;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+  accent-color: var(--color-primary);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+input:disabled, select:disabled, textarea:disabled {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
 .mono { font-family: var(--font-mono); }
@@ -333,26 +348,6 @@ input, select, textarea {
 }
 :root[data-theme='dark'] .filtres-demandes select {
   color-scheme: dark;
-}
-
-/* ---------- Badges de statut ---------- */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-  transition: all 0.2s ease;
-}
-.badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  box-shadow: 0 0 6px currentColor;
 }
 
 /* ---------- Messages d'erreur de champ ---------- */

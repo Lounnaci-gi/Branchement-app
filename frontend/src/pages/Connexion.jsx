@@ -101,7 +101,7 @@ export default function Connexion() {
           </div>
           <div className="login-title-group">
             <h1>Suivi des Branchements</h1>
-            <div className="login-badge">Espace Agent ADE</div>
+            <div>Espace Agent ADE</div>
           </div>
         </div>
 

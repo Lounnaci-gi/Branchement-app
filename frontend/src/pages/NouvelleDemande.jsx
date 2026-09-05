@@ -340,7 +340,7 @@ export default function NouvelleDemande() {
 
       <header className="obat-page-header">
         <div>
-          <span className="obat-section-badge">ADE • RACCORDEMENT AU RÉSEAU</span>
+          <span>ADE • RACCORDEMENT AU RÉSEAU</span>
           <h1 className="obat-page-title">{modeEdition ? 'Modifier la demande' : 'Nouvelle demande de branchement'}</h1>
           <p className="obat-page-subtitle">
             {modeEdition ? 'Mise à jour des informations du dossier et des spécifications techniques' : 'Enregistrement d’un nouveau raccordement au réseau AEP'}

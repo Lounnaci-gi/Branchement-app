@@ -50,7 +50,7 @@ export default function GestionCommunes() {
       <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Gestion des communes' }]} />
       <header className="obat-page-header">
         <div>
-          <span className="obat-section-badge">ADE • RÉFÉRENTIEL TERRITORIAL</span>
+          <span>ADE • RÉFÉRENTIEL TERRITORIAL</span>
           <h1 className="obat-page-title">Gestion des communes</h1>
           <p className="obat-page-subtitle">Référentiel des agences et communes rattachées pour le déploiement des branchements</p>
         </div>

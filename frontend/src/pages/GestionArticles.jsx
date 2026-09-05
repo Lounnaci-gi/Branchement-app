@@ -344,7 +344,7 @@ export default function GestionArticles() {
       {/* 1. EN-TÊTE DE LA BIBLIOTHÈQUE (STYLE OBAT) */}
       <header className="obat-articles-header">
         <div className="obat-articles-title-block">
-          <span className="obat-ade-badge">ADE</span>
+          <span>ADE</span>
           <h1>Bibliothèque d'Articles & Tarifs</h1>
           <p className="obat-articles-subtitle">
             Gérez les fournitures, canalisations, robinetteries, compteurs et prestations de main d’œuvre utilisés dans les devis.
@@ -506,7 +506,7 @@ export default function GestionArticles() {
                   <div className="obat-card-title">
                     <span>📁</span> {groupe.libelle}
                   </div>
-                  <span className="obat-unite-badge">{groupe.articles.length} articles</span>
+                  <span>{groupe.articles.length} articles</span>
                 </div>
 
                 <div className="tableau-responsive">
@@ -535,7 +535,7 @@ export default function GestionArticles() {
                         return (
                           <tr key={art.code}>
                             <td>
-                              <span className="obat-code-badge">{art.code}</span>
+                              <span>{art.code}</span>
                             </td>
                             <td className="obat-article-desc-cell">
                               <strong>{art.libelle}</strong>
@@ -546,10 +546,10 @@ export default function GestionArticles() {
                               </div>
                             </td>
                             <td className="center">
-                              <span className="obat-unite-badge">{art.unite}</span>
+                              <span>{art.unite}</span>
                             </td>
                             <td className="center">
-                              <span className={`obat-type-badge ${estPrestation ? 'prestation' : 'fourn-pose'}`}>
+                              <span>
                                 {estPrestation ? 'Prestation' : 'Fourniture + Pose'}
                               </span>
                             </td>
@@ -625,13 +625,13 @@ export default function GestionArticles() {
                   return (
                     <tr key={fam.id_famille}>
                       <td>
-                        <span className="obat-code-badge">{fam.code_famille}</span>
+                        <span>{fam.code_famille}</span>
                       </td>
                       <td>
                         <strong>{fam.libelle}</strong>
                       </td>
                       <td className="center">
-                        <span className="obat-unite-badge">{count} article(s)</span>
+                        <span>{count} article(s)</span>
                       </td>
                       <td className="right">
                         <button
@@ -916,7 +916,7 @@ export default function GestionArticles() {
           <div className="obat-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="obat-modal-header">
               <div>
-                <span className="obat-code-badge">{tarifEnEdition.code}</span>
+                <span>{tarifEnEdition.code}</span>
                 <h3 style={{ marginTop: 4 }}>Modifier le tarif de l'article</h3>
               </div>
               <button

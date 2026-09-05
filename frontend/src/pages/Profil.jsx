@@ -116,7 +116,7 @@ export default function Profil() {
       <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Mon profil' }]} />
       <header className="obat-page-header">
         <div>
-          <span className="obat-section-badge">ADE • ESPACE AGENT</span>
+          <span>ADE • ESPACE AGENT</span>
           <h1 className="obat-page-title">Mon profil agent</h1>
           <p className="obat-page-subtitle">Paramètres du compte ADE et identifiants de connexion</p>
         </div>

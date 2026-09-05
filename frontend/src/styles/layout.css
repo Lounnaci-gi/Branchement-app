@@ -323,37 +323,6 @@
   color: var(--color-text);
 }
 
-.badge-terminal-clickable {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--color-surface-sunken);
-  border: 1px solid var(--color-border);
-  font-size: 12.5px;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.badge-terminal-clickable:hover {
-  background: var(--color-primary-selection);
-  border-color: var(--color-primary);
-  color: var(--color-text);
-  transform: translateY(-1px);
-}
-
-.badge-terminal-arrow {
-  color: var(--color-primary);
-  font-size: 12px;
-  transition: transform 0.15s ease;
-}
-
-.badge-terminal-clickable:hover .badge-terminal-arrow {
-  transform: translateX(2px);
-}
-
 /* ---------- Onglets Statuts Rapides ---------- */
 .onglets-statuts {
   display: flex;
@@ -677,20 +646,6 @@
   flex-wrap: wrap;
 }
 
-/* --- Badge de section (contexte: ADE, TECHNIQUE, etc.) --- */
-.obat-section-badge {
-  display: inline-block;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  padding: 3px 9px;
-  border-radius: 4px;
-  background: var(--color-primary);
-  color: #FFFFFF;
-  margin-bottom: 6px;
-}
-
 /* --- Cartes avec en-tête Obat --- */
 .obat-section-card {
   background: var(--color-surface);
@@ -940,29 +895,6 @@
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
 }
-
-/* --- Badges de statut Obat (remplacement des .badge) --- */
-.obat-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 11.5px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.obat-status-badge.pending  { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
-.obat-status-badge.active   { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
-.obat-status-badge.danger   { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
-.obat-status-badge.info     { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
-.obat-status-badge.neutral  { background: var(--color-surface-sunken); color: var(--color-text-muted); border: 1px solid var(--color-border); }
-
-:root[data-theme='dark'] .obat-status-badge.pending { background: rgba(251,176,66,0.12); color: #FBB042; border-color: rgba(251,176,66,0.25); }
-:root[data-theme='dark'] .obat-status-badge.active  { background: rgba(52,211,153,0.12); color: #34D399; border-color: rgba(52,211,153,0.25); }
-:root[data-theme='dark'] .obat-status-badge.danger  { background: rgba(251,113,133,0.12); color: #FB7185; border-color: rgba(251,113,133,0.25); }
-:root[data-theme='dark'] .obat-status-badge.info    { background: rgba(59,170,232,0.14); color: #3BAAE8; border-color: rgba(59,170,232,0.25); }
 
 /* --- Boutons Obat primaires / secondaires (alias globaux) --- */
 .obat-btn {

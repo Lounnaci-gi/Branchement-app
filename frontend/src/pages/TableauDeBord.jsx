@@ -108,7 +108,7 @@ export default function TableauDeBord() {
 
       <header className="obat-page-header">
         <div>
-          <span className="obat-section-badge">ADE • SUIVI TECHNIQUE</span>
+          <span>ADE • SUIVI TECHNIQUE</span>
           <h1 className="obat-page-title">Tableau de bord de gestion</h1>
           <p className="obat-page-subtitle">
             Indicateurs d'activité, suivi des chantiers et pilotage du réseau de branchements en temps réel.
@@ -278,7 +278,7 @@ export default function TableauDeBord() {
             .map((s) => (
               <div
                 key={s.code_statut}
-                className="badge-terminal-clickable"
+                className="repartition-terminal-link"
                 onClick={() => navigate(`/demandes?statut=${s.code_statut}`)}
                 onKeyDown={(e) => activerClavier(e, () => navigate(`/demandes?statut=${s.code_statut}`))}
                 role="button"
@@ -288,7 +288,7 @@ export default function TableauDeBord() {
                 <span>{s.code_statut === 'REJETEE' ? '⛔' : '🚫'}</span>
                 <span>{s.libelle} :</span>
                 <strong className="mono">{s.total}</strong>
-                <span className="badge-terminal-arrow">→</span>
+                <span>→</span>
               </div>
             ))}
         </div>

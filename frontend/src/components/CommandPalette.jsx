@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
-import StatutBadge from './StatutBadge';
 import './CommandPalette.css';
 
 export default function CommandPalette({ isOpen, onClose }) {
@@ -121,7 +120,7 @@ export default function CommandPalette({ isOpen, onClose }) {
             onChange={(e) => setQuery(e.target.value)}
           />
           {loading && <div className="cmd-palette-spinner" aria-hidden="true" />}
-          <kbd className="cmd-palette-badge">Échap</kbd>
+          <kbd>Échap</kbd>
         </div>
 
         <div className="cmd-palette-results">
@@ -148,7 +147,7 @@ export default function CommandPalette({ isOpen, onClose }) {
                           <span className="cmd-palette-item-number mono">{item.title}</span>
                           <span className="cmd-palette-item-sub">{item.subtitle}</span>
                         </div>
-                        <StatutBadge code={item.statut} />
+                        <span>{item.statut}</span>
                       </div>
                     ) : (
                       <div className="cmd-palette-item-content">

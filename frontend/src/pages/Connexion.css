@@ -15,26 +15,7 @@
 }
 
 /* Cercles décoratifs d'ambiance aquatique */
-.login-bg-shape {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  opacity: 0.35;
-  animation: floatOrb 12s ease-in-out infinite alternate;
-}
-
-.login-bg-shape-1 {
-  width: 450px;
-  height: 450px;
-  background: #6B86F4;
-  top: -100px;
-  right: -50px;
-}
-
 .login-bg-shape-2 {
-  width: 380px;
-  height: 380px;
   background: #3155D1;
   bottom: -100px;
   left: -80px;
@@ -137,27 +118,6 @@
   color: var(--color-text);
   margin: 0;
   line-height: 1.25;
-}
-
-.login-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #3155D1;
-  margin-top: 3px;
-}
-
-.login-badge::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  background: var(--color-success);
-  border-radius: 50%;
-  display: inline-block;
 }
 
 /* Message d'erreur interactif */

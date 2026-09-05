@@ -86,15 +86,6 @@
   to { transform: rotate(360deg); }
 }
 
-.cmd-palette-badge {
-  font-size: 11px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-}
-
 /* Résultats */
 .cmd-palette-results {
   max-height: 380px;

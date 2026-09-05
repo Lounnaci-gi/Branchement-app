@@ -1,10 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import client from '../api/client';
-import StatutBadge from '../components/StatutBadge';
 import Pipeline from '../components/Pipeline';
 import Breadcrumbs from '../components/Breadcrumbs';
-import { ETAPES_PIPELINE, STATUTS_TERMINAUX } from '../constants/statuts';
+import { ETAPES_PIPELINE, STATUTS_TERMINAUX, LIBELLES_STATUT } from '../constants/statuts';
 import { demanderConfirmation, notifierErreur } from '../utils/notifications';
 
 function nettoyerTexte(valeur, defaut = '') {
@@ -181,7 +180,7 @@ export default function ListeDemandes() {
 
       <header className="obat-page-header">
         <div>
-          <span className="obat-section-badge">ADE • DOSSIERS D'ABONNÉS</span>
+          <span>ADE • DOSSIERS D'ABONNÉS</span>
           <h1 className="obat-page-title">Demandes de branchement</h1>
           <p className="obat-page-subtitle">
             {total} dossier{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''} · Suivi des étapes, étude technique et devis
@@ -485,7 +484,7 @@ export default function ListeDemandes() {
                   <Pipeline statutActuel={d.statut_actuel} compact />
                 </td>
                 <td>
-                  <StatutBadge code={d.statut_actuel} />
+                  <span>{LIBELLES_STATUT[d.statut_actuel] || d.statut_actuel}</span>
                 </td>
                 <td>
                   <span style={{ fontSize: 12.5 }}>

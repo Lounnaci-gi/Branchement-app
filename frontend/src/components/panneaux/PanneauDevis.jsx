@@ -529,7 +529,7 @@ export default function PanneauDevis({
           <div>
             <h3 style={{ margin: 0 }}>Devis & Paiement</h3>
             {devisListe.length > 0 && (
-              <div className="panneau-devis-total-badge">
+              <div>
                 <span>{devisListe.length} {devisListe.length > 1 ? 'devis enregistrés' : 'devis enregistré'}</span>
                 <span>•</span>
                 <span>Total : <span className="panneau-devis-total-valeur">{montantTotalCumule.toLocaleString('fr-DZ')} DA</span></span>
@@ -1048,7 +1048,7 @@ export default function PanneauDevis({
               <div className="paiement-details-content">
                 <div className="champ">
                   <label id="mode-paiement-label">MODE DE RÈGLEMENT *</label>
-                  <div className="mode-paiement-badges" role="radiogroup" aria-labelledby="mode-paiement-label">
+                  <div role="radiogroup" aria-labelledby="mode-paiement-label">
                     <button
                       type="button"
                       role="radio"

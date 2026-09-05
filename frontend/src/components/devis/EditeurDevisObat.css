@@ -20,7 +20,7 @@
 .obat-devis-wrapper input,
 .obat-devis-wrapper select,
 .obat-devis-wrapper textarea {
-  color: #1F2937 !important;
+  color: #1F2937;
 }
 
 /* ---------- 1. BARRE D'ACTION SUPÉRIEURE (TOPBAR) ---------- */
@@ -478,13 +478,6 @@
   color: #1173bf;
 }
 
-/* Tooltip info mention obligatoire */
-.obat-tooltip-badge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
 .obat-info-bubble {
   position: absolute;
   top: -34px;
@@ -759,6 +752,38 @@
   color: #6B7280;
   font-size: 13px;
   background: #FAFAFA;
+}
+
+:root[data-theme='dark'] .obat-devis-wrapper {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-devis-wrapper input,
+:root[data-theme='dark'] .obat-devis-wrapper select,
+:root[data-theme='dark'] .obat-devis-wrapper textarea {
+  background-color: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] .obat-table input,
+:root[data-theme='dark'] .obat-table select {
+  background: transparent;
+}
+
+:root[data-theme='dark'] .obat-table input:hover,
+:root[data-theme='dark'] .obat-table select:hover,
+:root[data-theme='dark'] .obat-table input:focus,
+:root[data-theme='dark'] .obat-table select:focus {
+  background: var(--color-surface);
+}
+
+:root[data-theme='dark'] .obat-desc-textarea,
+:root[data-theme='dark'] .obat-section-title {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
 }
 
 /* ---------- 7. BARRE D'AJOUT D'ÉLÉMENTS SOUS LE TABLEAU ---------- */
@@ -1149,18 +1174,6 @@
    ENRICHISSEMENTS OBAT (Focus t=84s, Sections, Packs, Cadenas)
    ============================================================ */
 
-/* Badge ADE */
-.obat-ade-badge {
-  background: #1991EB;
-  color: #FFFFFF;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  margin-right: 8px;
-}
-
 .obat-ade-corp-header {
   margin-bottom: 6px;
   display: flex;
@@ -1407,14 +1420,6 @@
   gap: 12px;
 }
 
-.obat-section-subtotal-badge {
-  font-size: 12.5px;
-  color: #475569;
-  background: #EFF6FF;
-  padding: 4px 10px;
-  border-radius: 4px;
-}
-
 .obat-btn-del-section {
   background: transparent;
   border: 1px solid #FCA5A5;
@@ -1626,16 +1631,6 @@
   padding-bottom: 10px;
 }
 
-.obat-tag-badge {
-  font-size: 11px;
-  font-weight: 700;
-  background: #DCFCE7;
-  color: #15803D;
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-
 .obat-ouvrage-table {
   width: 100%;
   border-collapse: collapse;
@@ -1825,20 +1820,6 @@
   border-color: #E2E8F0;
 }
 
-.obat-badge-deja-ajoute {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #F1F5F9;
-  border: 1px solid #CBD5E1;
-  color: #64748B;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 4px;
-  user-select: none;
-}
-
 .obat-pack-card.deja-ajoute {
   background: #F8FAFC;
   border-color: #FECACA;
@@ -1971,6 +1952,181 @@
   background: #0369A1 !important;
   border-color: #0369A1 !important;
   color: #FFFFFF !important;
+}
+
+/* ---------- Thème sombre complet de l'éditeur de devis ---------- */
+:root[data-theme='dark'] .obat-devis-wrapper {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-topbar,
+:root[data-theme='dark'] .obat-sheet,
+:root[data-theme='dark'] .obat-drawer,
+:root[data-theme='dark'] .obat-modal-card,
+:root[data-theme='dark'] .obat-ventilation-popover,
+:root[data-theme='dark'] .obat-dropdown-menu,
+:root[data-theme='dark'] .obat-pack-card,
+:root[data-theme='dark'] .obat-section-block,
+:root[data-theme='dark'] .obat-sign-box {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-drawer-search,
+:root[data-theme='dark'] .obat-familles-tags,
+:root[data-theme='dark'] .obat-card-header,
+:root[data-theme='dark'] .obat-section-bar,
+:root[data-theme='dark'] .obat-section-add-actions,
+:root[data-theme='dark'] .obat-summary-card,
+:root[data-theme='dark'] .obat-bank-card,
+:root[data-theme='dark'] .obat-bon-pour-accord,
+:root[data-theme='dark'] .obat-meta-mandatory {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-doc-title,
+:root[data-theme='dark'] .obat-sheet-header-left h1.obat-sheet-numero,
+:root[data-theme='dark'] .obat-client-name,
+:root[data-theme='dark'] .obat-object-banner,
+:root[data-theme='dark'] .obat-section-title,
+:root[data-theme='dark'] .obat-block-title,
+:root[data-theme='dark'] .obat-payment-methods strong,
+:root[data-theme='dark'] .obat-summary-line strong,
+:root[data-theme='dark'] .obat-col-desig strong,
+:root[data-theme='dark'] .obat-col-total,
+:root[data-theme='dark'] .obat-item-name,
+:root[data-theme='dark'] .obat-item-price,
+:root[data-theme='dark'] .obat-pack-title,
+:root[data-theme='dark'] .obat-section-title-input,
+:root[data-theme='dark'] .obat-section-preview-title,
+:root[data-theme='dark'] .obat-accord-title {
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-meta-row,
+:root[data-theme='dark'] .obat-meta-row span.label,
+:root[data-theme='dark'] .obat-client-line,
+:root[data-theme='dark'] .obat-table td,
+:root[data-theme='dark'] .obat-col-num,
+:root[data-theme='dark'] .obat-col-desig small,
+:root[data-theme='dark'] .obat-add-elements-prompt,
+:root[data-theme='dark'] .obat-payment-methods,
+:root[data-theme='dark'] .obat-reste-row,
+:root[data-theme='dark'] .obat-dechets-row,
+:root[data-theme='dark'] .obat-summary-line,
+:root[data-theme='dark'] .obat-footer-notes h4,
+:root[data-theme='dark'] .obat-pack-desc,
+:root[data-theme='dark'] .obat-pack-total,
+:root[data-theme='dark'] .obat-se-preview-row,
+:root[data-theme='dark'] .obat-warning-text,
+:root[data-theme='dark'] .obat-modal-card p,
+:root[data-theme='dark'] .obat-accord-text {
+  color: var(--color-text-muted);
+}
+
+:root[data-theme='dark'] .obat-devis-wrapper input,
+:root[data-theme='dark'] .obat-devis-wrapper select,
+:root[data-theme='dark'] .obat-devis-wrapper textarea,
+:root[data-theme='dark'] .obat-section-title-input {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] .obat-table input,
+:root[data-theme='dark'] .obat-table select,
+:root[data-theme='dark'] .obat-section-title-input {
+  background: transparent;
+}
+
+:root[data-theme='dark'] .obat-table input:hover,
+:root[data-theme='dark'] .obat-table select:hover,
+:root[data-theme='dark'] .obat-table input:focus,
+:root[data-theme='dark'] .obat-table select:focus,
+:root[data-theme='dark'] .obat-section-title-input:hover,
+:root[data-theme='dark'] .obat-section-title-input:focus {
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-table td,
+:root[data-theme='dark'] .obat-summary-line,
+:root[data-theme='dark'] .obat-config-header,
+:root[data-theme='dark'] .obat-ouvrage-table th,
+:root[data-theme='dark'] .obat-ouvrage-table td,
+:root[data-theme='dark'] .obat-footer-notes,
+:root[data-theme='dark'] .obat-bottom-grid {
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-table tbody tr:hover,
+:root[data-theme='dark'] .obat-tr-ouvrage {
+  background: var(--color-surface-hover) !important;
+}
+
+:root[data-theme='dark'] .obat-ouvrage-table th,
+:root[data-theme='dark'] .obat-table-empty {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+:root[data-theme='dark'] .obat-btn-option,
+:root[data-theme='dark'] .obat-btn-annuler,
+:root[data-theme='dark'] .obat-btn-add-element,
+:root[data-theme='dark'] .obat-btn-add-secondary,
+:root[data-theme='dark'] .obat-btn-quick-add,
+:root[data-theme='dark'] .obat-payment-pill,
+:root[data-theme='dark'] .obat-floating-biblio-btn,
+:root[data-theme='dark'] .obat-bottom-ventilation-btn,
+:root[data-theme='dark'] .obat-famille-tag,
+:root[data-theme='dark'] .obat-btn-action-secondary,
+:root[data-theme='dark'] .obat-padlock-btn {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-drawer-tabs {
+  background: var(--color-surface-sunken);
+}
+
+:root[data-theme='dark'] .obat-drawer-tab.active,
+:root[data-theme='dark'] .obat-payment-pill.selected {
+  background: var(--color-primary-selection);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-warning-callout {
+  background: var(--color-warning-bg);
+  border-color: var(--color-border-warning);
+  color: var(--color-warning);
+}
+
+:root[data-theme='dark'] .obat-dechets-card {
+  background: var(--color-success-bg);
+  border-color: var(--color-border-success);
+  color: var(--color-success);
+}
+
+:root[data-theme='dark'] .obat-btn-close:hover,
+:root[data-theme='dark'] .obat-dropdown-item:hover,
+:root[data-theme='dark'] .obat-btn-add-secondary:hover,
+:root[data-theme='dark'] .obat-btn-action-secondary:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+@media print {
+  :root[data-theme='dark'] .obat-devis-wrapper,
+  :root[data-theme='dark'] .obat-sheet {
+    background: #FFFFFF !important;
+    color: #1F2937 !important;
+  }
 }
 
 
