@@ -8,13 +8,13 @@ Workflow couvert : **Dépôt → Étude technique → Devis → Paiement → Tra
 ```
 branchement-app/
 ├── database/
-│   ├── schema.sql              → structure complète SQL Server (tables, vue, procédure, trigger)
-│   └── seed-referentiel.sql    → données de référence de départ (centre/agence/communes) — à adapter
+│   ├── schema.sql              → structure complète SQL Server + référentiel de départ
+│   └── Articles.sql            → catalogue d'articles et tarifs BPU ADE (optionnel)
 ├── backend/                    → API Node.js / Express / mssql
 │   ├── config/db.js
 │   ├── middleware/auth.js      → JWT
 │   ├── routes/                 → auth, demandes, référentiels, dashboard
-│   ├── scripts/creerAgent.js   → crée un compte agent (admin, guichet, technique...)
+│   ├── scripts/creerAgent.js   → crée ou met à jour un compte agent (admin, guichet, technique...)
 │   └── server.js
 └── frontend/                   → React (Vite)
     └── src/
@@ -28,9 +28,9 @@ branchement-app/
 Dans SQL Server Management Studio (ou `sqlcmd`) :
 
 ```sql
--- Exécuter dans l'ordre :
--- 1. database/schema.sql
--- 2. database/seed-referentiel.sql (adapte les communes/agences à ta réalité)
+-- Exécuter :
+-- 1. database/schema.sql (crée la base BranchementAEP, tables, procédures et référentiel de base)
+-- 2. database/Articles.sql (catalogue complet des 329 articles BPU ADE)
 ```
 
 ## 2. Backend

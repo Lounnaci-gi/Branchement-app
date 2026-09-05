@@ -79,6 +79,11 @@ export default function GestionArticles() {
   const [erreursTarif, setErreursTarif] = useState({});
   const [envoiTarif, setEnvoiTarif] = useState(false);
 
+  // Modification directe dans le tableau (sans formulaire modal)
+  const [articleEnEditionCode, setArticleEnEditionCode] = useState(null);
+  const [formInlineTarif, setFormInlineTarif] = useState(null);
+  const [envoiInlineTarif, setEnvoiInlineTarif] = useState(false);
+
   const agent = JSON.parse(localStorage.getItem('agent') || '{}');
 
   async function chargerDonnees() {
@@ -252,6 +257,93 @@ export default function GestionArticles() {
       notifierErreur(error.response?.data?.erreur || 'Erreur lors de la mise à jour du tarif.');
     } finally {
       setEnvoiTarif(false);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // MODIFICATION DU TARIF DIRECTEMENT DANS LE TABLEAU (SANS FORMULAIRE)
+  // -------------------------------------------------------------
+  function demarrerEditionInline(article) {
+    setArticleEnEditionCode(article.code);
+    setFormInlineTarif({
+      code_article: article.code,
+      libelle: article.libelle || '',
+      matiere: article.matiere || '',
+      couleur: article.couleur || '',
+      avec_diametre: Boolean(article.avecDiametre),
+      unite: article.unite || 'U',
+      mode_prix: article.modePrix || 'FOURNITURE_POSE',
+      prix_unitaire: article.modePrix === 'PRESTATION' ? String(article.prix ?? '') : '',
+      prix_fourniture: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixFourniture ?? '') : '',
+      prix_pose: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixPose ?? '') : '',
+      type_tva: article.typeTva || 'PRESTATION',
+      taux_tva: Number(article.tauxTva ?? 19)
+    });
+  }
+
+  function annulerEditionInline() {
+    setArticleEnEditionCode(null);
+    setFormInlineTarif(null);
+  }
+
+  async function enregistrerTarifInline(article) {
+    if (!formInlineTarif) return;
+    const libelle = String(formInlineTarif.libelle || '').trim();
+    if (!libelle) {
+      notifierErreur('La désignation de l’article est requise.');
+      return;
+    }
+
+    const mode = formInlineTarif.mode_prix;
+    const prix = Number(formInlineTarif.prix_unitaire);
+    const fourniture = Number(formInlineTarif.prix_fourniture);
+    const pose = Number(formInlineTarif.prix_pose);
+
+    if (mode === 'PRESTATION') {
+      if (!Number.isFinite(prix) || prix < 0) {
+        notifierErreur('Veuillez saisir un prix unitaire valide.');
+        return;
+      }
+    } else {
+      if (!Number.isFinite(fourniture) || fourniture < 0) {
+        notifierErreur('Veuillez saisir un prix de fourniture valide.');
+        return;
+      }
+      if (!Number.isFinite(pose) || pose < 0) {
+        notifierErreur('Veuillez saisir un prix de pose valide.');
+        return;
+      }
+    }
+
+    // Applicable à compter de la date de modification (date du jour)
+    const dateAujourdhui = new Date().toISOString().slice(0, 10);
+    const payload = {
+      libelle,
+      unite: formInlineTarif.unite || 'U',
+      matiere: formInlineTarif.matiere || '',
+      couleur: formInlineTarif.couleur || '',
+      avec_diametre: Boolean(formInlineTarif.avec_diametre),
+      mode_prix: formInlineTarif.mode_prix,
+      prix_unitaire: mode === 'PRESTATION' ? prix : fourniture + pose,
+      prix_fourniture: mode === 'FOURNITURE_POSE' ? fourniture : null,
+      prix_pose: mode === 'FOURNITURE_POSE' ? pose : null,
+      type_tva: formInlineTarif.type_tva || 'PRESTATION',
+      taux_tva: formInlineTarif.taux_tva || 19,
+      date_debut: dateAujourdhui
+    };
+
+    setEnvoiInlineTarif(true);
+    try {
+      await client.put(`/referentiels/articles/${encodeURIComponent(formInlineTarif.code_article)}`, payload);
+      await chargerDonnees();
+      setArticleEnEditionCode(null);
+      setFormInlineTarif(null);
+      const dateFormatee = new Date().toLocaleDateString('fr-FR');
+      await notifierSucces(`Article « ${libelle} » mis à jour avec succès (applicable à compter du ${dateFormatee}).`);
+    } catch (error) {
+      notifierErreur(error.response?.data?.erreur || 'Erreur lors de la mise à jour de l’article.');
+    } finally {
+      setEnvoiInlineTarif(false);
     }
   }
 
@@ -526,27 +618,125 @@ export default function GestionArticles() {
                     </thead>
                     <tbody>
                       {groupe.articles.map((art) => {
+                        const enEdition = articleEnEditionCode === art.code;
                         const estPrestation = art.modePrix === 'PRESTATION';
-                        const fourniture = Number(art.prixFourniture || 0);
-                        const pose = Number(art.prixPose || 0);
-                        const prixHT = estPrestation ? Number(art.prix || 0) : fourniture + pose;
-                        const prixTTC = prixHT * (1 + (Number(art.tauxTva || 19) / 100));
+
+                        let fournitureAffichee = Number(art.prixFourniture || 0);
+                        let poseAffichee = Number(art.prixPose || 0);
+                        let prixHTAffiche = estPrestation ? Number(art.prix || 0) : fournitureAffichee + poseAffichee;
+                        let tauxTva = Number(art.tauxTva || 19);
+
+                        if (enEdition && formInlineTarif) {
+                          if (estPrestation) {
+                            prixHTAffiche = Number(formInlineTarif.prix_unitaire) || 0;
+                          } else {
+                            fournitureAffichee = Number(formInlineTarif.prix_fourniture) || 0;
+                            poseAffichee = Number(formInlineTarif.prix_pose) || 0;
+                            prixHTAffiche = fournitureAffichee + poseAffichee;
+                          }
+                        }
+
+                        const prixTTCAffiche = prixHTAffiche * (1 + (tauxTva / 100));
 
                         return (
-                          <tr key={art.code}>
+                          <tr key={art.code} className={enEdition ? 'obat-row-editing' : ''}>
                             <td>
                               <span>{art.code}</span>
                             </td>
                             <td className="obat-article-desc-cell">
-                              <strong>{art.libelle}</strong>
-                              <div className="obat-article-submeta">
-                                {art.matiere && <span>Matière : {art.matiere}</span>}
-                                {art.couleur && <span>Couleur : {art.couleur}</span>}
-                                {art.avecDiametre && <span>Diamètre sélectionnable</span>}
-                              </div>
+                              {enEdition && formInlineTarif ? (
+                                <div className="obat-inline-desc-editor">
+                                  <input
+                                    type="text"
+                                    className="obat-inline-text-input"
+                                    value={formInlineTarif.libelle}
+                                    onChange={(e) =>
+                                      setFormInlineTarif({
+                                        ...formInlineTarif,
+                                        libelle: e.target.value
+                                      })
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') enregistrerTarifInline(art);
+                                      if (e.key === 'Escape') annulerEditionInline();
+                                    }}
+                                    placeholder="Désignation de l’article *"
+                                    title="Désignation de l’article"
+                                    autoFocus
+                                  />
+                                  <div className="obat-inline-caracts-row">
+                                    <input
+                                      type="text"
+                                      className="obat-inline-subinput"
+                                      value={formInlineTarif.matiere}
+                                      onChange={(e) =>
+                                        setFormInlineTarif({
+                                          ...formInlineTarif,
+                                          matiere: e.target.value
+                                        })
+                                      }
+                                      placeholder="Matière"
+                                      title="Matière (ex: PEHD, Fonte, Laiton...)"
+                                    />
+                                    <input
+                                      type="text"
+                                      className="obat-inline-subinput"
+                                      value={formInlineTarif.couleur}
+                                      onChange={(e) =>
+                                        setFormInlineTarif({
+                                          ...formInlineTarif,
+                                          couleur: e.target.value
+                                        })
+                                      }
+                                      placeholder="Couleur"
+                                      title="Couleur (ex: Bleu, Noir...)"
+                                    />
+                                    <label className="obat-inline-checkbox-label" title="Diamètre sélectionnable lors du chiffrage de devis">
+                                      <input
+                                        type="checkbox"
+                                        checked={formInlineTarif.avec_diametre}
+                                        onChange={(e) =>
+                                          setFormInlineTarif({
+                                            ...formInlineTarif,
+                                            avec_diametre: e.target.checked
+                                          })
+                                        }
+                                      />
+                                      <span>Ø sélec.</span>
+                                    </label>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <strong>{art.libelle}</strong>
+                                  <div className="obat-article-submeta">
+                                    {art.matiere && <span>Matière : {art.matiere}</span>}
+                                    {art.couleur && <span>Couleur : {art.couleur}</span>}
+                                    {art.avecDiametre && <span>Diamètre sélectionnable</span>}
+                                  </div>
+                                </>
+                              )}
                             </td>
                             <td className="center">
-                              <span>{art.unite}</span>
+                              {enEdition && formInlineTarif ? (
+                                <select
+                                  className="obat-inline-select"
+                                  value={formInlineTarif.unite}
+                                  onChange={(e) =>
+                                    setFormInlineTarif({
+                                      ...formInlineTarif,
+                                      unite: e.target.value
+                                    })
+                                  }
+                                  title="Unité de mesure"
+                                >
+                                  {['U', 'ML', 'M²', 'M3', 'KG', 'H', 'FF', 'ENS'].map((u) => (
+                                    <option key={u} value={u}>{u}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span>{art.unite}</span>
+                              )}
                             </td>
                             <td className="center">
                               <span>
@@ -554,26 +744,168 @@ export default function GestionArticles() {
                               </span>
                             </td>
                             <td className="right obat-price-cell">
-                              {estPrestation ? '—' : `${formaterNombre(fourniture)} DA`}
+                              {estPrestation ? (
+                                '—'
+                              ) : enEdition ? (
+                                <div className="obat-inline-input-wrapper">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    className="obat-inline-input"
+                                    value={formInlineTarif.prix_fourniture}
+                                    onChange={(e) =>
+                                      setFormInlineTarif({
+                                        ...formInlineTarif,
+                                        prix_fourniture: e.target.value
+                                      })
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') enregistrerTarifInline(art);
+                                      if (e.key === 'Escape') annulerEditionInline();
+                                    }}
+                                    autoFocus
+                                    title="Prix Fourniture HT"
+                                  />
+                                  <span className="obat-inline-unit">DA</span>
+                                </div>
+                              ) : (
+                                `${formaterNombre(fournitureAffichee)} DA`
+                              )}
                             </td>
                             <td className="right obat-price-cell">
-                              {estPrestation ? '—' : `${formaterNombre(pose)} DA`}
+                              {estPrestation ? (
+                                '—'
+                              ) : enEdition ? (
+                                <div className="obat-inline-input-wrapper">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    className="obat-inline-input"
+                                    value={formInlineTarif.prix_pose}
+                                    onChange={(e) =>
+                                      setFormInlineTarif({
+                                        ...formInlineTarif,
+                                        prix_pose: e.target.value
+                                      })
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') enregistrerTarifInline(art);
+                                      if (e.key === 'Escape') annulerEditionInline();
+                                    }}
+                                    title="Prix Pose HT"
+                                  />
+                                  <span className="obat-inline-unit">DA</span>
+                                </div>
+                              ) : (
+                                `${formaterNombre(poseAffichee)} DA`
+                              )}
                             </td>
                             <td className="right obat-price-total">
-                              {formaterNombre(prixHT)} DA
+                              {estPrestation && enEdition ? (
+                                <div className="obat-inline-input-wrapper">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    className="obat-inline-input"
+                                    value={formInlineTarif.prix_unitaire}
+                                    onChange={(e) =>
+                                      setFormInlineTarif({
+                                        ...formInlineTarif,
+                                        prix_unitaire: e.target.value
+                                      })
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') enregistrerTarifInline(art);
+                                      if (e.key === 'Escape') annulerEditionInline();
+                                    }}
+                                    autoFocus
+                                    title="Prix Prestation HT"
+                                  />
+                                  <span className="obat-inline-unit">DA</span>
+                                </div>
+                              ) : (
+                                `${formaterNombre(prixHTAffiche)} DA`
+                              )}
                             </td>
-                            <td className="right obat-price-cell" style={{ color: '#059669' }}>
-                              {formaterNombre(prixTTC)} DA
+                            <td className="right obat-price-cell" style={{ color: '#059669', fontWeight: 600 }}>
+                              {formaterNombre(prixTTCAffiche)} DA
                             </td>
                             <td className="center">
-                              <button
-                                type="button"
-                                className="obat-btn-action-sm"
-                                onClick={() => ouvrirModificationTarif(art)}
-                                title="Modifier le tarif de cet article"
-                              >
-                                ✎ Tarif
-                              </button>
+                              {enEdition ? (
+                                <div className="obat-actions-inline-group">
+                                  <button
+                                    type="button"
+                                    className="obat-btn-action-icon obat-btn-save"
+                                    onClick={() => enregistrerTarifInline(art)}
+                                    disabled={envoiInlineTarif}
+                                    title="Enregistrer (applicable dès la date de modification)"
+                                    aria-label="Enregistrer le tarif"
+                                  >
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="obat-btn-action-icon obat-btn-cancel"
+                                    onClick={annulerEditionInline}
+                                    disabled={envoiInlineTarif}
+                                    title="Annuler"
+                                    aria-label="Annuler la modification"
+                                  >
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden="true"
+                                    >
+                                      <line x1="18" y1="6" x2="6" y2="18" />
+                                      <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="obat-btn-action-icon"
+                                  onClick={() => demarrerEditionInline(art)}
+                                  title="Modifier le tarif directement dans le tableau"
+                                  aria-label={`Modifier le tarif de ${art.libelle}`}
+                                >
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden="true"
+                                  >
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
@@ -609,7 +941,7 @@ export default function GestionArticles() {
                 <th style={{ width: 140 }}>Code Famille</th>
                 <th>Libellé de la famille</th>
                 <th className="center" style={{ width: 140 }}>Articles associés</th>
-                <th className="right" style={{ width: 140 }}>Actions</th>
+                <th className="center" style={{ width: 90 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -633,13 +965,28 @@ export default function GestionArticles() {
                       <td className="center">
                         <span>{count} article(s)</span>
                       </td>
-                      <td className="right">
+                      <td className="center">
                         <button
                           type="button"
-                          className="obat-btn-action-sm"
+                          className="obat-btn-action-icon"
                           onClick={() => ouvrirModalFamille(fam)}
+                          title="Modifier le libellé de la famille"
+                          aria-label={`Modifier le libellé de la famille ${fam.libelle}`}
                         >
-                          ✎ Modifier libellé
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
                         </button>
                       </td>
                     </tr>

@@ -9,10 +9,16 @@ async function runMigration() {
   console.log('Connecté. Lecture du script de migration...');
   
   const fichierMigration = process.argv[2] || 'database/schema.sql';
-  const scriptPath = path.resolve(process.cwd(), fichierMigration);
+  let scriptPath = path.resolve(process.cwd(), fichierMigration);
   if (!fs.existsSync(scriptPath)) {
-    console.error(`❌ Fichier de migration introuvable : ${scriptPath}`);
-    process.exit(1);
+    // Essayer depuis la racine du projet si exécuté depuis backend/
+    const cheminRacine = path.resolve(__dirname, '..', '..', fichierMigration);
+    if (fs.existsSync(cheminRacine)) {
+      scriptPath = cheminRacine;
+    } else {
+      console.error(`❌ Fichier de migration introuvable : ${scriptPath}`);
+      process.exit(1);
+    }
   }
   const sqlContent = fs.readFileSync(scriptPath, 'utf8');
   

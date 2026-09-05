@@ -240,7 +240,7 @@ CREATE TABLE ArticlesDevis (
     libelle         NVARCHAR(150) NOT NULL,
     matiere         NVARCHAR(50) NULL,
     couleur         NVARCHAR(50) NULL,
-    unite           NVARCHAR(20) NOT NULL CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG')),
+    unite           NVARCHAR(20) NOT NULL CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG', N'H', N'FF', N'ENS')),
     mode_prix       NVARCHAR(20) NOT NULL DEFAULT N'FOURNITURE_POSE' CONSTRAINT CK_ArticlesDevis_ModePrix CHECK (mode_prix IN (N'PRESTATION', N'FOURNITURE_POSE')),
     prix_unitaire   DECIMAL(12,2) NOT NULL CONSTRAINT CK_ArticlesDevis_Prix CHECK (prix_unitaire >= 0),
     prix_fourniture DECIMAL(12,2) NULL CONSTRAINT CK_ArticlesDevis_PrixFourniture CHECK (prix_fourniture IS NULL OR prix_fourniture >= 0),
