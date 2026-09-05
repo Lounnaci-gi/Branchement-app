@@ -18,6 +18,8 @@ router.get('/articles', async (req, res) => {
     const pool = await getPool();
     const result = await pool.request().query(`
                   SELECT f.id_famille, f.code_famille AS code, f.libelle AS libelle_famille,
+                    f.id_categorie,
+                    cat.libelle AS libelle_categorie,
                     a.id_article, a.code_article AS code_article, a.libelle, a.matiere, a.couleur, a.unite,
                     COALESCE(t.mode_prix, a.mode_prix) AS mode_prix,
                     COALESCE(t.prix_unitaire, a.prix_unitaire) AS prix,
@@ -27,6 +29,7 @@ router.get('/articles', async (req, res) => {
                     COALESCE(t.taux_tva, a.taux_tva) AS taux_tva,
                     ISNULL(a.avec_diametre, 0) AS avec_diametre
       FROM FamillesArticles f
+      LEFT JOIN CategoriesArticles cat ON cat.id_categorie = f.id_categorie
       INNER JOIN ArticlesDevis a ON a.id_famille = f.id_famille
                   OUTER APPLY (
                SELECT TOP 1 tarif.mode_prix, tarif.prix_unitaire, tarif.prix_fourniture,
@@ -43,7 +46,14 @@ router.get('/articles', async (req, res) => {
     const familles = result.recordset.reduce((acc, article) => {
       let famille = acc.find((item) => item.code === article.code);
       if (!famille) {
-        famille = { id_famille: article.id_famille, code: article.code, libelle: article.libelle_famille, articles: [] };
+        famille = {
+          id_famille: article.id_famille,
+          code: article.code,
+          libelle: article.libelle_famille,
+          id_categorie: article.id_categorie,
+          libelle_categorie: article.libelle_categorie,
+          articles: []
+        };
         acc.push(famille);
       }
       famille.articles.push({
@@ -70,27 +80,31 @@ router.get('/articles', async (req, res) => {
   }
 });
 
-router.get('/articles/familles', autoriserRoles('admin', 'chef_agence', 'agent_technique'), async (req, res) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// CATEGORIES D'ARTICLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/articles/categories', async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-      SELECT id_famille, code_famille, libelle
-      FROM FamillesArticles
+      SELECT id_categorie, code_categorie, libelle
+      FROM CategoriesArticles
       WHERE actif = 1
       ORDER BY libelle
     `);
     res.json(result.recordset);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ erreur: 'Erreur lors du chargement des familles d’articles.' });
+    res.status(500).json({ erreur: 'Erreur lors du chargement des catégories d\'articles.' });
   }
 });
 
-router.post('/articles/familles', autoriserRoles('admin'), async (req, res) => {
+router.post('/articles/categories', autoriserRoles('admin'), async (req, res) => {
   const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
 
   if (!texteValide(libelle, { maxLength: 100, obligatoire: true })) {
-    return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
+    return res.status(400).json({ erreur: 'Le libellé de la catégorie est invalide (100 caractères max).' });
   }
 
   try {
@@ -100,18 +114,117 @@ router.post('/articles/familles', autoriserRoles('admin'), async (req, res) => {
     try {
       const creation = await new sql.Request(transaction)
         .input('libelle', sql.NVarChar(100), libelle)
-        .query(`INSERT INTO FamillesArticles (code_famille, libelle)
+        .query(`INSERT INTO CategoriesArticles (code_categorie, libelle)
+                OUTPUT INSERTED.id_categorie
+                VALUES (CONCAT(N'__CAT_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle)`);
+      const categorieId = creation.recordset[0].id_categorie;
+      const result = await new sql.Request(transaction)
+        .input('id_categorie', sql.Int, categorieId)
+        .query(`UPDATE CategoriesArticles
+                SET code_categorie = CONCAT(N'CAT-', id_categorie)
+                OUTPUT INSERTED.id_categorie, INSERTED.code_categorie, INSERTED.libelle
+                WHERE id_categorie = @id_categorie`);
+      await transaction.commit();
+      res.status(201).json(result.recordset[0]);
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    if (err.number === 2601 || err.number === 2627) {
+      return res.status(409).json({ erreur: 'Le code automatique de cette catégorie existe déjà.' });
+    }
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la création de la catégorie.' });
+  }
+});
+
+router.put('/articles/categories/:id_categorie', autoriserRoles('admin'), async (req, res) => {
+  const categorieId = Number(req.params.id_categorie);
+  const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
+
+  if (!Number.isInteger(categorieId) || categorieId <= 0 || !texteValide(libelle, { maxLength: 100, obligatoire: true })) {
+    return res.status(400).json({ erreur: 'Le libellé de la catégorie est invalide.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id_categorie', sql.Int, categorieId)
+      .input('libelle', sql.NVarChar(100), libelle)
+      .query(`UPDATE CategoriesArticles
+              SET libelle = @libelle
+              OUTPUT INSERTED.id_categorie, INSERTED.code_categorie, INSERTED.libelle
+              WHERE id_categorie = @id_categorie AND actif = 1`);
+    if (!result.recordset[0]) return res.status(404).json({ erreur: 'Catégorie introuvable.' });
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la modification de la catégorie.' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FAMILLES D'ARTICLES
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/articles/familles', autoriserRoles('admin', 'chef_agence', 'agent_technique'), async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT f.id_famille, f.code_famille, f.libelle,
+             f.id_categorie, cat.libelle AS libelle_categorie
+      FROM FamillesArticles f
+      LEFT JOIN CategoriesArticles cat ON cat.id_categorie = f.id_categorie
+      WHERE f.actif = 1
+      ORDER BY cat.libelle, f.libelle
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors du chargement des familles d\'articles.' });
+  }
+});
+
+router.post('/articles/familles', autoriserRoles('admin'), async (req, res) => {
+  const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
+  const idCategorie = req.body.id_categorie ? Number(req.body.id_categorie) : null;
+
+  if (!texteValide(libelle, { maxLength: 100, obligatoire: true })) {
+    return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
+  }
+  if (idCategorie !== null && (!Number.isInteger(idCategorie) || idCategorie <= 0)) {
+    return res.status(400).json({ erreur: 'La catégorie sélectionnée est invalide.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    try {
+      const creation = await new sql.Request(transaction)
+        .input('libelle', sql.NVarChar(100), libelle)
+        .input('id_categorie', sql.Int, idCategorie)
+        .query(`INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
                 OUTPUT INSERTED.id_famille
-                VALUES (CONCAT(N'__FAM_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle)`);
+                VALUES (CONCAT(N'__FAM_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @id_categorie)`);
       const familleId = creation.recordset[0].id_famille;
       const result = await new sql.Request(transaction)
         .input('id_famille', sql.Int, familleId)
         .query(`UPDATE FamillesArticles
                 SET code_famille = CONCAT(N'FAM-', id_famille)
-                OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle
+                OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle, INSERTED.id_categorie
                 WHERE id_famille = @id_famille`);
       await transaction.commit();
-      res.status(201).json(result.recordset[0]);
+      const fam = result.recordset[0];
+      let libelle_categorie = null;
+      if (fam.id_categorie) {
+        const cat = await pool.request()
+          .input('id_categorie', sql.Int, fam.id_categorie)
+          .query('SELECT libelle FROM CategoriesArticles WHERE id_categorie = @id_categorie');
+        libelle_categorie = cat.recordset[0]?.libelle || null;
+      }
+      res.status(201).json({ ...fam, libelle_categorie });
     } catch (err) {
       await transaction.rollback();
       throw err;
@@ -121,35 +234,62 @@ router.post('/articles/familles', autoriserRoles('admin'), async (req, res) => {
       return res.status(409).json({ erreur: 'Le code automatique de cette famille existe déjà.' });
     }
     console.error(err);
-    res.status(500).json({ erreur: 'Erreur lors de la création de la famille d’articles.' });
+    res.status(500).json({ erreur: 'Erreur lors de la création de la famille d\'articles.' });
   }
 });
 
 router.put('/articles/familles/:id_famille', autoriserRoles('admin'), async (req, res) => {
   const familleId = Number(req.params.id_famille);
   const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
+  const idCategorie = req.body.id_categorie !== undefined
+    ? (req.body.id_categorie === null || req.body.id_categorie === '' ? null : Number(req.body.id_categorie))
+    : undefined;
 
   if (!Number.isInteger(familleId) || familleId <= 0 || !texteValide(libelle, { maxLength: 100, obligatoire: true })) {
     return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
   }
+  if (idCategorie !== undefined && idCategorie !== null && (!Number.isInteger(idCategorie) || idCategorie <= 0)) {
+    return res.status(400).json({ erreur: 'La catégorie sélectionnée est invalide.' });
+  }
 
   try {
     const pool = await getPool();
-    const result = await pool.request()
+    let query;
+    let request = pool.request()
       .input('id_famille', sql.Int, familleId)
-      .input('libelle', sql.NVarChar(100), libelle)
-      .query(`UPDATE FamillesArticles
-              SET libelle = @libelle
-              OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle
-              WHERE id_famille = @id_famille AND actif = 1`);
-    if (!result.recordset[0]) return res.status(404).json({ erreur: 'Famille d’articles introuvable.' });
-    res.json(result.recordset[0]);
+      .input('libelle', sql.NVarChar(100), libelle);
+
+    if (idCategorie !== undefined) {
+      request = request.input('id_categorie', sql.Int, idCategorie);
+      query = `UPDATE FamillesArticles
+               SET libelle = @libelle, id_categorie = @id_categorie
+               OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle, INSERTED.id_categorie
+               WHERE id_famille = @id_famille AND actif = 1`;
+    } else {
+      query = `UPDATE FamillesArticles
+               SET libelle = @libelle
+               OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle, INSERTED.id_categorie
+               WHERE id_famille = @id_famille AND actif = 1`;
+    }
+
+    const result = await request.query(query);
+    if (!result.recordset[0]) return res.status(404).json({ erreur: 'Famille d\'articles introuvable.' });
+
+    const fam = result.recordset[0];
+    let libelle_categorie = null;
+    if (fam.id_categorie) {
+      const cat = await pool.request()
+        .input('id_categorie', sql.Int, fam.id_categorie)
+        .query('SELECT libelle FROM CategoriesArticles WHERE id_categorie = @id_categorie');
+      libelle_categorie = cat.recordset[0]?.libelle || null;
+    }
+    res.json({ ...fam, libelle_categorie });
   } catch (err) {
     if (err.number === 2601 || err.number === 2627) {
       return res.status(409).json({ erreur: 'Ce code de famille existe déjà.' });
     }
     console.error(err);
-    res.status(500).json({ erreur: 'Erreur lors de la modification de la famille d’articles.' });
+    res.status(500).json({ erreur: 'Erreur lors de la modification de la famille d\'articles.' });
   }
 });
 

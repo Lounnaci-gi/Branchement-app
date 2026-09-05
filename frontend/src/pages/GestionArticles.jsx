@@ -29,7 +29,8 @@ const FORMULAIRE_VIDE = {
   avec_diametre: false
 };
 
-const FAMILLE_VIDE = { libelle: '' };
+const FAMILLE_VIDE = { libelle: '', id_categorie: '' };
+const CATEGORIE_VIDE = { libelle: '' };
 
 const TARIF_VIDE = {
   code_article: '',
@@ -49,19 +50,25 @@ function formaterNombre(val) {
 
 export default function GestionArticles() {
   const [familles, setFamilles] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
 
   // Recherche & Filtres (Logique Obat)
   const [recherche, setRecherche] = useState('');
   const [filtreFamille, setFiltreFamille] = useState('TOUS');
+  const [filtreCategorie, setFiltreCategorie] = useState('TOUS');
   const [filtreMode, setFiltreMode] = useState('TOUS'); // 'TOUS', 'FOURNITURE_POSE', 'PRESTATION'
   const [ongletPrincipal, setOngletPrincipal] = useState('catalogue'); // 'catalogue' ou 'familles'
+  const [categorieSelectionnee, setCategorieSelectionnee] = useState(null);
 
   // Modales
   const [modalNouvelArticleOuvert, setModalNouvelArticleOuvert] = useState(false);
   const [modalFamilleOuvert, setModalFamilleOuvert] = useState(false);
   const [familleEnEdition, setFamilleEnEdition] = useState(null);
+
+  const [modalCategorieOuvert, setModalCategorieOuvert] = useState(false);
+  const [categorieEnEdition, setCategorieEnEdition] = useState(null);
 
   const [modalTarifOuvert, setModalTarifOuvert] = useState(false);
   const [tarifEnEdition, setTarifEnEdition] = useState(null);
@@ -74,6 +81,10 @@ export default function GestionArticles() {
   const [formFamille, setFormFamille] = useState(FAMILLE_VIDE);
   const [erreursFamille, setErreursFamille] = useState({});
   const [envoiFamille, setEnvoiFamille] = useState(false);
+
+  const [formCategorie, setFormCategorie] = useState(CATEGORIE_VIDE);
+  const [erreursCategorie, setErreursCategorie] = useState({});
+  const [envoiCategorie, setEnvoiCategorie] = useState(false);
 
   const [formTarif, setFormTarif] = useState(TARIF_VIDE);
   const [erreursTarif, setErreursTarif] = useState({});
@@ -89,12 +100,14 @@ export default function GestionArticles() {
   async function chargerDonnees() {
     setChargement(true);
     try {
-      const [famillesResponse, articlesResponse] = await Promise.all([
+      const [famillesResponse, articlesResponse, categoriesResponse] = await Promise.all([
         client.get('/referentiels/articles/familles'),
-        client.get('/referentiels/articles')
+        client.get('/referentiels/articles'),
+        client.get('/referentiels/articles/categories')
       ]);
       setFamilles(famillesResponse.data || []);
       setArticles(articlesResponse.data || []);
+      setCategories(categoriesResponse.data || []);
     } catch (err) {
       notifierErreur(err.response?.data?.erreur || 'Impossible de charger le référentiel.');
     } finally {
@@ -113,7 +126,9 @@ export default function GestionArticles() {
       (fam.articles || []).map((art) => ({
         ...art,
         codeFamille: fam.code,
-        libelleFamille: fam.libelle
+        libelleFamille: fam.libelle,
+        idCategorie: fam.id_categorie,
+        libelleCategorie: fam.libelle_categorie
       }))
     );
   }, [articles]);
@@ -126,6 +141,7 @@ export default function GestionArticles() {
   // Filtrage dynamique des articles (comme dans EditeurDevisObat)
   const articlesFiltres = useMemo(() => {
     return tousLesArticles.filter((art) => {
+      const matchCategorie = filtreCategorie === 'TOUS' || art.idCategorie === Number(filtreCategorie);
       const matchFamille = filtreFamille === 'TOUS' || art.codeFamille === filtreFamille;
       const matchMode = filtreMode === 'TOUS' || art.modePrix === filtreMode;
       const q = recherche.toLowerCase().trim();
@@ -134,12 +150,13 @@ export default function GestionArticles() {
         art.code,
         art.matiere,
         art.couleur,
-        art.libelleFamille
+        art.libelleFamille,
+        art.libelleCategorie
       ].some((v) => v?.toLowerCase().includes(q));
 
-      return matchFamille && matchMode && matchTexte;
+      return matchCategorie && matchFamille && matchMode && matchTexte;
     });
-  }, [tousLesArticles, filtreFamille, filtreMode, recherche]);
+  }, [tousLesArticles, filtreCategorie, filtreFamille, filtreMode, recherche]);
 
   // Regroupement par famille pour l'affichage catalogue
   const articlesParFamilleAffiches = useMemo(() => {
@@ -149,6 +166,8 @@ export default function GestionArticles() {
         map.set(art.codeFamille, {
           code: art.codeFamille,
           libelle: art.libelleFamille,
+          idCategorie: art.idCategorie,
+          libelleCategorie: art.libelleCategorie,
           articles: []
         });
       }
@@ -353,7 +372,7 @@ export default function GestionArticles() {
   function ouvrirModalFamille(famille = null) {
     if (famille) {
       setFamilleEnEdition(famille.id_famille);
-      setFormFamille({ libelle: famille.libelle });
+      setFormFamille({ libelle: famille.libelle, id_categorie: famille.id_categorie || '' });
     } else {
       setFamilleEnEdition(null);
       setFormFamille(FAMILLE_VIDE);
@@ -371,19 +390,63 @@ export default function GestionArticles() {
 
     setEnvoiFamille(true);
     try {
+      const payload = {
+        libelle: formFamille.libelle,
+        id_categorie: formFamille.id_categorie || null
+      };
       if (familleEnEdition) {
-        await client.put(`/referentiels/articles/familles/${familleEnEdition}`, formFamille);
+        await client.put(`/referentiels/articles/familles/${familleEnEdition}`, payload);
         await notifierSucces('Famille modifiée avec succès.');
       } else {
-        await client.post('/referentiels/articles/familles', formFamille);
+        await client.post('/referentiels/articles/familles', payload);
         await notifierSucces('Nouvelle famille créée.');
       }
       setModalFamilleOuvert(false);
       await chargerDonnees();
     } catch (error) {
-      notifierErreur(error.response?.data?.erreur || 'Erreur lors de l’enregistrement de la famille.');
+      notifierErreur(error.response?.data?.erreur || 'Erreur lors de l\'enregistrement de la famille.');
     } finally {
       setEnvoiFamille(false);
+    }
+  }
+
+  // -------------------------------------------------------------
+  // GESTION DES CATEGORIES
+  // -------------------------------------------------------------
+  function ouvrirModalCategorie(categorie = null) {
+    if (categorie) {
+      setCategorieEnEdition(categorie.id_categorie);
+      setFormCategorie({ libelle: categorie.libelle });
+    } else {
+      setCategorieEnEdition(null);
+      setFormCategorie(CATEGORIE_VIDE);
+    }
+    setErreursCategorie({});
+    setModalCategorieOuvert(true);
+  }
+
+  async function enregistrerCategorie(e) {
+    e.preventDefault();
+    if (!formCategorie.libelle.trim()) {
+      setErreursCategorie({ libelle: 'Le libellé de la catégorie est obligatoire.' });
+      return;
+    }
+
+    setEnvoiCategorie(true);
+    try {
+      if (categorieEnEdition) {
+        await client.put(`/referentiels/articles/categories/${categorieEnEdition}`, formCategorie);
+        await notifierSucces('Catégorie modifiée avec succès.');
+      } else {
+        await client.post('/referentiels/articles/categories', formCategorie);
+        await notifierSucces('Nouvelle catégorie créée.');
+      }
+      setModalCategorieOuvert(false);
+      await chargerDonnees();
+    } catch (error) {
+      notifierErreur(error.response?.data?.erreur || 'Erreur lors de l\'enregistrement de la catégorie.');
+    } finally {
+      setEnvoiCategorie(false);
     }
   }
 
@@ -421,7 +484,7 @@ export default function GestionArticles() {
         <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Articles de devis' }]} />
         <div className="obat-card-block" style={{ padding: 32, textAlign: 'center', maxWidth: 600, margin: '40px auto' }}>
           <h2>Accès restreint</h2>
-          <p style={{ color: '#64748B', marginTop: 8 }}>
+          <p style={{ color: 'var(--color-text-muted)', marginTop: 8 }}>
             Seuls les administrateurs de l'ADE sont habilités à modifier le référentiel des articles et tarifs de chiffrage.
           </p>
         </div>
@@ -484,10 +547,10 @@ export default function GestionArticles() {
         </div>
 
         <div className="obat-stat-card">
-          <div className="obat-stat-icon purple">🔧</div>
+          <div className="obat-stat-icon purple">🗂️</div>
           <div>
-            <div className="obat-stat-val">{totalFourniturePose}</div>
-            <div className="obat-stat-lbl">Fournitures & Pose</div>
+            <div className="obat-stat-val">{categories.length}</div>
+            <div className="obat-stat-lbl">Catégories</div>
           </div>
         </div>
 
@@ -500,7 +563,7 @@ export default function GestionArticles() {
         </div>
       </div>
 
-      {/* 3. BARRE DE RECHERCHE ET FILTRES FAMILLES */}
+      {/* 3. BARRE DE RECHERCHE ET FILTRES */}
       <div className="obat-filter-panel">
         <div className="obat-search-row">
           <div className="obat-search-input-wrap">
@@ -513,6 +576,20 @@ export default function GestionArticles() {
               onChange={(e) => setRecherche(e.target.value)}
             />
           </div>
+
+          <select
+            className="obat-mode-select"
+            value={filtreCategorie}
+            onChange={(e) => {
+              setFiltreCategorie(e.target.value);
+              setFiltreFamille('TOUS'); // reset famille when category changes
+            }}
+          >
+            <option value="TOUS">Toutes les catégories</option>
+            {categories.map((cat) => (
+              <option key={cat.id_categorie} value={cat.id_categorie}>{cat.libelle}</option>
+            ))}
+          </select>
 
           <select
             className="obat-mode-select"
@@ -533,22 +610,24 @@ export default function GestionArticles() {
             onClick={() => setFiltreFamille('TOUS')}
           >
             Toutes les familles
-            <span className="obat-tag-count">{totalArticles}</span>
+            <span className="obat-tag-count">{articlesFiltres.length}</span>
           </button>
-          {familles.map((fam) => {
-            const countFamille = tousLesArticles.filter((a) => a.codeFamille === fam.code_famille).length;
-            return (
-              <button
-                key={fam.id_famille}
-                type="button"
-                className={`obat-tag-pill ${filtreFamille === fam.code_famille ? 'active' : ''}`}
-                onClick={() => setFiltreFamille(fam.code_famille)}
-              >
-                {fam.libelle}
-                <span className="obat-tag-count">{countFamille}</span>
-              </button>
-            );
-          })}
+          {familles
+            .filter((fam) => filtreCategorie === 'TOUS' || fam.id_categorie === Number(filtreCategorie))
+            .map((fam) => {
+              const countFamille = tousLesArticles.filter((a) => a.codeFamille === fam.code_famille).length;
+              return (
+                <button
+                  key={fam.id_famille}
+                  type="button"
+                  className={`obat-tag-pill ${filtreFamille === fam.code_famille ? 'active' : ''}`}
+                  onClick={() => setFiltreFamille(fam.code_famille)}
+                >
+                  {fam.libelle}
+                  <span className="obat-tag-count">{countFamille}</span>
+                </button>
+              );
+            })}
         </div>
       </div>
 
@@ -574,7 +653,7 @@ export default function GestionArticles() {
       {ongletPrincipal === 'catalogue' && (
         <>
           {articlesFiltres.length === 0 ? (
-            <div className="obat-card-block" style={{ padding: 40, textAlign: 'center', color: '#64748B' }}>
+            <div className="obat-card-block" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
               <h3>Aucun article ne correspond à votre recherche</h3>
               <p style={{ fontSize: 13 }}>Essayez de modifier votre mot-clé ou réinitialisez les filtres.</p>
@@ -585,6 +664,7 @@ export default function GestionArticles() {
                 onClick={() => {
                   setRecherche('');
                   setFiltreFamille('TOUS');
+                  setFiltreCategorie('TOUS');
                   setFiltreMode('TOUS');
                 }}
               >
@@ -597,6 +677,11 @@ export default function GestionArticles() {
                 <div className="obat-card-header">
                   <div className="obat-card-title">
                     <span>📁</span> {groupe.libelle}
+                    {groupe.libelleCategorie && (
+                      <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-selection)', borderRadius: 4, padding: '2px 7px' }}>
+                        🗂️ {groupe.libelleCategorie}
+                      </span>
+                    )}
                   </div>
                   <span>{groupe.articles.length} articles</span>
                 </div>
@@ -830,7 +915,7 @@ export default function GestionArticles() {
                                 `${formaterNombre(prixHTAffiche)} DA`
                               )}
                             </td>
-                            <td className="right obat-price-cell" style={{ color: '#059669', fontWeight: 600 }}>
+                            <td className="right obat-price-cell" style={{ color: 'var(--color-success)', fontWeight: 600 }}>
                               {formaterNombre(prixTTCAffiche)} DA
                             </td>
                             <td className="center">
@@ -919,83 +1004,173 @@ export default function GestionArticles() {
         </>
       )}
 
-      {/* 6. VUE GESTION DES FAMILLES */}
+      {/* 6. VUE GESTION DES FAMILLES & CATEGORIES */}
       {ongletPrincipal === 'familles' && (
-        <div className="obat-card-block">
-          <div className="obat-card-header">
-            <div className="obat-card-title">
-              <span>📁</span> Liste des Familles d'articles ({familles.length})
+        <>
+          {/* Section Catégories */}
+          <div className="obat-card-block">
+            <div className="obat-card-header">
+              <div className="obat-card-title">
+                <span>🗂️</span> Catégories d'articles ({categories.length})
+              </div>
+              <button
+                type="button"
+                className="obat-btn-primary"
+                onClick={() => ouvrirModalCategorie(null)}
+              >
+                + Ajouter une catégorie
+              </button>
             </div>
-            <button
-              type="button"
-              className="obat-btn-primary"
-              onClick={() => ouvrirModalFamille(null)}
-            >
-              + Ajouter une famille
-            </button>
+
+            <table className="obat-articles-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 140 }}>Code</th>
+                  <th>Libellé de la catégorie</th>
+                  <th className="center" style={{ width: 140 }}>Familles associées</th>
+                  <th className="center" style={{ width: 90 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 24 }}>
+                      Aucune catégorie enregistrée.
+                    </td>
+                  </tr>
+                ) : (
+                  categories.map((cat) => {
+                    const countFam = familles.filter((f) => f.id_categorie === cat.id_categorie).length;
+                    return (
+                      <tr
+                        key={cat.id_categorie}
+                        className={categorieSelectionnee === cat.id_categorie ? 'obat-category-row-selected' : 'obat-category-row'}
+                        onClick={() => setCategorieSelectionnee((ancienne) => (
+                          ancienne === cat.id_categorie ? null : cat.id_categorie
+                        ))}
+                      >
+                        <td><span>{cat.code_categorie}</span></td>
+                        <td><strong>{cat.libelle}</strong></td>
+                        <td className="center"><span>{countFam} famille(s)</span></td>
+                        <td className="center">
+                          <button
+                            type="button"
+                            className="obat-btn-action-icon"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              ouvrirModalCategorie(cat);
+                            }}
+                            title="Modifier le libellé de la catégorie"
+                            aria-label={`Modifier la catégorie ${cat.libelle}`}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
 
-          <table className="obat-articles-table">
-            <thead>
-              <tr>
-                <th style={{ width: 140 }}>Code Famille</th>
-                <th>Libellé de la famille</th>
-                <th className="center" style={{ width: 140 }}>Articles associés</th>
-                <th className="center" style={{ width: 90 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {familles.length === 0 ? (
+          {/* Section Familles */}
+          <div className="obat-card-block">
+            <div className="obat-card-header">
+              <div className="obat-card-title">
+                <span>📁</span> {categorieSelectionnee
+                  ? `Familles de la catégorie (${familles.filter((fam) => fam.id_categorie === categorieSelectionnee).length})`
+                  : `Familles d'articles (${familles.length})`}
+              </div>
+              <div className="obat-articles-header-actions">
+                {categorieSelectionnee && (
+                  <button
+                    type="button"
+                    className="obat-btn-secondary"
+                    onClick={() => setCategorieSelectionnee(null)}
+                  >
+                    Toutes les familles
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="obat-btn-primary"
+                  onClick={() => ouvrirModalFamille(null)}
+                >
+                  + Ajouter une famille
+                </button>
+              </div>
+            </div>
+
+            <table className="obat-articles-table">
+              <thead>
                 <tr>
-                  <td colSpan={4} style={{ textAlign: 'center', color: '#64748B', padding: 24 }}>
-                    Aucune famille enregistrée.
-                  </td>
+                  <th style={{ width: 140 }}>Code Famille</th>
+                  <th>Libellé de la famille</th>
+                  <th style={{ width: 180 }}>Catégorie</th>
+                  <th className="center" style={{ width: 140 }}>Articles associés</th>
+                  <th className="center" style={{ width: 90 }}>Actions</th>
                 </tr>
-              ) : (
-                familles.map((fam) => {
-                  const count = tousLesArticles.filter((a) => a.codeFamille === fam.code_famille).length;
-                  return (
-                    <tr key={fam.id_famille}>
-                      <td>
-                        <span>{fam.code_famille}</span>
-                      </td>
-                      <td>
-                        <strong>{fam.libelle}</strong>
-                      </td>
-                      <td className="center">
-                        <span>{count} article(s)</span>
-                      </td>
-                      <td className="center">
-                        <button
-                          type="button"
-                          className="obat-btn-action-icon"
-                          onClick={() => ouvrirModalFamille(fam)}
-                          title="Modifier le libellé de la famille"
-                          aria-label={`Modifier le libellé de la famille ${fam.libelle}`}
-                        >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden="true"
+              </thead>
+              <tbody>
+                {familles.filter((fam) => !categorieSelectionnee || fam.id_categorie === categorieSelectionnee).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: 24 }}>
+                      {categorieSelectionnee ? 'Aucune famille associée à cette catégorie.' : 'Aucune famille enregistrée.'}
+                    </td>
+                  </tr>
+                ) : (
+                  familles.filter((fam) => !categorieSelectionnee || fam.id_categorie === categorieSelectionnee).map((fam) => {
+                    const count = tousLesArticles.filter((a) => a.codeFamille === fam.code_famille).length;
+                    return (
+                      <tr
+                        key={fam.id_famille}
+                        className={filtreFamille === fam.code_famille ? 'obat-family-row-selected' : 'obat-family-row'}
+                        onClick={() => {
+                          setFiltreFamille(fam.code_famille);
+                          setFiltreCategorie('TOUS');
+                          setFiltreMode('TOUS');
+                          setRecherche('');
+                          setOngletPrincipal('catalogue');
+                        }}
+                      >
+                        <td><span>{fam.code_famille}</span></td>
+                        <td><strong>{fam.libelle}</strong></td>
+                        <td>
+                          {fam.libelle_categorie
+                            ? <span style={{ fontSize: 12, color: 'var(--color-primary)', background: 'var(--color-primary-selection)', borderRadius: 4, padding: '2px 7px', fontWeight: 500 }}>🗂️ {fam.libelle_categorie}</span>
+                            : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>— Non classée</span>
+                          }
+                        </td>
+                        <td className="center"><span>{count} article(s)</span></td>
+                        <td className="center">
+                          <button
+                            type="button"
+                            className="obat-btn-action-icon"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              ouvrirModalFamille(fam);
+                            }}
+                            title="Modifier la famille"
+                            aria-label={`Modifier la famille ${fam.libelle}`}
                           >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* -------------------------------------------------------------
@@ -1084,7 +1259,7 @@ export default function GestionArticles() {
 
                 {/* Sélecteur de mode de prix Obat */}
                 <div style={{ margin: '12px 0 16px' }}>
-                  <label style={{ fontSize: 12.5, fontWeight: 700, display: 'block', marginBottom: 8, color: '#374151' }}>
+                  <label style={{ fontSize: 12.5, fontWeight: 700, display: 'block', marginBottom: 8, color: 'var(--color-text)' }}>
                     Structure de tarification :
                   </label>
                   <div style={{ display: 'flex', gap: 10 }}>
@@ -1189,7 +1364,7 @@ export default function GestionArticles() {
                       type="text"
                       disabled
                       value={form.mode_prix === 'PRESTATION' ? 'TVA Prestation (19%)' : 'TVA Travaux (19%)'}
-                      style={{ background: '#F1F5F9', color: '#64748B' }}
+                      style={{ background: 'var(--color-surface-sunken)', color: 'var(--color-text-muted)' }}
                     />
                   </div>
 
@@ -1277,7 +1452,7 @@ export default function GestionArticles() {
 
             <form onSubmit={enregistrerTarif} noValidate>
               <div className="obat-modal-body">
-                <p style={{ margin: '0 0 16px', fontSize: 13.5, color: '#475569' }}>
+                <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--color-text-muted)' }}>
                   <strong>{tarifEnEdition.libelle}</strong>
                 </p>
 
@@ -1426,12 +1601,24 @@ export default function GestionArticles() {
             <form onSubmit={enregistrerFamille} noValidate>
               <div className="obat-modal-body">
                 <div className="obat-form-group">
+                  <label>Catégorie *</label>
+                  <select
+                    value={formFamille.id_categorie}
+                    onChange={(e) => setFormFamille({ ...formFamille, id_categorie: e.target.value })}
+                  >
+                    <option value="">— Sans catégorie —</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id_categorie} value={cat.id_categorie}>{cat.libelle}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="obat-form-group">
                   <label>Libellé de la famille d'articles *</label>
                   <input
                     type="text"
                     placeholder="Ex. Tuyauterie & Raccords PEHD"
                     value={formFamille.libelle}
-                    onChange={(e) => setFormFamille({ libelle: e.target.value })}
+                    onChange={(e) => setFormFamille({ ...formFamille, libelle: e.target.value })}
                     maxLength={100}
                     autoFocus
                   />
@@ -1439,7 +1626,7 @@ export default function GestionArticles() {
                     <span className="obat-field-error">{erreursFamille.libelle}</span>
                   )}
                 </div>
-                <p style={{ fontSize: 12, color: '#64748B', margin: '6px 0 0' }}>
+                <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '6px 0 0' }}>
                   Le code unique (ex: FAM-01) sera automatiquement attribué par le système.
                 </p>
               </div>
@@ -1464,6 +1651,66 @@ export default function GestionArticles() {
           </div>
         </div>
       )}
+
+      {/* -------------------------------------------------------------
+          10. MODALE CATEGORIE (AJOUT / MODIFICATION)
+          ------------------------------------------------------------- */}
+      {modalCategorieOuvert && (
+        <div className="obat-modal-overlay" onClick={() => setModalCategorieOuvert(false)}>
+          <div className="obat-modal-card" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <div className="obat-modal-header">
+              <h3>{categorieEnEdition ? 'Modifier la catégorie' : 'Créer une nouvelle catégorie'}</h3>
+              <button
+                type="button"
+                className="obat-btn-close-sm"
+                onClick={() => setModalCategorieOuvert(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={enregistrerCategorie} noValidate>
+              <div className="obat-modal-body">
+                <div className="obat-form-group">
+                  <label>Libellé de la catégorie *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex. Canalisations & Raccords"
+                    value={formCategorie.libelle}
+                    onChange={(e) => setFormCategorie({ libelle: e.target.value })}
+                    maxLength={100}
+                    autoFocus
+                  />
+                  {erreursCategorie.libelle && (
+                    <span className="obat-field-error">{erreursCategorie.libelle}</span>
+                  )}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '6px 0 0' }}>
+                  Le code unique (ex: CAT-1) sera automatiquement attribué par le système.
+                </p>
+              </div>
+
+              <div className="obat-modal-footer">
+                <button
+                  type="button"
+                  className="obat-btn-secondary"
+                  onClick={() => setModalCategorieOuvert(false)}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="obat-btn-primary"
+                  disabled={envoiCategorie}
+                >
+                  {envoiCategorie ? 'Enregistrement…' : '✓ Enregistrer la catégorie'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

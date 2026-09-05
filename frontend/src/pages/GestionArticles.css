@@ -330,6 +330,24 @@
   background: #F8FAFC;
 }
 
+.obat-category-row {
+  cursor: pointer;
+}
+
+.obat-category-row-selected td {
+  background: #EFF6FF;
+  box-shadow: inset 3px 0 0 #1991EB;
+}
+
+.obat-family-row {
+  cursor: pointer;
+}
+
+.obat-family-row-selected td {
+  background: #EFF6FF;
+  box-shadow: inset 3px 0 0 #1991EB;
+}
+
 .obat-article-desc-cell strong {
   color: #0F172A;
   display: block;
@@ -693,12 +711,104 @@
   color: var(--color-text);
 }
 
+:root[data-theme='dark'] .obat-articles-title-block h1,
+:root[data-theme='dark'] .obat-stat-val,
+:root[data-theme='dark'] .obat-card-title,
+:root[data-theme='dark'] .obat-article-desc-cell strong,
+:root[data-theme='dark'] .obat-price-cell,
+:root[data-theme='dark'] .obat-modal-header h3,
+:root[data-theme='dark'] .obat-live-price-row strong {
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-articles-subtitle,
+:root[data-theme='dark'] .obat-stat-lbl,
+:root[data-theme='dark'] .obat-article-submeta,
+:root[data-theme='dark'] .obat-inline-unit,
+:root[data-theme='dark'] .obat-live-price-header,
+:root[data-theme='dark'] .obat-live-price-row,
+:root[data-theme='dark'] .obat-main-tab,
+:root[data-theme='dark'] .obat-form-group label {
+  color: var(--color-text-muted);
+}
+
 :root[data-theme='dark'] .obat-filter-panel,
 :root[data-theme='dark'] .obat-card-block,
 :root[data-theme='dark'] .obat-modal-card,
 :root[data-theme='dark'] .obat-stat-card {
   background: var(--color-surface);
   border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-stat-icon.blue { background: rgba(59, 170, 232, 0.14); }
+:root[data-theme='dark'] .obat-stat-icon.green { background: rgba(52, 211, 153, 0.14); }
+:root[data-theme='dark'] .obat-stat-icon.amber { background: rgba(251, 176, 66, 0.14); }
+:root[data-theme='dark'] .obat-stat-icon.purple { background: rgba(167, 139, 250, 0.14); }
+
+:root[data-theme='dark'] .obat-articles-table th {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+:root[data-theme='dark'] .obat-articles-table td {
+  border-color: var(--color-border-subtle);
+}
+
+:root[data-theme='dark'] .obat-articles-table tr:hover td {
+  background: var(--color-surface-hover);
+}
+
+:root[data-theme='dark'] .obat-category-row-selected td {
+  background: var(--color-primary-selection);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-family-row-selected td {
+  background: var(--color-primary-selection);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-main-tabs {
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-main-tab:hover,
+:root[data-theme='dark'] .obat-main-tab.active {
+  color: var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-main-tab.active {
+  border-bottom-color: var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-mode-select,
+:root[data-theme='dark'] .obat-search-input {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] .obat-tag-pill {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+:root[data-theme='dark'] .obat-tag-pill:hover {
+  background: var(--color-primary-selection);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+:root[data-theme='dark'] .obat-live-price-box {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-modal-overlay {
+  background: rgba(3, 7, 18, 0.72);
 }
 
 :root[data-theme='dark'] .obat-search-input,
@@ -726,6 +836,18 @@
 :root[data-theme='dark'] .obat-card-header {
   border-color: var(--color-border);
   background: var(--color-surface-sunken);
+}
+
+:root[data-theme='dark'] .obat-btn-save {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: #06291d;
+}
+
+:root[data-theme='dark'] .obat-btn-save:hover {
+  background: #6ee7b7;
+  border-color: #6ee7b7;
+  color: #06291d;
 }
 
 :root[data-theme='dark'] .obat-form-group input:focus,
