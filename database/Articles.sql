@@ -2,63 +2,111 @@
    SCRIPT : Injection du catalogue d'articles de devis (BPU ADE)
    Base    : BranchementAEP
    Source  : Bordereau des prix unitaires ADE (branchement AEP)
-   Contenu : 12 nouvelles familles, 329 articles, 329 tarifs
+   Contenu : 6 categories, 12 nouvelles familles, 329 articles, 329 tarifs
    Idempotent : peut etre relance sans creer de doublons
+
+   Adapte au schema reconstruit du 2026-09-06 : FamillesArticles
+   porte desormais nativement la colonne id_categorie (FK vers
+   CategoriesArticles). Comme la base ne contenait aucune categorie
+   (schema reconstruit sans seed), ce script cree d'abord les 6
+   categories de reference puis rattache chaque famille a la sienne.
    ============================================================ */
 USE BranchementAEP;
 GO
 
 /* ------------------------------------------------------------
-   1. NOUVELLES FAMILLES D'ARTICLES
+   0. CATEGORIES DE REFERENCE
+      (memes categories que migration_categories.sql)
+   ------------------------------------------------------------ */
+IF NOT EXISTS (SELECT 1 FROM CategoriesArticles WHERE code_categorie = N'TRAVAUX-TERRASSEMENT')
+    INSERT INTO CategoriesArticles (code_categorie, libelle) VALUES (N'TRAVAUX-TERRASSEMENT', N'Travaux & Terrassement');
+IF NOT EXISTS (SELECT 1 FROM CategoriesArticles WHERE code_categorie = N'CANALISATIONS-RACCORDS')
+    INSERT INTO CategoriesArticles (code_categorie, libelle) VALUES (N'CANALISATIONS-RACCORDS', N'Canalisations & Raccords');
+IF NOT EXISTS (SELECT 1 FROM CategoriesArticles WHERE code_categorie = N'ROBINETTERIE-ACCESSOIRES')
+    INSERT INTO CategoriesArticles (code_categorie, libelle) VALUES (N'ROBINETTERIE-ACCESSOIRES', N'Robinetterie & Accessoires');
+IF NOT EXISTS (SELECT 1 FROM CategoriesArticles WHERE code_categorie = N'COMPTAGE')
+    INSERT INTO CategoriesArticles (code_categorie, libelle) VALUES (N'COMPTAGE', N'Comptage');
+IF NOT EXISTS (SELECT 1 FROM CategoriesArticles WHERE code_categorie = N'FRAIS-PRESTATIONS')
+    INSERT INTO CategoriesArticles (code_categorie, libelle) VALUES (N'FRAIS-PRESTATIONS', N'Frais & Prestations');
+IF NOT EXISTS (SELECT 1 FROM CategoriesArticles WHERE code_categorie = N'MATERIAUX-GENERIQUES')
+    INSERT INTO CategoriesArticles (code_categorie, libelle) VALUES (N'MATERIAUX-GENERIQUES', N'Matériaux génériques');
+GO
+
+/* ------------------------------------------------------------
+   1. NOUVELLES FAMILLES D'ARTICLES (rattachees a leur categorie)
    (RACCORDEMENTS, MATERIEL, TRAVAUX existent deja via seed-referentiel.sql)
    ------------------------------------------------------------ */
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'TERRASSEMENT-BR')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'TERRASSEMENT-BR', N'Terrassement branchement AEP');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'TERRASSEMENT-BR', N'Terrassement branchement AEP', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'TRAVAUX-TERRASSEMENT';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'CANALISATION-PEHD')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'CANALISATION-PEHD', N'Tubes et canalisations PEHD');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'CANALISATION-PEHD', N'Tubes et canalisations PEHD', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'CANALISATIONS-RACCORDS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'COLLIER-PRISE-CHARGE')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'COLLIER-PRISE-CHARGE', N'Colliers et robinets de prise en charge');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'COLLIER-PRISE-CHARGE', N'Colliers et robinets de prise en charge', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'CANALISATIONS-RACCORDS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'PIECES-PEHD-PP')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'PIECES-PEHD-PP', N'Pieces speciales PEHD/PP (coudes, manchons, raccords, brides, tes, bouchons)');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'PIECES-PEHD-PP', N'Pieces speciales PEHD/PP (coudes, manchons, raccords, brides, tes, bouchons)', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'CANALISATIONS-RACCORDS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'ROBINETTERIE-ARRET')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'ROBINETTERIE-ARRET', N'Robinetterie d''arret');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'ROBINETTERIE-ARRET', N'Robinetterie d''arret', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'ROBINETTERIE-ACCESSOIRES';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'ACCESSOIRES-BRANCHEMENT')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'ACCESSOIRES-BRANCHEMENT', N'Accessoires de branchement');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'ACCESSOIRES-BRANCHEMENT', N'Accessoires de branchement', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'ROBINETTERIE-ACCESSOIRES';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'ABONNEMENT')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'ABONNEMENT', N'Frais d''abonnement');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'ABONNEMENT', N'Frais d''abonnement', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'FRAIS-PRESTATIONS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'COMPTAGE-BR')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'COMPTAGE-BR', N'Comptage (pose et verification compteur)');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'COMPTAGE-BR', N'Comptage (pose et verification compteur)', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'COMPTAGE';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'CAUTIONNEMENT')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'CAUTIONNEMENT', N'Cautionnement chantier');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'CAUTIONNEMENT', N'Cautionnement chantier', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'FRAIS-PRESTATIONS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'COUPURE-RETAB')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'COUPURE-RETAB', N'Frais de coupure et retablissement');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'COUPURE-RETAB', N'Frais de coupure et retablissement', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'FRAIS-PRESTATIONS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'PIQUAGE-ILLICITE')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'PIQUAGE-ILLICITE', N'Piquages illicites');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'PIQUAGE-ILLICITE', N'Piquages illicites', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'FRAIS-PRESTATIONS';
 END
 IF NOT EXISTS (SELECT 1 FROM FamillesArticles WHERE code_famille = N'VENTE-CITERNE')
 BEGIN
-    INSERT INTO FamillesArticles (code_famille, libelle) VALUES (N'VENTE-CITERNE', N'Vente d''eau par citerne');
+    INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
+    SELECT N'VENTE-CITERNE', N'Vente d''eau par citerne', id_categorie
+    FROM CategoriesArticles WHERE code_categorie = N'FRAIS-PRESTATIONS';
 END
 GO
 
@@ -503,5 +551,5 @@ AND NOT EXISTS (
 );
 GO
 
-PRINT N'Injection du catalogue BPU terminee : 12 familles, 329 articles.';
+PRINT N'Injection du catalogue BPU terminee : 6 categories, 12 familles, 329 articles.';
 GO

@@ -1,19 +1,21 @@
 /* ============================================================
    RECONSTRUCTION COMPLETE — BASE DE DONNEES BranchementAEP
    SGBD : Microsoft SQL Server
-   Assemblage de : schema.sql + seed-referentiel.sql
-                   + securite-moindre-privilege.sql
-   Corrections apportées lors de l'assemblage :
-     1) schema.sql ligne ~423 : N'Borne d\'incendie' utilisait un
-        antislash pour échapper le guillemet (invalide en T-SQL,
-        provoque une erreur de syntaxe). Corrigé en N'Borne d''incendie'.
-     2) securite-moindre-privilege.sql n'accordait aucun droit sur
-        LignesDevis, FamillesArticles, ArticlesDevis,
-        TarifsArticlesDevis, HistoriqueModificationsDemandes.
-        Ces GRANT ont été ajoutés (section 4bis) car l'application
-        en a besoin (détail des devis, catalogue d'articles/tarifs,
-        journal de modifications).
-   Date : 2026-09-05
+   Assemblage de : schema.sql (v2) + migration_categories.sql
+                   + seed-referentiel.sql (partiel) + securite.sql
+
+   Différences par rapport au schema.sql précédent :
+     1) Ajout de la table CategoriesArticles (hiérarchie
+        Catégorie → Famille → Article), directement dans le DDL
+        (plus besoin de script de migration séparé).
+     2) FamillesArticles porte désormais nativement la colonne
+        id_categorie (NULL autorisé) + sa FK vers CategoriesArticles.
+     3) AUCUN seed de données pour CategoriesArticles,
+        FamillesArticles, ArticlesDevis, TarifsArticlesDevis :
+        ces tables sont créées vides. Seules les données de
+        référence organisationnelles (Centres/Agences/Communes)
+        et les TypesBranchement sont conservées.
+   Date : 2026-09-06
    ============================================================ */
 
 /* ============================================================
@@ -225,11 +227,21 @@ CREATE TABLE LignesDevis (
 
 /* ------------------------------------------------------------
    10. REFERENTIEL DES ARTICLES DE DEVIS
+       Hiérarchie : CategoriesArticles → FamillesArticles → ArticlesDevis
+       (tables créées vides — pas de seed ici)
    ------------------------------------------------------------ */
+CREATE TABLE CategoriesArticles (
+    id_categorie    INT IDENTITY(1,1) PRIMARY KEY,
+    code_categorie  NVARCHAR(50) NOT NULL UNIQUE,
+    libelle         NVARCHAR(100) NOT NULL,
+    actif           BIT NOT NULL DEFAULT 1
+);
+
 CREATE TABLE FamillesArticles (
     id_famille      INT IDENTITY(1,1) PRIMARY KEY,
     code_famille    NVARCHAR(50) NOT NULL UNIQUE,
     libelle         NVARCHAR(100) NOT NULL,
+    id_categorie    INT NULL CONSTRAINT FK_FamillesArticles_Categorie REFERENCES CategoriesArticles(id_categorie),
     actif           BIT NOT NULL DEFAULT 1
 );
 
@@ -424,8 +436,8 @@ GO
 
 /* ------------------------------------------------------------
    Donnees de reference minimales pour demarrer
-   CORRIGE : N'Borne d''incendie' (échappement par doublement du
-   guillemet, l'antislash de schema.sql original était invalide)
+   (types de branchement — ce ne sont ni des articles,
+   ni des familles, ni des catégories)
    ------------------------------------------------------------ */
 INSERT INTO TypesBranchement (libelle, diametre_defaut) VALUES
 (N'Domestique', N'15mm'),
@@ -439,7 +451,10 @@ INSERT INTO TypesBranchement (libelle, diametre_defaut) VALUES
 GO
 
 /* ============================================================
-   ETAPE 1 — DONNEES DE REFERENCE (seed-referentiel.sql)
+   ETAPE 1 — DONNEES DE REFERENCE ORGANISATIONNELLES
+   (Centres / Agences / Communes uniquement — PAS de
+   CategoriesArticles, FamillesArticles, ArticlesDevis
+   ni TarifsArticlesDevis : ces tables restent vides)
    ============================================================ */
 IF NOT EXISTS (SELECT 1 FROM Centres WHERE nom_centre = N'Centre Berrouaghia')
 BEGIN
@@ -458,81 +473,6 @@ IF NOT EXISTS (SELECT 1 FROM Communes WHERE nom_commune = N'Berrouaghia')
 BEGIN
     INSERT INTO Communes (id_agence, nom_commune, wilaya) VALUES
     (1, N'Berrouaghia', N'Medea');
-END
-GO
-
--- NOTE : TypesBranchement contient déjà 'Borne d'incendie' (inséré ci-dessus
--- dans schema.sql). Ce IF NOT EXISTS ne réinsère donc rien — conservé pour
--- rester fidèle au script d'origine.
-IF NOT EXISTS (SELECT 1 FROM TypesBranchement WHERE libelle = N'Borne d''incendie')
-BEGIN
-    INSERT INTO TypesBranchement (libelle, diametre_defaut) VALUES
-    (N'Borne d''incendie', NULL);
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM FamillesArticles)
-BEGIN
-        INSERT INTO FamillesArticles (code_famille, libelle) VALUES
-            (N'RACCORDEMENTS', N'Raccordements'),
-            (N'MATERIEL', N'Matériel de pose'),
-            (N'TRAVAUX', N'Travaux / main d’œuvre');
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM ArticlesDevis)
-BEGIN
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-        SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
-        FROM (VALUES
-            (N'RACCORDEMENTS', N'RAC-110', N'Raccord 110 mm', N'U', N'FOURNITURE_POSE', CAST(25000 AS DECIMAL(12,2)), CAST(25000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'RACCORDEMENTS', N'RAC-160', N'Raccord 160 mm', N'U', N'FOURNITURE_POSE', CAST(32000 AS DECIMAL(12,2)), CAST(32000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'RACCORDEMENTS', N'VAN-050', N'Vanne 50 mm', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'RACCORDEMENTS', N'VAN-100', N'Vanne 100 mm', N'U', N'FOURNITURE_POSE', CAST(26000 AS DECIMAL(12,2)), CAST(26000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'MATERIEL', N'MAT-C', N'Coffret de branchement', N'U', N'FOURNITURE_POSE', CAST(14500 AS DECIMAL(12,2)), CAST(14500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'MATERIEL', N'MAT-P', N'Pieds / supports', N'U', N'FOURNITURE_POSE', CAST(7000 AS DECIMAL(12,2)), CAST(7000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'MATERIEL', N'MAT-S', N'Système de sécurité', N'U', N'FOURNITURE_POSE', CAST(12000 AS DECIMAL(12,2)), CAST(12000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-            (N'TRAVAUX', N'TR-FO', N'Fouille / terrassement', N'ML', N'FOURNITURE_POSE', CAST(5500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(5500 AS DECIMAL(12,2))),
-            (N'TRAVAUX', N'TR-RE', N'Réseau et branchement', N'ML', N'FOURNITURE_POSE', CAST(4200 AS DECIMAL(12,2)), CAST(2500 AS DECIMAL(12,2)), CAST(1700 AS DECIMAL(12,2))),
-            (N'TRAVAUX', N'TR-PO', N'Pose / raccordement', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)))
-        ) a(code_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-        INNER JOIN FamillesArticles f ON f.code_famille = a.code_famille;
-END
-GO
-
-IF NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE code_article = N'MAT-DA')
-BEGIN
-    INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-    SELECT id_famille, N'MAT-DA', N'Dalle de protection', N'M²', N'FOURNITURE_POSE', 2800, 1800, 1000
-    FROM FamillesArticles WHERE code_famille = N'MATERIEL';
-END
-IF NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE code_article = N'MAT-SB')
-BEGIN
-    INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-    SELECT id_famille, N'MAT-SB', N'Sable de remblai', N'M3', N'FOURNITURE_POSE', 3200, 3200, 0
-    FROM FamillesArticles WHERE code_famille = N'MATERIEL';
-END
-IF NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE code_article = N'MAT-CI')
-BEGIN
-    INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-    SELECT id_famille, N'MAT-CI', N'Ciment', N'KG', N'FOURNITURE_POSE', 95, 95, 0
-    FROM FamillesArticles WHERE code_famille = N'MATERIEL';
-END
-GO
-
-UPDATE ArticlesDevis
-SET mode_prix = N'FOURNITURE_POSE', prix_fourniture = 2500, prix_pose = 1700
-WHERE code_article = N'TR-RE';
-UPDATE ArticlesDevis
-SET mode_prix = N'FOURNITURE_POSE', prix_fourniture = 1800, prix_pose = 1000
-WHERE code_article = N'MAT-DA';
-GO
-
-IF NOT EXISTS (SELECT 1 FROM TarifsArticlesDevis)
-BEGIN
-    INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
-    SELECT id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, CONVERT(date, GETDATE())
-    FROM ArticlesDevis;
 END
 GO
 
@@ -578,9 +518,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.PiecesJointes TO db_aep_app_
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueStatuts TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE ON OBJECT::dbo.Agents TO db_aep_app_role;
 
--- AJOUTE : tables couvertes par le schéma mais absentes du script de sécurité d'origine
+-- Tables couvertes par le schéma mais absentes du script de sécurité d'origine
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.LignesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueModificationsDemandes TO db_aep_app_role;
+GRANT SELECT ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
 GRANT SELECT ON OBJECT::dbo.FamillesArticles TO db_aep_app_role;
 GRANT SELECT ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
 GRANT SELECT ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
@@ -600,5 +541,5 @@ GRANT EXECUTE ON OBJECT::dbo.sp_ChangerStatutDemande TO db_aep_app_role;
 ALTER ROLE db_aep_app_role ADD MEMBER ade_app_user;
 GO
 
-PRINT N'Reconstruction de BranchementAEP terminée.';
+PRINT N'Reconstruction de BranchementAEP terminée (sans catégories/familles/articles).';
 GO

@@ -73,7 +73,12 @@ export default function Connexion() {
       navigate('/');
     } catch (err) {
       const message = err.response?.data?.erreur || 'Erreur de connexion au serveur.';
-      setErreur(message);
+      const tentativesRestantes = err.response?.data?.tentativesRestantes;
+      setErreur(
+        typeof tentativesRestantes === 'number'
+          ? `${message} Tentatives restantes : ${tentativesRestantes}.`
+          : message
+      );
       motDePasseInputRef.current?.focus();
     } finally {
       setChargement(false);

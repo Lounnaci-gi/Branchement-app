@@ -25,6 +25,13 @@ function identifiantsIdentiques(identifiantA, identifiantB) {
   return normaliserIdentifiant(identifiantA).toLocaleLowerCase() === normaliserIdentifiant(identifiantB).toLocaleLowerCase();
 }
 
+function reponseEchecConnexion(req, res, erreur, statut = 401) {
+  return res.status(statut).json({
+    erreur,
+    tentativesRestantes: Math.max(0, req.rateLimit?.remaining ?? 0)
+  });
+}
+
 function genererToken(agent) {
   return jwt.sign(
     {
@@ -46,13 +53,13 @@ router.post('/login', async (req, res) => {
     const mot_de_passe = String(req.body?.mot_de_passe || '');
 
     if (!email || !mot_de_passe) {
-      return res.status(400).json({ erreur: 'Identifiant et mot de passe requis.' });
+      return reponseEchecConnexion(req, res, 'Identifiant et mot de passe requis.', 400);
     }
     if (!identifiantValide(email)) {
-      return res.status(400).json({ erreur: 'Identifiant invalide.' });
+      return reponseEchecConnexion(req, res, 'Identifiant invalide.', 400);
     }
     if (mot_de_passe.length < 8) {
-      return res.status(400).json({ erreur: 'Le mot de passe doit contenir au moins 8 caractères.' });
+      return reponseEchecConnexion(req, res, 'Le mot de passe doit contenir au moins 8 caractères.', 400);
     }
 
     const pool = await getPool();
@@ -63,12 +70,12 @@ router.post('/login', async (req, res) => {
 
     const agent = result.recordset[0];
     if (!agent || !agent.actif) {
-      return res.status(401).json({ erreur: 'Identifiants invalides.' });
+      return reponseEchecConnexion(req, res, 'Identifiants invalides.');
     }
 
     const motDePasseValide = await bcrypt.compare(mot_de_passe, agent.mot_de_passe);
     if (!motDePasseValide) {
-      return res.status(401).json({ erreur: 'Identifiants invalides.' });
+      return reponseEchecConnexion(req, res, 'Identifiants invalides.');
     }
 
     const token = genererToken(agent);

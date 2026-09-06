@@ -108,10 +108,16 @@ try {
 if (rateLimit) {
   const limiteAuth = rateLimit({
     windowMs: 15 * 60 * 1000, // fenêtre de 15 minutes
-    max: 20,                   // max 20 tentatives par fenêtre par IP
+    max: 3,                    // max 3 tentatives par fenêtre par IP
+    skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { erreur: 'Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes.' }
+    handler: (req, res) => {
+      res.status(429).json({
+        erreur: 'Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes.',
+        tentativesRestantes: 0
+      });
+    }
   });
   app.use('/api/auth/login', limiteAuth);
 } else {
