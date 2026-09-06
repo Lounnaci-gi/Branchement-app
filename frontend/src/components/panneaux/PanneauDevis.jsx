@@ -281,12 +281,6 @@ export default function PanneauDevis({
     );
   }
 
-  function changerDiametre(code, valeur) {
-    setLignesDevis((prev) =>
-      prev.map((l) => (l.code === code ? { ...l, diametre: valeur } : l))
-    );
-  }
-
   useEffect(() => {
     client.get('/referentiels/banques').then((res) => setBanques(res.data)).catch(() => setBanques([]));
     client.get('/referentiels/articles')
@@ -797,19 +791,6 @@ export default function PanneauDevis({
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span>{article.libelle}</span>
-                          {article.avecDiametre && (
-                            <span style={{
-                              fontSize: 10.5,
-                              background: 'var(--color-surface-sunken)',
-                              border: '1px solid var(--color-border)',
-                              color: 'var(--color-primary)',
-                              padding: '1px 5px',
-                              borderRadius: 4,
-                              fontWeight: 600
-                            }}>
-                              Ø Diamètre
-                            </span>
-                          )}
                         </div>
                         <small style={{ color: 'var(--color-text-muted)' }}>
                           {article.code} · {LIBELLES_UNITES[article.unite] || article.unite}
@@ -842,10 +823,7 @@ export default function PanneauDevis({
 
             {/* Tableau des lignes saisies */}
             {lignesDevis.length > 0 ? (() => {
-              const auMoinsUnAvecDiametre = lignesDevis.some((l) => l.avecDiametre);
-              const colonnesGrille = auMoinsUnAvecDiametre
-                ? 'minmax(150px, 1fr) 68px 90px 80px 85px 110px 36px'
-                : 'minmax(150px, 1fr) 68px 80px 85px 110px 36px';
+              const colonnesGrille = 'minmax(150px, 1fr) 68px 80px 85px 110px 36px';
 
               return (
               <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
@@ -858,7 +836,6 @@ export default function PanneauDevis({
                 }}>
                   <span>Article</span>
                   <span style={{ textAlign: 'center' }}>Type</span>
-                  {auMoinsUnAvecDiametre && <span style={{ textAlign: 'center' }}>Diamètre</span>}
                   <span style={{ textAlign: 'center' }}>Qté</span>
                   <span style={{ textAlign: 'right' }}>P.U.</span>
                   <span style={{ textAlign: 'right' }}>Montant HT</span>
@@ -929,22 +906,6 @@ export default function PanneauDevis({
                           );
                         })()}
                       </div>
-                      {auMoinsUnAvecDiametre && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {ligne.avecDiametre ? (
-                            <input
-                              type="text"
-                              list="liste-diametres"
-                              placeholder="ex: 20 mm"
-                              value={ligne.diametre || ''}
-                              onChange={(e) => changerDiametre(ligne.code, e.target.value)}
-                              style={{ width: 84, textAlign: 'center', padding: '4px 6px', fontSize: 12.5 }}
-                            />
-                          ) : (
-                            <span style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>—</span>
-                          )}
-                        </div>
-                      )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
                         <button
                           type="button"
@@ -1182,20 +1143,6 @@ export default function PanneauDevis({
         {banques.map((banque) => <option key={banque} value={banque} />)}
       </datalist>
 
-      <datalist id="liste-diametres">
-        <option value="15 mm" />
-        <option value="20 mm" />
-        <option value="25 mm" />
-        <option value="32 mm" />
-        <option value="40 mm" />
-        <option value="50 mm" />
-        <option value="63 mm" />
-        <option value="80 mm" />
-        <option value="100 mm" />
-        <option value="110 mm" />
-        <option value="125 mm" />
-        <option value="160 mm" />
-      </datalist>
     </div>
   );
 }

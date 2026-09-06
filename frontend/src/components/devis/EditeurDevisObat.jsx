@@ -1707,14 +1707,6 @@ export default function EditeurDevisObat({
                                       )}
                                       <input
                                         type="text"
-                                        placeholder="Ø mm"
-                                        title="Diamètre en mm (optionnel)"
-                                        value={ligne.diametre || ''}
-                                        onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'diametre', e.target.value)}
-                                        style={{ width: 55, fontSize: 11, padding: '1px 4px', border: '1px solid #CBD5E1', borderRadius: 3 }}
-                                      />
-                                      <input
-                                        type="text"
                                         placeholder="Matière"
                                         title="Matière (optionnel)"
                                         value={ligne.matiere || ''}
@@ -1737,7 +1729,6 @@ export default function EditeurDevisObat({
                                     <strong>{ligne.libelle || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Sans désignation</span>}</strong>
                                     <div style={{ fontSize: 11.5, color: '#64748B' }}>
                                       {ligne.code}
-                                      {ligne.diametre ? ` · Ø ${ligne.diametre} mm` : ''}
                                       {ligne.matiere ? ` · ${ligne.matiere}` : ''}
                                     </div>
                                     {aTarifsFournitureEtPose(ligne) && (

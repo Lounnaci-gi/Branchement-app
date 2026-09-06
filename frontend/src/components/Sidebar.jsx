@@ -74,6 +74,10 @@ export default function Sidebar({ agent, onOpenSearch }) {
               <span className="sidebar-lien-icone" aria-hidden="true">▤</span>
               <span>Articles de devis</span>
             </NavLink>
+            <NavLink to="/parametres" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
+              <span className="sidebar-lien-icone" aria-hidden="true">⚙</span>
+              <span>Paramètres</span>
+            </NavLink>
           </>
         )}
       </nav>

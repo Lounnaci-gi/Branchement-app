@@ -858,6 +858,17 @@
   box-shadow: 0 0 0 3px var(--color-glow);
 }
 
+:root[data-theme='dark'] .obat-pricing-option {
+  background: var(--color-surface-sunken) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-pricing-option.active {
+  background: var(--color-primary-selection) !important;
+  border-color: var(--color-primary) !important;
+}
+
 :root[data-theme='dark'] .obat-btn-secondary,
 :root[data-theme='dark'] .obat-btn-action-sm,
 :root[data-theme='dark'] .obat-btn-action-icon {

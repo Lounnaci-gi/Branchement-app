@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth');
 const demandesRoutes = require('./routes/demandes');
 const referentielsRoutes = require('./routes/referentiels');
 const dashboardRoutes = require('./routes/dashboard');
+const parametresRoutes = require('./routes/parametres');
 
 const app = express();
 
@@ -128,6 +129,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/demandes', demandesRoutes);
 app.use('/api/referentiels', referentielsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/parametres', parametresRoutes);
 
 app.get('/api/sante', (req, res) => res.json({ statut: 'OK' }));
 

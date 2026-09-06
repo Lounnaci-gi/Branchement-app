@@ -11,6 +11,7 @@ import AffichageDevis from './pages/AffichageDevis';
 import GestionCommunes from './pages/GestionCommunes';
 import GestionArticles from './pages/GestionArticles';
 import Profil from './pages/Profil';
+import Parametres from './pages/Parametres';
 
 import CommandPalette from './components/CommandPalette';
 
@@ -79,6 +80,7 @@ export default function App() {
       <Route path="/referentiels/communes" element={<EspaceProtege><GestionCommunes /></EspaceProtege>} />
       <Route path="/referentiels/articles" element={<EspaceProtege><GestionArticles /></EspaceProtege>} />
       <Route path="/profil" element={<EspaceProtege><Profil /></EspaceProtege>} />
+      <Route path="/parametres" element={<EspaceProtege><Parametres /></EspaceProtege>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

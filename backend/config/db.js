@@ -269,6 +269,47 @@ async function verifierEtMigrerBase(pool) {
     `;
     await pool.request().query(migrationLignesDevisSQL);
 
+    const migrationParametresSQL = `
+      IF OBJECT_ID('dbo.ParametresApplication', 'U') IS NULL
+      BEGIN
+        CREATE TABLE ParametresApplication (
+          cle NVARCHAR(50) PRIMARY KEY,
+          valeur DECIMAL(5,2) NOT NULL,
+          date_maj DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+        );
+      END;
+
+      IF NOT EXISTS (SELECT 1 FROM ParametresApplication WHERE cle = N'TVA_PRESTATION')
+        INSERT INTO ParametresApplication (cle, valeur) VALUES (N'TVA_PRESTATION', 19);
+      IF NOT EXISTS (SELECT 1 FROM ParametresApplication WHERE cle = N'TVA_TRAVAUX')
+        INSERT INTO ParametresApplication (cle, valeur) VALUES (N'TVA_TRAVAUX', 19);
+
+      IF OBJECT_ID('dbo.HistoriqueTva', 'U') IS NULL
+      BEGIN
+        CREATE TABLE HistoriqueTva (
+          id_tva INT IDENTITY(1,1) PRIMARY KEY,
+          type_tva NVARCHAR(20) NOT NULL,
+          taux DECIMAL(5,2) NOT NULL,
+          date_effet DATE NOT NULL,
+          date_creation DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+          CONSTRAINT CK_HistoriqueTva_Type CHECK (type_tva IN (N'PRESTATION', N'TRAVAUX')),
+          CONSTRAINT CK_HistoriqueTva_Taux CHECK (taux >= 0 AND taux <= 100),
+          CONSTRAINT UQ_HistoriqueTva_TypeDate UNIQUE (type_tva, date_effet)
+        );
+      END;
+
+      IF NOT EXISTS (SELECT 1 FROM HistoriqueTva)
+      BEGIN
+        INSERT INTO HistoriqueTva (type_tva, taux, date_effet)
+        SELECT N'PRESTATION', valeur, CONVERT(date, GETDATE())
+        FROM ParametresApplication WHERE cle = N'TVA_PRESTATION';
+        INSERT INTO HistoriqueTva (type_tva, taux, date_effet)
+        SELECT N'TRAVAUX', valeur, CONVERT(date, GETDATE())
+        FROM ParametresApplication WHERE cle = N'TVA_TRAVAUX';
+      END;
+    `;
+    await pool.request().query(migrationParametresSQL);
+
     const updateViewSQL = `
       CREATE OR ALTER VIEW vw_DemandesSynthese AS
       SELECT

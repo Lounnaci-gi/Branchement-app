@@ -79,7 +79,6 @@ export default function AffichageDevis() {
   const demande = fiche.demande;
   const nature = demande.type_autre || demande.type_branchement || 'Branchement d’eau potable';
   const aDesArticles = Array.isArray(devis.articles) && devis.articles.length > 0;
-  const aUnDiametre = aDesArticles && devis.articles.some((a) => a.diametre);
   const totalHtArticles = aDesArticles
     ? devis.articles.reduce((sum, a) => sum + Number(a.montantLigne || (a.quantite * a.prix) || 0), 0)
     : Number(devis.montant);
@@ -140,7 +139,6 @@ export default function AffichageDevis() {
             <tr>
               <th className="col-desig">Désignation des travaux / fournitures</th>
               <th className="col-type">Type</th>
-              {aUnDiametre && <th className="col-diam">Diamètre</th>}
               <th className="col-unite">Unité</th>
               <th className="col-qte">Qtité</th>
               <th className="col-pu">P.U.</th>
@@ -177,7 +175,6 @@ export default function AffichageDevis() {
                     <td className="col-type">
                       <span>{codeType}</span>
                     </td>
-                    {aUnDiametre && <td className="col-diam">{art.diametre || '—'}</td>}
                     <td className="col-unite">{art.unite || 'U'}</td>
                     <td className="col-qte">{art.quantite}</td>
                     <td className="col-pu">{Number(art.prix).toLocaleString('fr-DZ')} DA</td>
@@ -191,7 +188,6 @@ export default function AffichageDevis() {
                 <td className="col-type">
                   <span>FP/</span>
                 </td>
-                {aUnDiametre && <td className="col-diam">—</td>}
                 <td className="col-unite">U</td>
                 <td className="col-qte">1</td>
                 <td className="col-pu">{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>

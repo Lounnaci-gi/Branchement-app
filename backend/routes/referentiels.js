@@ -342,6 +342,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
   const prixFinal = mode_prix === 'FOURNITURE_POSE' ? fourniture + pose : prix;
   const fournitureFinale = mode_prix === 'FOURNITURE_POSE' ? fourniture : null;
   const poseFinale = mode_prix === 'FOURNITURE_POSE' ? pose : null;
+  const typeTvaEffectif = type_tva;
 
   try {
     const pool = await getPool();
@@ -363,7 +364,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
         .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
-        .input('type_tva', sql.NVarChar(20), type_tva)
+        .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
         .input('taux_tva', sql.Decimal(5, 2), taux)
         .input('avec_diametre', sql.Bit, avecDiametre)
         .query(`INSERT INTO ArticlesDevis
@@ -479,7 +480,7 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
 
     const idArticle = existant.recordset[0].id_article;
     const modeEffectif = mode_prix || existant.recordset[0].mode_prix || 'FOURNITURE_POSE';
-    const typeTvaEffectif = type_tva || existant.recordset[0].type_tva || 'PRESTATION';
+    const typeTvaEffectif = modeEffectif === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX';
     const tauxTvaEffectif = Number.isFinite(Number(taux_tva)) ? Number(taux_tva) : Number(existant.recordset[0].taux_tva || 19);
 
     const prix = Number(prix_unitaire);
@@ -602,6 +603,7 @@ router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
   const prixFinal = mode_prix === 'FOURNITURE_POSE' ? fourniture + pose : prix;
   const fournitureFinale = mode_prix === 'FOURNITURE_POSE' ? fourniture : null;
   const poseFinale = mode_prix === 'FOURNITURE_POSE' ? pose : null;
+  const typeTvaEffectif = mode_prix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX';
 
   try {
     const pool = await getPool();
@@ -623,7 +625,7 @@ router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
         .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
-        .input('type_tva', sql.NVarChar(20), type_tva)
+        .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
         .input('taux_tva', sql.Decimal(5, 2), taux)
         .input('date_debut', sql.Date, debut)
         .query(`INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)

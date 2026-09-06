@@ -53,13 +53,14 @@ export default function GestionArticles() {
   const [categories, setCategories] = useState([]);
   const [articles, setArticles] = useState([]);
   const [chargement, setChargement] = useState(true);
+  const [parametresTva, setParametresTva] = useState({ prestation: 19, travaux: 19 });
 
   // Recherche & Filtres (Logique Obat)
   const [recherche, setRecherche] = useState('');
   const [filtreFamille, setFiltreFamille] = useState('TOUS');
   const [filtreCategorie, setFiltreCategorie] = useState('TOUS');
   const [filtreMode, setFiltreMode] = useState('TOUS'); // 'TOUS', 'FOURNITURE_POSE', 'PRESTATION'
-  const [ongletPrincipal, setOngletPrincipal] = useState('catalogue'); // 'catalogue' ou 'familles'
+  const [ongletPrincipal, setOngletPrincipal] = useState('catalogue'); // 'catalogue', 'familles' ou 'categories'
   const [categorieSelectionnee, setCategorieSelectionnee] = useState(null);
 
   // Modales
@@ -100,14 +101,19 @@ export default function GestionArticles() {
   async function chargerDonnees() {
     setChargement(true);
     try {
-      const [famillesResponse, articlesResponse, categoriesResponse] = await Promise.all([
+      const [famillesResponse, articlesResponse, categoriesResponse, tvaResponse] = await Promise.all([
         client.get('/referentiels/articles/familles'),
         client.get('/referentiels/articles'),
-        client.get('/referentiels/articles/categories')
+        client.get('/referentiels/articles/categories'),
+        client.get('/parametres/tva')
       ]);
       setFamilles(famillesResponse.data || []);
       setArticles(articlesResponse.data || []);
       setCategories(categoriesResponse.data || []);
+      setParametresTva({
+        prestation: Number.isFinite(Number(tvaResponse.data?.tvaPrestation)) ? Number(tvaResponse.data.tvaPrestation) : 19,
+        travaux: Number.isFinite(Number(tvaResponse.data?.tvaTravaux)) ? Number(tvaResponse.data.tvaTravaux) : 19
+      });
     } catch (err) {
       notifierErreur(err.response?.data?.erreur || 'Impossible de charger le référentiel.');
     } finally {
@@ -183,8 +189,8 @@ export default function GestionArticles() {
     setForm((ancien) => {
       if (champ !== 'mode_prix') return { ...ancien, [champ]: valeur };
       return valeur === 'PRESTATION'
-        ? { ...ancien, mode_prix: valeur, prix_fourniture: '', prix_pose: '', type_tva: 'PRESTATION' }
-        : { ...ancien, mode_prix: valeur, prix_unitaire: '', type_tva: 'TRAVAUX' };
+        ? { ...ancien, mode_prix: valeur, prix_fourniture: '', prix_pose: '', type_tva: 'PRESTATION', taux_tva: String(parametresTva.prestation) }
+        : { ...ancien, mode_prix: valeur, prix_unitaire: '', type_tva: 'TRAVAUX', taux_tva: String(parametresTva.travaux) };
     });
     setErreurs((anciennes) => ({ ...anciennes, [champ]: undefined }));
   }
@@ -216,10 +222,13 @@ export default function GestionArticles() {
 
     setEnvoi(true);
     try {
-      await client.post('/referentiels/articles', form);
+      await client.post('/referentiels/articles', {
+        ...form,
+        type_tva: form.mode_prix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX'
+      });
       await chargerDonnees();
       setModalNouvelArticleOuvert(false);
-      setForm(FORMULAIRE_VIDE);
+      setForm({ ...FORMULAIRE_VIDE, taux_tva: String(parametresTva.travaux) });
       await notifierSucces('Article ajouté avec succès à la bibliothèque !');
     } catch (error) {
       notifierErreur(error.response?.data?.erreur || 'Erreur lors de la création de l’article.');
@@ -239,7 +248,7 @@ export default function GestionArticles() {
       prix_unitaire: article.modePrix === 'PRESTATION' ? String(article.prix ?? '') : '',
       prix_fourniture: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixFourniture ?? '') : '',
       prix_pose: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixPose ?? '') : '',
-      type_tva: article.typeTva || 'PRESTATION',
+      type_tva: article.modePrix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
       taux_tva: String(article.tauxTva ?? 19),
       date_debut: new Date().toISOString().slice(0, 10)
     });
@@ -295,7 +304,7 @@ export default function GestionArticles() {
       prix_unitaire: article.modePrix === 'PRESTATION' ? String(article.prix ?? '') : '',
       prix_fourniture: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixFourniture ?? '') : '',
       prix_pose: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixPose ?? '') : '',
-      type_tva: article.typeTva || 'PRESTATION',
+      type_tva: article.modePrix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
       taux_tva: Number(article.tauxTva ?? 19)
     });
   }
@@ -346,7 +355,7 @@ export default function GestionArticles() {
       prix_unitaire: mode === 'PRESTATION' ? prix : fourniture + pose,
       prix_fourniture: mode === 'FOURNITURE_POSE' ? fourniture : null,
       prix_pose: mode === 'FOURNITURE_POSE' ? pose : null,
-      type_tva: formInlineTarif.type_tva || 'PRESTATION',
+      type_tva: mode === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
       taux_tva: formInlineTarif.taux_tva || 19,
       date_debut: dateAujourdhui
     };
@@ -518,7 +527,7 @@ export default function GestionArticles() {
             type="button"
             className="obat-btn-primary"
             onClick={() => {
-              setForm(FORMULAIRE_VIDE);
+              setForm({ ...FORMULAIRE_VIDE, taux_tva: String(parametresTva.travaux) });
               setErreurs({});
               setModalNouvelArticleOuvert(true);
             }}
@@ -602,33 +611,6 @@ export default function GestionArticles() {
           </select>
         </div>
 
-        {/* Pilules de familles d'articles */}
-        <div className="obat-tags-row">
-          <button
-            type="button"
-            className={`obat-tag-pill ${filtreFamille === 'TOUS' ? 'active' : ''}`}
-            onClick={() => setFiltreFamille('TOUS')}
-          >
-            Toutes les familles
-            <span className="obat-tag-count">{articlesFiltres.length}</span>
-          </button>
-          {familles
-            .filter((fam) => filtreCategorie === 'TOUS' || fam.id_categorie === Number(filtreCategorie))
-            .map((fam) => {
-              const countFamille = tousLesArticles.filter((a) => a.codeFamille === fam.code_famille).length;
-              return (
-                <button
-                  key={fam.id_famille}
-                  type="button"
-                  className={`obat-tag-pill ${filtreFamille === fam.code_famille ? 'active' : ''}`}
-                  onClick={() => setFiltreFamille(fam.code_famille)}
-                >
-                  {fam.libelle}
-                  <span className="obat-tag-count">{countFamille}</span>
-                </button>
-              );
-            })}
-        </div>
       </div>
 
       {/* 4. ONGLETS PRINCIPAUX */}
@@ -645,7 +627,14 @@ export default function GestionArticles() {
           className={`obat-main-tab ${ongletPrincipal === 'familles' ? 'active' : ''}`}
           onClick={() => setOngletPrincipal('familles')}
         >
-          📁 Familles & Catégories ({familles.length})
+          📁 Familles ({familles.length})
+        </button>
+        <button
+          type="button"
+          className={`obat-main-tab ${ongletPrincipal === 'categories' ? 'active' : ''}`}
+          onClick={() => setOngletPrincipal('categories')}
+        >
+          🗂️ Catégorie ({categories.length})
         </button>
       </div>
 
@@ -697,7 +686,6 @@ export default function GestionArticles() {
                         <th className="right" style={{ width: 120 }}>Fourniture HT</th>
                         <th className="right" style={{ width: 120 }}>Pose HT</th>
                         <th className="right" style={{ width: 130 }}>Total Net HT</th>
-                        <th className="right" style={{ width: 130 }}>TTC (19%)</th>
                         <th className="center" style={{ width: 130 }}>Actions</th>
                       </tr>
                     </thead>
@@ -709,8 +697,6 @@ export default function GestionArticles() {
                         let fournitureAffichee = Number(art.prixFourniture || 0);
                         let poseAffichee = Number(art.prixPose || 0);
                         let prixHTAffiche = estPrestation ? Number(art.prix || 0) : fournitureAffichee + poseAffichee;
-                        let tauxTva = Number(art.tauxTva || 19);
-
                         if (enEdition && formInlineTarif) {
                           if (estPrestation) {
                             prixHTAffiche = Number(formInlineTarif.prix_unitaire) || 0;
@@ -721,8 +707,9 @@ export default function GestionArticles() {
                           }
                         }
 
-                        const prixTTCAffiche = prixHTAffiche * (1 + (tauxTva / 100));
-
+                        const typeArticle = estPrestation
+                          ? 'PR'
+                          : `${fournitureAffichee > 0 ? 'F' : ''}${poseAffichee > 0 ? 'P' : ''}` || 'FP';
                         return (
                           <tr key={art.code} className={enEdition ? 'obat-row-editing' : ''}>
                             <td>
@@ -776,19 +763,6 @@ export default function GestionArticles() {
                                       placeholder="Couleur"
                                       title="Couleur (ex: Bleu, Noir...)"
                                     />
-                                    <label className="obat-inline-checkbox-label" title="Diamètre sélectionnable lors du chiffrage de devis">
-                                      <input
-                                        type="checkbox"
-                                        checked={formInlineTarif.avec_diametre}
-                                        onChange={(e) =>
-                                          setFormInlineTarif({
-                                            ...formInlineTarif,
-                                            avec_diametre: e.target.checked
-                                          })
-                                        }
-                                      />
-                                      <span>Ø sélec.</span>
-                                    </label>
                                   </div>
                                 </div>
                               ) : (
@@ -797,7 +771,6 @@ export default function GestionArticles() {
                                   <div className="obat-article-submeta">
                                     {art.matiere && <span>Matière : {art.matiere}</span>}
                                     {art.couleur && <span>Couleur : {art.couleur}</span>}
-                                    {art.avecDiametre && <span>Diamètre sélectionnable</span>}
                                   </div>
                                 </>
                               )}
@@ -824,9 +797,7 @@ export default function GestionArticles() {
                               )}
                             </td>
                             <td className="center">
-                              <span>
-                                {estPrestation ? 'Prestation' : 'Fourniture + Pose'}
-                              </span>
+                              <span>{typeArticle}</span>
                             </td>
                             <td className="right obat-price-cell">
                               {estPrestation ? (
@@ -915,9 +886,6 @@ export default function GestionArticles() {
                                 `${formaterNombre(prixHTAffiche)} DA`
                               )}
                             </td>
-                            <td className="right obat-price-cell" style={{ color: 'var(--color-success)', fontWeight: 600 }}>
-                              {formaterNombre(prixTTCAffiche)} DA
-                            </td>
                             <td className="center">
                               {enEdition ? (
                                 <div className="obat-actions-inline-group">
@@ -1005,10 +973,10 @@ export default function GestionArticles() {
       )}
 
       {/* 6. VUE GESTION DES FAMILLES & CATEGORIES */}
-      {ongletPrincipal === 'familles' && (
+      {(ongletPrincipal === 'familles' || ongletPrincipal === 'categories') && (
         <>
           {/* Section Catégories */}
-          <div className="obat-card-block">
+          {ongletPrincipal === 'categories' && <div className="obat-card-block">
             <div className="obat-card-header">
               <div className="obat-card-title">
                 <span>🗂️</span> Catégories d'articles ({categories.length})
@@ -1075,10 +1043,10 @@ export default function GestionArticles() {
                 )}
               </tbody>
             </table>
-          </div>
+          </div>}
 
           {/* Section Familles */}
-          <div className="obat-card-block">
+          {ongletPrincipal === 'familles' && <div className="obat-card-block">
             <div className="obat-card-header">
               <div className="obat-card-title">
                 <span>📁</span> {categorieSelectionnee
@@ -1169,7 +1137,7 @@ export default function GestionArticles() {
                 )}
               </tbody>
             </table>
-          </div>
+          </div>}
         </>
       )}
 
@@ -1264,6 +1232,7 @@ export default function GestionArticles() {
                   </label>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <label
+                      className={`obat-pricing-option ${form.mode_prix === 'FOURNITURE_POSE' ? 'active' : ''}`}
                       style={{
                         flex: 1,
                         padding: '10px 14px',
@@ -1288,6 +1257,7 @@ export default function GestionArticles() {
                     </label>
 
                     <label
+                      className={`obat-pricing-option ${form.mode_prix === 'PRESTATION' ? 'active' : ''}`}
                       style={{
                         flex: 1,
                         padding: '10px 14px',
@@ -1360,12 +1330,17 @@ export default function GestionArticles() {
                 <div className="obat-form-grid-2">
                   <div className="obat-form-group">
                     <label>Régime TVA appliqué</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={form.mode_prix === 'PRESTATION' ? 'TVA Prestation (19%)' : 'TVA Travaux (19%)'}
-                      style={{ background: 'var(--color-surface-sunken)', color: 'var(--color-text-muted)' }}
-                    />
+                    <select
+                      value={form.type_tva}
+                      onChange={(e) => modifier('type_tva', e.target.value)}
+                    >
+                      <option value="PRESTATION">
+                        TVA Prestation ({form.type_tva === 'PRESTATION' ? form.taux_tva : parametresTva.prestation}%)
+                      </option>
+                      <option value="TRAVAUX">
+                        TVA Travaux ({form.type_tva === 'TRAVAUX' ? form.taux_tva : parametresTva.travaux}%)
+                      </option>
+                    </select>
                   </div>
 
                   <div className="obat-form-group">
