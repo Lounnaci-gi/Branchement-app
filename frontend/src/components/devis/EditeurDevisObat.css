@@ -602,6 +602,32 @@
   outline: none;
 }
 
+.obat-section-number {
+  flex-shrink: 0;
+  color: #1991EB;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.obat-numbering-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748B;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.obat-numbering-control select {
+  padding: 5px 8px;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: #374151;
+  font-size: 12px;
+}
+
 /* ---------- 6. TABLEAU DE ARTICLES (STYLE OBAT BLEU VIF) ---------- */
 .obat-table-container {
   width: 100%;
@@ -617,6 +643,15 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+}
+
+.obat-columns-header {
+  margin-bottom: 0;
+  border-radius: 4px 4px 0 0;
+}
+
+.obat-section-block .obat-table {
+  border-top: 0;
 }
 
 .obat-table thead tr {
@@ -1496,7 +1531,7 @@
 .obat-sections-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 0;
   margin-top: 16px;
 }
 
@@ -2152,6 +2187,10 @@
 :root[data-theme='dark'] .obat-section-preview-title,
 :root[data-theme='dark'] .obat-accord-title {
   color: var(--color-text);
+:root[data-theme='dark'] .obat-section-number,
+:root[data-theme='dark'] .obat-numbering-control {
+  color: var(--color-text-muted);
+}
 }
 
 :root[data-theme='dark'] .obat-client-box-header {

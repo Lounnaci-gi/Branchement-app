@@ -29,6 +29,35 @@ function normaliserPrix(valeur) {
   return Number.isFinite(prix) && prix >= 0 ? prix : 0;
 }
 
+function numeroRomain(valeur) {
+  const nombres = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+  ];
+  let reste = valeur;
+  return nombres.reduce((resultat, [nombre, symbole]) => {
+    const repetitions = Math.floor(reste / nombre);
+    reste %= nombre;
+    return resultat + symbole.repeat(repetitions);
+  }, '');
+}
+
+function numeroAlphabetique(index) {
+  let reste = index + 1;
+  let resultat = '';
+  while (reste > 0) {
+    reste -= 1;
+    resultat = String.fromCharCode(65 + (reste % 26)) + resultat;
+    reste = Math.floor(reste / 26);
+  }
+  return resultat;
+}
+
+function numeroSection(index, mode) {
+  return mode === 'ALPHABETIQUE' ? numeroAlphabetique(index) : numeroRomain(index + 1);
+}
+
 function aTarifsFournitureEtPose(article) {
   if (!article) return false;
   const f = Number(article.prixFourniture ?? article.prix_fourniture ?? 0);
@@ -171,6 +200,7 @@ export default function EditeurDevisObat({
   // Options d'affichage Obat
   const [afficherColonneMarge, setAfficherColonneMarge] = useState(true);
   const [afficherColonneUnite, setAfficherColonneUnite] = useState(true);
+  const [modeNumerotationSections, setModeNumerotationSections] = useState('ROMAIN');
   const [masquerDetailsOuvragesPreview, setMasquerDetailsOuvragesPreview] = useState(true);
   const [autoliquidationTva, setAutoliquidationTva] = useState(false); // Obat 8:18
 
@@ -280,7 +310,7 @@ export default function EditeurDevisObat({
     return [
       {
         id_section: 'sec_1',
-        titre: `1. Travaux de branchement AEP (${natureDefaut})`,
+        titre: `Travaux de branchement AEP (${natureDefaut})`,
         categorie: 'Sans catégorie',
         lignes: []
       }
@@ -387,6 +417,12 @@ export default function EditeurDevisObat({
   function ajouterLigneVide(idSection) {
     let targetId = idSection || idSectionActive;
 
+    const sectionCible = sections.find((section) => section.id_section === targetId);
+    if (sectionCible?.lignes.some((ligne) => ligne.estLigneLibre)) {
+      notifierErreur("Enregistrez l'article en cours avant d'en créer un autre.");
+      return;
+    }
+
     setSections((prev) => {
       let updated = [...prev];
       if (updated.length === 0) {
@@ -421,6 +457,7 @@ export default function EditeurDevisObat({
         prixFourniture: 0,
         prixPose: 0,
         choixPrix: 'FOURNITURE_POSE',
+        categorie: 'Sans catégorie',
         id_famille: '',
         sousElements: [],
         estLigneLibre: true
@@ -486,10 +523,9 @@ export default function EditeurDevisObat({
   // ACTIONS SUR LES SECTIONS ET LIGNES
   // -------------------------------------------------------------
   function ajouterSection() {
-    const nouveauNum = sections.length + 1;
     const nouvelleSec = {
       id_section: `sec_${Date.now()}`,
-      titre: `${nouveauNum}. Nouvelle section de travaux`,
+      titre: 'Nouvelle section de travaux',
       lignes: []
     };
     setSections((prev) => [...prev, nouvelleSec]);
@@ -737,6 +773,8 @@ export default function EditeurDevisObat({
 
   function selectionnerSuggestionArticle(idSection, idLigne, article) {
     const codeArticle = String(article.code || article.code_article || '').trim().toUpperCase();
+    const categorieArticle = obtenirCategorieArticle(article, tousLesArticles);
+
     const dejaPresent = sections.some((section) => section.lignes.some((ligne) => (
       ligne.id_ligne !== idLigne &&
       String(ligne.code || ligne.code_article || '').trim().toUpperCase() === codeArticle
@@ -747,33 +785,55 @@ export default function EditeurDevisObat({
       return;
     }
 
-    setSections((prev) => prev.map((section) => (
-      section.id_section !== idSection
-        ? section
-        : {
-            ...section,
-            lignes: section.lignes.map((ligne) => {
-              if (ligne.id_ligne !== idLigne) return ligne;
-              const modePrix = article.modePrix || (article.typeTva === 'PRESTATION' ? 'PRESTATION' : 'FOURNITURE_POSE');
-              const estPrestation = modePrix === 'PRESTATION';
-              return {
-                ...ligne,
-                code: article.code,
-                libelle: article.libelle,
-                unite: article.unite || 'U',
-                modePrix,
-                type: estPrestation ? 'PR/' : 'FP/',
-                typeTva: estPrestation ? 'PRESTATION' : 'TRAVAUX',
-                tauxTva: estPrestation ? tvaPrestation : (Number(article.tauxTva) || 19),
-                prix: Number(article.prix) || 0,
-                prixFourniture: article.prixFourniture ?? null,
-                prixPose: article.prixPose ?? null,
-                choixPrix: estPrestation ? null : 'FOURNITURE_POSE',
-                estLigneLibre: false
-              };
-            })
-          }
-    )));
+    const ligneBase = sections
+      .flatMap((section) => section.lignes)
+      .find((ligne) => ligne.id_ligne === idLigne) || {};
+    const modePrix = article.modePrix || (article.typeTva === 'PRESTATION' ? 'PRESTATION' : 'FOURNITURE_POSE');
+    const estPrestation = modePrix === 'PRESTATION';
+    const ligneSelectionnee = {
+      ...ligneBase,
+      code: article.code,
+      libelle: article.libelle,
+      unite: article.unite || 'U',
+      modePrix,
+      type: estPrestation ? 'PR/' : 'FP/',
+      typeTva: estPrestation ? 'PRESTATION' : 'TRAVAUX',
+      tauxTva: estPrestation ? tvaPrestation : (Number(article.tauxTva) || 19),
+      prix: Number(article.prix) || 0,
+      prixFourniture: article.prixFourniture ?? null,
+      prixPose: article.prixPose ?? null,
+      choixPrix: estPrestation ? null : 'FOURNITURE_POSE',
+      categorie: categorieArticle,
+      estLigneLibre: false
+    };
+    const sectionExistante = sections.find((section) => section.categorie === categorieArticle);
+    const idSectionCategorie = sectionExistante?.id_section || `sec_cat_${Date.now()}`;
+
+    setSections((prev) => {
+      const sectionsSansLigne = prev
+        .map((section) => ({
+          ...section,
+          lignes: section.lignes.filter((ligne) => ligne.id_ligne !== idLigne)
+        }))
+        .filter((section) => section.lignes.length > 0 || section.id_section === idSection);
+      const indexSection = sectionsSansLigne.findIndex((section) => section.id_section === idSectionCategorie);
+
+      if (indexSection >= 0) {
+        sectionsSansLigne[indexSection] = {
+          ...sectionsSansLigne[indexSection],
+          titre: categorieArticle,
+          categorie: categorieArticle,
+          lignes: [...sectionsSansLigne[indexSection].lignes, ligneSelectionnee]
+        };
+        return sectionsSansLigne;
+      }
+
+      return [
+        ...sectionsSansLigne,
+        { id_section: idSectionCategorie, titre: categorieArticle, categorie: categorieArticle, lignes: [ligneSelectionnee] }
+      ];
+    });
+    setIdSectionActive(idSectionCategorie);
     setRecherchesLignes((prev) => ({ ...prev, [idLigne]: '' }));
     setSuggestionsLignes((prev) => ({ ...prev, [idLigne]: [] }));
   }
@@ -835,7 +895,19 @@ export default function EditeurDevisObat({
       categorie,
       lignes
     }));
-    setSections((prev) => [...prev, ...sectionsPack]);
+
+    setSections((prev) => {
+      const sectionsAjour = [...prev];
+      sectionsPack.forEach((sectionPack) => {
+        const sectionExistante = sectionsAjour.find((section) => section.categorie === sectionPack.categorie);
+        if (sectionExistante) {
+          sectionExistante.lignes = [...sectionExistante.lignes, ...sectionPack.lignes];
+        } else {
+          sectionsAjour.push(sectionPack);
+        }
+      });
+      return sectionsAjour;
+    });
     setDrawerBiblioOuvert(false);
   }
 
@@ -1758,6 +1830,24 @@ export default function EditeurDevisObat({
 
           {/* 4. SECTIONS ET LIGNES DU DEVIS */}
           <div className="obat-sections-container">
+            <table className="obat-table obat-columns-header">
+              <thead>
+                <tr>
+                  <th className="center obat-col-num">N°</th>
+                  <th className="obat-col-desig">Désignation</th>
+                  <th className="center obat-col-type">Type</th>
+                  <th className="center obat-col-qte">Qté</th>
+                  {afficherColonneUnite && <th className="center obat-col-unite">Unité</th>}
+                  <th className="right obat-col-pu">Prix U. HT</th>
+                  {afficherColonneMarge && modeOnglet === 'edition' && (
+                    <th className="center obat-col-marge">Marge</th>
+                  )}
+                  <th className="center obat-col-tva">TVA</th>
+                  <th className="right obat-col-total">Total HT</th>
+                  {modeOnglet === 'edition' && <th className="center obat-col-del" />}
+                </tr>
+              </thead>
+            </table>
             {sections.map((section, sIdx) => {
               const totalSectionHT = section.lignes.reduce(
                 (acc, l) => acc + (Number(l.quantite) || 0) * (Number(l.prix) || 0),
@@ -1772,6 +1862,9 @@ export default function EditeurDevisObat({
                 >
                   <div className="obat-section-bar">
                     <div className="obat-section-bar-left">
+                      <span className="obat-section-number">
+                        {numeroSection(sIdx, modeNumerotationSections)} -
+                      </span>
                       {modeOnglet === 'edition' ? (
                         <input
                           type="text"
@@ -1806,22 +1899,6 @@ export default function EditeurDevisObat({
                   </div>
 
                   <table className="obat-table">
-                    <thead>
-                      <tr>
-                        <th className="center obat-col-num">N°</th>
-                        <th className="obat-col-desig">Désignation</th>
-                        <th className="center obat-col-type">Type</th>
-                        <th className="center obat-col-qte">Qté</th>
-                        {afficherColonneUnite && <th className="center obat-col-unite">Unité</th>}
-                        <th className="right obat-col-pu">Prix U. HT</th>
-                        {afficherColonneMarge && modeOnglet === 'edition' && (
-                          <th className="center obat-col-marge">Marge</th>
-                        )}
-                        <th className="center obat-col-tva">TVA</th>
-                        <th className="right obat-col-total">Total HT</th>
-                        {modeOnglet === 'edition' && <th className="center obat-col-del" />}
-                      </tr>
-                    </thead>
                     <tbody>
                       {section.lignes.length === 0 ? (
                         <tr>
@@ -2138,28 +2215,6 @@ export default function EditeurDevisObat({
                     </tbody>
                   </table>
 
-                  {modeOnglet === 'edition' && (
-                    <div className="obat-section-add-actions">
-                      <button
-                        type="button"
-                        className="obat-btn-quick-add obat-btn-primary-add"
-                        onClick={() => ajouterLigneVide(section.id_section)}
-                        title="Ajouter une ligne vide à remplir directement dans le devis"
-                      >
-                        + Ajouter un article
-                      </button>
-                      <button
-                        type="button"
-                        className="obat-btn-quick-add"
-                        onClick={() => {
-                          setIdSectionActive(section.id_section);
-                          setDrawerBiblioOuvert(true);
-                        }}
-                      >
-                        📚 Insérer depuis la Bibliothèque
-                      </button>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -2170,6 +2225,22 @@ export default function EditeurDevisObat({
             <div className="obat-add-elements-wrapper">
               <div className="obat-add-toolbar">
                 <div className="obat-add-group-left">
+                  <button
+                    type="button"
+                    className="obat-btn-add-element obat-btn-primary-add"
+                    onClick={() => ajouterLigneVide(idSectionActive)}
+                    title="Ajouter un article dans la section active"
+                  >
+                    + Ajouter un article
+                  </button>
+                  <button
+                    type="button"
+                    className="obat-btn-add-element"
+                    onClick={() => setDrawerBiblioOuvert(true)}
+                    title="Insérer un article depuis la bibliothèque dans la section active"
+                  >
+                    📚 Insérer depuis la Bibliothèque
+                  </button>
                   <button
                     type="button"
                     className="obat-btn-add-element"
@@ -2190,6 +2261,17 @@ export default function EditeurDevisObat({
                 </div>
 
                 <div className="obat-add-group-right">
+                  <label className="obat-numbering-control">
+                    Numérotation
+                    <select
+                      value={modeNumerotationSections}
+                      onChange={(e) => setModeNumerotationSections(e.target.value)}
+                      aria-label="Style de numérotation des sections"
+                    >
+                      <option value="ROMAIN">I, II, III</option>
+                      <option value="ALPHABETIQUE">A, B, C</option>
+                    </select>
+                  </label>
                   <button
                     type="button"
                     className="obat-btn-add-secondary"
