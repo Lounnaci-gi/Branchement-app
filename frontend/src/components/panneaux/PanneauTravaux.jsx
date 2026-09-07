@@ -158,7 +158,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
     <div className="obat-section-card">
       <div className="obat-section-card-header">
         <div className="obat-section-card-title">
-          <span>🛠️</span> Exécution des travaux & Pose compteur
+          Exécution des travaux & Pose compteur
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!ouvert && travaux && (
@@ -169,7 +169,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
                 onClick={() => handleImprimer(travaux || form)}
                 title="Imprimer l'ordre d'exécution"
               >
-                <span>🖨</span> Ordre d'exécution
+                Ordre d'exécution
               </button>
               {travauxTermines && (
                 <button
@@ -178,7 +178,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
                   onClick={() => handleImprimerContrat(travaux || form)}
                   title="Imprimer le contrat d'abonnement"
                 >
-                  <span>🖨</span> Contrat
+                  Contrat
                 </button>
               )}
             </>
@@ -198,7 +198,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
                   : undefined
             }
           >
-            {demandeVerrouillee ? '🔒 Demande scellée' : travaux ? '✎ Modifier' : '➕ Renseigner'}
+            {demandeVerrouillee ? 'Demande scellée' : travaux ? 'Modifier' : 'Renseigner'}
           </button>
         </div>
       </div>
@@ -294,7 +294,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             <textarea rows={2} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
           </div>
           <button className="obat-btn obat-btn-pri" disabled={envoi}>
-            {envoi ? 'Enregistrement...' : '✓ Enregistrer les travaux'}
+            {envoi ? 'Enregistrement...' : 'Enregistrer les travaux'}
           </button>
         </form>
       )}

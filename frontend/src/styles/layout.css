@@ -36,6 +36,22 @@
   font-size: 12px;
 }
 
+/* Les actions restent textuelles; les pictogrammes SVG ne sont plus affiches. */
+svg {
+  display: none;
+}
+
+.obat-btn-action-icon svg {
+  display: block;
+}
+
+.obat-btn-action-icon {
+  width: auto;
+  min-width: 32px;
+  padding: 6px 8px;
+}
+
+
 .page {
   padding: 30px 40px 48px;
   max-width: 1440px;

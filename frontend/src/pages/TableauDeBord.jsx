@@ -104,7 +104,7 @@ export default function TableauDeBord() {
 
   return (
     <div className="page">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', icon: '📊' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord' }]} />
 
       <header className="obat-page-header">
         <div>
@@ -128,7 +128,7 @@ export default function TableauDeBord() {
             <span>Actualiser</span>
           </button>
           <Link to="/demandes/nouvelle" className="obat-btn obat-btn-pri">
-            <span>✨</span> Nouvelle demande
+            Nouvelle demande
           </Link>
         </div>
       </header>
@@ -144,7 +144,7 @@ export default function TableauDeBord() {
           title="Voir toutes les demandes actives"
           style={{ cursor: 'pointer' }}
         >
-          <div className="obat-kpi-icon blue">📋</div>
+          <div className="obat-kpi-icon blue" />
           <div>
             <div className="obat-kpi-value">
               <CompteurAnime cible={total} />
@@ -162,7 +162,7 @@ export default function TableauDeBord() {
           title="Voir les demandes achevées"
           style={{ cursor: 'pointer' }}
         >
-          <div className="obat-kpi-icon green">✅</div>
+          <div className="obat-kpi-icon green" />
           <div>
             <div className="obat-kpi-value" style={{ color: 'var(--color-success)' }}>
               <CompteurAnime cible={demandesAchevees} />
@@ -180,7 +180,7 @@ export default function TableauDeBord() {
           title="Voir les demandes de ce mois"
           style={{ cursor: 'pointer' }}
         >
-          <div className="obat-kpi-icon purple">📅</div>
+          <div className="obat-kpi-icon purple" />
           <div>
             <div className="obat-kpi-value">
               <CompteurAnime cible={donnees.demandesCeMois} />
@@ -198,7 +198,7 @@ export default function TableauDeBord() {
           title="Voir les devis en attente de paiement"
           style={{ cursor: 'pointer' }}
         >
-          <div className="obat-kpi-icon amber">💳</div>
+          <div className="obat-kpi-icon amber" />
           <div>
             <div className="obat-kpi-value" style={{ color: 'var(--color-accent)' }}>
               <CompteurAnime cible={donnees.enAttentePaiement.total} />
@@ -219,7 +219,7 @@ export default function TableauDeBord() {
           title="Délai moyen constaté de réalisation"
           style={{ cursor: 'pointer' }}
         >
-          <div className="obat-kpi-icon cyan">⏱️</div>
+          <div className="obat-kpi-icon cyan" />
           <div>
             <div className="obat-kpi-value">
               <CompteurAnime cible={Math.round(donnees.delaiMoyenJours)} suffixe=" j" />
@@ -233,7 +233,7 @@ export default function TableauDeBord() {
       <div className="obat-section-card" style={{ marginTop: 20 }}>
         <div className="obat-section-card-header">
           <div className="obat-section-card-title">
-            <span>📊</span> Répartition des dossiers par étape du pipeline
+            Répartition des dossiers par étape du pipeline
           </div>
           <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
             Cliquez pour filtrer les demandes
@@ -288,7 +288,6 @@ export default function TableauDeBord() {
                 <span>{s.code_statut === 'REJETEE' ? '⛔' : '🚫'}</span>
                 <span>{s.libelle} :</span>
                 <strong className="mono">{s.total}</strong>
-                <span>→</span>
               </div>
             ))}
         </div>

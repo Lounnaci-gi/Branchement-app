@@ -519,7 +519,6 @@ export default function PanneauDevis({
       {/* En-tête principal du panneau */}
       <div className="panneau-devis-header">
         <div className="panneau-devis-titre-wrap">
-          <div className="panneau-devis-icon">💳</div>
           <div>
             <h3 style={{ margin: 0 }}>Devis & Paiement</h3>
             {devisListe.length > 0 && (
@@ -540,7 +539,7 @@ export default function PanneauDevis({
               onClick={() => navigate(`/demandes/${idDemande}/devis/nouveau`)}
               title="Ouvrir l'éditeur de devis structuré inspiré d'Obat"
             >
-              <span>✨</span> Éditeur Devis Obat
+              Éditeur Devis Obat
             </button>
           )}
           {afficherActionsCreation && !demandeVerrouillee && devisListe.length > 0 && !ouvert && (
@@ -559,7 +558,7 @@ export default function PanneauDevis({
                 setOuvert(true);
               }}
             >
-              <span>✎</span> Saisie rapide
+              Saisie rapide
             </button>
           )}
           {ouvert && (
@@ -608,7 +607,7 @@ export default function PanneauDevis({
 
                 <div>
                   <span className={`devis-statut-pill ${estPaye ? 'paye' : 'impaye'}`}>
-                    {estPaye ? '✓ Réglé' : '⏳ Impayé'}
+                    {estPaye ? 'Réglé' : 'Impayé'}
                     {estPaye && item.date_paiement && (
                       <span style={{ opacity: 0.8, fontSize: 11 }}>
                         ({new Date(item.date_paiement).toLocaleDateString('fr-FR')})
@@ -624,7 +623,7 @@ export default function PanneauDevis({
                     onClick={() => onAfficherDevis?.(item.id_devis)}
                     title="Afficher le devis dans une page dédiée"
                   >
-                    <span>👁</span> Afficher
+                    Afficher
                   </button>
                   {!demandeVerrouillee && !estPaye && (
                     <>
@@ -634,7 +633,7 @@ export default function PanneauDevis({
                         onClick={() => navigate(`/demandes/${idDemande}/devis/nouveau?id_devis=${item.id_devis}`)}
                         title="Ouvrir dans l'éditeur de devis complet inspiré d'Obat"
                       >
-                        <span>✏️</span> Éditeur complet
+                        Éditeur complet
                       </button>
                       <button
                         type="button"
@@ -642,7 +641,7 @@ export default function PanneauDevis({
                         onClick={() => ouvrirModification(item)}
                         title="Modifier ou régler ce devis impayé"
                       >
-                        <span>💳</span> Régler / Rapide
+                        Régler / Rapide
                       </button>
                     </>
                   )}
@@ -653,7 +652,6 @@ export default function PanneauDevis({
 
           {devisListe.length === 0 && (
             <div className="devis-empty-state">
-              <div className="devis-empty-icon">📑</div>
               <div className="devis-empty-text">
                 {demandeVerrouillee
                   ? 'Demande scellée — aucune modification de devis n’est autorisée.'
@@ -683,7 +681,6 @@ export default function PanneauDevis({
         <form onSubmit={enregistrer} className="form-devis-container">
           <div className="form-devis-entete">
             <h4>
-              <span>{devisActuel ? '✎' : devisListe.length > 0 ? '➕' : '📄'}</span>
               {devisActuel
                 ? `Modifier le devis (${devisActuel.numero_devis})`
                 : devisListe.length > 0
@@ -981,7 +978,6 @@ export default function PanneauDevis({
             >
               <div className="paiement-toggle-left">
                 <div className="paiement-toggle-icon">
-                  {enregistrerPaiement ? '✅' : '💳'}
                 </div>
                 <div className="paiement-toggle-text">
                   <span className="paiement-toggle-titre">
@@ -1128,7 +1124,6 @@ export default function PanneauDevis({
               Annuler
             </button>
             <button type="submit" className="btn btn-primary" disabled={envoi}>
-              <span>{envoi ? '⏳' : '✓'}</span>
               {envoi
                 ? 'Enregistrement...'
                 : devisActuel

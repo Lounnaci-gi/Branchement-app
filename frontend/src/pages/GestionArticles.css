@@ -330,6 +330,41 @@
   background: #F8FAFC;
 }
 
+.categories-table {
+  table-layout: fixed;
+}
+
+.categories-table .category-code {
+  color: #64748B;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+}
+
+.categories-table .category-label {
+  color: #1E293B;
+  font-size: 14px;
+}
+
+.categories-table .category-family-count {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 92px;
+  padding: 4px 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 12px;
+  background: #F8FAFC;
+}
+
+.categories-table .category-actions {
+  white-space: nowrap;
+}
+
+.categories-table .category-actions .obat-btn-action-icon + .obat-btn-action-icon {
+  margin-left: 6px;
+}
+
 .obat-category-row {
   cursor: pointer;
 }
@@ -709,6 +744,20 @@
 /* ---------- Formulaires en thème sombre ---------- */
 :root[data-theme='dark'] .obat-articles-wrapper {
   color: var(--color-text);
+}
+
+:root[data-theme='dark'] .categories-table .category-code {
+  color: var(--color-text-muted);
+}
+
+:root[data-theme='dark'] .categories-table .category-label {
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .categories-table .category-family-count {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background: var(--color-surface-sunken);
 }
 
 :root[data-theme='dark'] .obat-articles-title-block h1,

@@ -113,7 +113,6 @@ export default function Connexion() {
         {/* Alerte d'erreur interactive */}
         {erreur && (
           <div className="login-alert" role="alert">
-            <span className="login-alert-icon" aria-hidden="true">⚠️</span>
             <div style={{ flex: 1 }}>{erreur}</div>
             <button
               type="button"
@@ -130,7 +129,7 @@ export default function Connexion() {
         <div className="login-field">
           <div className="login-label-row">
             <label htmlFor="login-identifiant" className="login-label">
-              <span>👤</span> Identifiant
+              Identifiant
             </label>
           </div>
           <div className="login-input-wrapper">
@@ -156,7 +155,7 @@ export default function Connexion() {
         <div className="login-field">
           <div className="login-label-row">
             <label htmlFor="login-mot-de-passe" className="login-label">
-              <span>🔒</span> Mot de passe
+              Mot de passe
             </label>
           </div>
           <div className="login-input-wrapper">
@@ -185,14 +184,13 @@ export default function Connexion() {
               title={afficherMotDePasse ? 'Masquer' : 'Afficher'}
               tabIndex={-1}
             >
-              <span aria-hidden="true">{afficherMotDePasse ? '🙈' : '👁️'}</span>
             </button>
           </div>
 
           {/* Indicateur de verrouillage des majuscules */}
           {capsLockActif && (
             <div className="login-caps-warning">
-              <span aria-hidden="true">⚠️</span> Touche Majuscule (Caps Lock) activée
+              Touche Majuscule (Caps Lock) activée
             </div>
           )}
         </div>
@@ -224,7 +222,6 @@ export default function Connexion() {
           ) : (
             <>
               <span>Se connecter</span>
-              <span aria-hidden="true">→</span>
             </>
           )}
         </button>

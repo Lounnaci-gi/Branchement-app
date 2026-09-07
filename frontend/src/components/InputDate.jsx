@@ -136,7 +136,6 @@ export default function InputDate({ value = '', onChange, min, max, className = 
           fontSize: '15px'
         }}
       >
-        📅
       </button>
       {/* Input date natif masqué mais fonctionnel pour le datepicker popup */}
       <input

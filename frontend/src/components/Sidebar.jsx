@@ -44,7 +44,6 @@ export default function Sidebar({ agent, onOpenSearch }) {
         onClick={onOpenSearch}
         title="Recherche rapide (Ctrl + K)"
       >
-        <span className="sidebar-search-icon" aria-hidden="true">🔍</span>
         <span className="sidebar-search-text">Recherche...</span>
         <kbd className="sidebar-search-kbd">Ctrl K</kbd>
       </button>
@@ -52,30 +51,24 @@ export default function Sidebar({ agent, onOpenSearch }) {
       <nav className="sidebar-nav">
         <div className="sidebar-nav-label">Espace de travail</div>
         <NavLink to="/" end className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-          <span className="sidebar-lien-icone" aria-hidden="true">⌂</span>
           <span>Tableau de bord</span>
         </NavLink>
         <NavLink to="/demandes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-          <span className="sidebar-lien-icone" aria-hidden="true">≡</span>
           <span>Demandes</span>
         </NavLink>
         <NavLink to="/demandes/nouvelle" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-          <span className="sidebar-lien-icone" aria-hidden="true">＋</span>
           <span>Nouvelle demande</span>
         </NavLink>
         {agentCourant?.role === 'admin' && (
           <>
             <div className="sidebar-nav-label sidebar-nav-label-admin">Référentiels</div>
             <NavLink to="/referentiels/communes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-              <span className="sidebar-lien-icone" aria-hidden="true">⌖</span>
               <span>Communes</span>
             </NavLink>
             <NavLink to="/referentiels/articles" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-              <span className="sidebar-lien-icone" aria-hidden="true">▤</span>
               <span>Articles de devis</span>
             </NavLink>
             <NavLink to="/parametres" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-              <span className="sidebar-lien-icone" aria-hidden="true">⚙</span>
               <span>Paramètres</span>
             </NavLink>
           </>

@@ -53,7 +53,7 @@ export default function Parametres() {
 
   return (
     <section className="page">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Paramètres' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Paramètres' }]} />
       <header className="obat-page-header">
         <div>
           <span>ADE • ADMINISTRATION</span>
@@ -113,7 +113,7 @@ export default function Parametres() {
         </div>
 
         <button type="submit" className="obat-btn obat-btn-pri" disabled={chargement || enregistrement} style={{ marginTop: 24 }}>
-          {enregistrement ? 'Enregistrement...' : '✓ Enregistrer les paramètres'}
+          {enregistrement ? 'Enregistrement...' : 'Enregistrer les paramètres'}
         </button>
       </form>
 

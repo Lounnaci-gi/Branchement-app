@@ -113,7 +113,7 @@ export default function Profil() {
 
   return (
     <section className="page">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Mon profil' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Mon profil' }]} />
       <header className="obat-page-header">
         <div>
           <span>ADE • ESPACE AGENT</span>
@@ -166,7 +166,6 @@ export default function Profil() {
                 style={{ flex: 1 }}
               />
               <button type="button" className="btn profil-toggle-password" onClick={() => setAfficherAncien((value) => !value)} aria-label={afficherAncien ? 'Masquer le mot de passe actuel' : 'Afficher le mot de passe actuel'} title={afficherAncien ? 'Masquer' : 'Afficher'}>
-                <span aria-hidden="true">{afficherAncien ? '🙈' : '👁'}</span>
               </button>
             </div>
           </div>
@@ -184,7 +183,6 @@ export default function Profil() {
                 style={{ flex: 1 }}
               />
               <button type="button" className="btn profil-toggle-password" onClick={() => setAfficherNouveau((value) => !value)} aria-label={afficherNouveau ? 'Masquer le nouveau mot de passe' : 'Afficher le nouveau mot de passe'} title={afficherNouveau ? 'Masquer' : 'Afficher'}>
-                <span aria-hidden="true">{afficherNouveau ? '🙈' : '👁'}</span>
               </button>
             </div>
           </div>
@@ -202,14 +200,13 @@ export default function Profil() {
                 style={{ flex: 1 }}
               />
               <button type="button" className="btn profil-toggle-password" onClick={() => setAfficherConfirmation((value) => !value)} aria-label={afficherConfirmation ? 'Masquer la confirmation du mot de passe' : 'Afficher la confirmation du mot de passe'} title={afficherConfirmation ? 'Masquer' : 'Afficher'}>
-                <span aria-hidden="true">{afficherConfirmation ? '🙈' : '👁'}</span>
               </button>
             </div>
           </div>
         </fieldset>
 
         <button type="submit" className="obat-btn obat-btn-pri" disabled={chargement}>
-          {chargement ? 'Enregistrement...' : '✓ Enregistrer les modifications'}
+          {chargement ? 'Enregistrement...' : 'Enregistrer les modifications'}
         </button>
       </form>
     </section>

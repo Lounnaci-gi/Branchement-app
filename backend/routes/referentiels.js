@@ -164,6 +164,54 @@ router.put('/articles/categories/:id_categorie', autoriserRoles('admin'), async 
   }
 });
 
+router.delete('/articles/categories/:id_categorie', autoriserRoles('admin'), async (req, res) => {
+  const categorieId = Number(req.params.id_categorie);
+
+  if (!Number.isInteger(categorieId) || categorieId <= 0) {
+    return res.status(400).json({ erreur: 'La catégorie sélectionnée est invalide.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id_categorie', sql.Int, categorieId)
+      .query(`UPDATE CategoriesArticles
+              SET actif = 0
+              OUTPUT INSERTED.id_categorie
+              WHERE id_categorie = @id_categorie
+                AND actif = 1
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM FamillesArticles
+                  WHERE id_categorie = @id_categorie
+                )`);
+
+    if (result.recordset[0]) {
+      return res.json({ message: 'Catégorie supprimée.' });
+    }
+
+    const categorie = await pool.request()
+      .input('id_categorie', sql.Int, categorieId)
+      .query(`SELECT actif,
+                     EXISTS_FAMILLE = CASE WHEN EXISTS (
+                       SELECT 1 FROM FamillesArticles WHERE id_categorie = @id_categorie
+                     ) THEN 1 ELSE 0 END
+              FROM CategoriesArticles
+              WHERE id_categorie = @id_categorie`);
+
+    if (!categorie.recordset[0]) {
+      return res.status(404).json({ erreur: 'Catégorie introuvable.' });
+    }
+    if (categorie.recordset[0].EXISTS_FAMILLE) {
+      return res.status(409).json({ erreur: 'Impossible de supprimer une catégorie qui contient des familles.' });
+    }
+    return res.status(409).json({ erreur: 'Cette catégorie est déjà supprimée.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la suppression de la catégorie.' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FAMILLES D'ARTICLES
 // ─────────────────────────────────────────────────────────────────────────────

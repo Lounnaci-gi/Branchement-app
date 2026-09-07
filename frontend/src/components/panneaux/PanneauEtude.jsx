@@ -84,7 +84,7 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, dem
                 : undefined
           }
         >
-          {demandeVerrouillee ? '🔒 Demande scellée' : devisPaye ? '🔒 Étude verrouillée' : etude ? '✎ Modifier' : '➕ Renseigner'}
+          {demandeVerrouillee ? 'Demande scellée' : devisPaye ? 'Étude verrouillée' : etude ? 'Modifier' : 'Renseigner'}
         </button>
       </div>
 
@@ -142,7 +142,7 @@ export default function PanneauEtude({ idDemande, demande, etude, devisPaye, dem
             <textarea rows={2} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
           </div>
           <button className="obat-btn obat-btn-pri" disabled={envoi}>
-            {envoi ? 'Enregistrement...' : '✓ Enregistrer l’étude'}
+            {envoi ? 'Enregistrement...' : 'Enregistrer l’étude'}
           </button>
         </form>
       )}

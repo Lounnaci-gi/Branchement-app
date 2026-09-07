@@ -261,7 +261,7 @@ export default function DetailDemande() {
     <div className="page">
       <Breadcrumbs
         items={[
-          { label: 'Tableau de bord', path: '/', icon: '📊' },
+          { label: 'Tableau de bord', path: '/' },
           { label: 'Demandes', path: '/demandes' },
           { label: demande.numero_demande }
         ]}
@@ -280,7 +280,7 @@ export default function DetailDemande() {
                 title="Copier le numéro de dossier"
                 aria-label="Copier le numéro de dossier"
               >
-                {copieChamp === 'numero' ? '✓ Copié' : '📋'}
+                {copieChamp === 'numero' ? 'Copié' : 'Copier'}
               </button>
             </h1>
             <span>{LIBELLES_STATUT[demande.statut_actuel] || demande.statut_actuel}</span>
@@ -298,7 +298,7 @@ export default function DetailDemande() {
             onClick={() => imprimerDemande(demande)}
             title="Imprimer la demande de branchement"
           >
-            <span>🖨</span> Demande
+                Demande
           </button>
           <button
             type="button"
@@ -306,7 +306,7 @@ export default function DetailDemande() {
             onClick={() => imprimerAccuse(demande)}
             title="Imprimer l'accusé de réception (2 coupons A4)"
           >
-            <span>🖨</span> Accusé
+                Accusé
           </button>
           {!demandeEstVerrouillee && devisListe.length === 0 && (
             <button
@@ -315,7 +315,7 @@ export default function DetailDemande() {
               onClick={ouvrirCreateurDevis}
               title="Créer un devis pour cette demande"
             >
-              <span>✨</span> Devis Obat
+                Devis Obat
             </button>
           )}
           <button
@@ -325,7 +325,7 @@ export default function DetailDemande() {
             style={{ opacity: estEtudeTerminee ? 1 : 0.6 }}
             title={estEtudeTerminee ? "Imprimer la demande d'établissement de devis" : "L'étude technique doit être terminée pour imprimer la demande de devis"}
           >
-            <span>{estEtudeTerminee ? '🖨' : '🔒'}</span> Demande devis
+            Demande devis
           </button>
           <button
             type="button"
@@ -334,7 +334,7 @@ export default function DetailDemande() {
             style={{ opacity: estDevisPayeOuTravaux ? 1 : 0.6 }}
             title={estDevisPayeOuTravaux ? "Imprimer l'ordre d'exécution des travaux" : "Le devis doit être payé pour imprimer l'ordre d'exécution"}
           >
-            <span>{estDevisPayeOuTravaux ? '🖨' : '🔒'}</span> Ordre d'exécution
+            Ordre d'exécution
           </button>
           <button
             type="button"
@@ -343,7 +343,7 @@ export default function DetailDemande() {
             style={{ opacity: estTravauxTermines ? 1 : 0.6 }}
             title={estTravauxTermines ? "Imprimer le contrat d'abonnement" : "Les travaux doivent être terminés pour imprimer le contrat d'abonnement"}
           >
-            <span>{estTravauxTermines ? '🖨' : '🔒'}</span> Contrat d'abonnement
+            Contrat d'abonnement
           </button>
           <button
             type="button"
@@ -352,21 +352,21 @@ export default function DetailDemande() {
             title="Exporter l'historique de la demande au format CSV"
             disabled={!historique || historique.length === 0}
           >
-            <span>📄</span> CSV
+              CSV
           </button>
           {demande.statut_actuel === 'TRAVAUX_TERMINES' && !demandeEstVerrouillee && (
             <button type="button" className="obat-btn obat-btn-pri" onClick={scellerDemande}>
-              <span>🔒</span> Sceller
+              Sceller
             </button>
           )}
           {!demandeEstVerrouillee && (
             <Link to={`/demandes/${id}/modifier`} className="obat-btn obat-btn-sec">
-              <span>✎</span> Modifier
+              Modifier
             </Link>
           )}
           {demandeEstVerrouillee && (
             <button type="button" className="obat-btn obat-btn-sec" disabled style={{ opacity: 0.8 }}>
-              <span>🔒</span> Scellée
+              Scellée
             </button>
           )}
         </div>
@@ -421,7 +421,7 @@ export default function DetailDemande() {
                       onClick={() => copier(demande.telephone, 'tel')}
                       title="Copier le téléphone"
                     >
-                      {copieChamp === 'tel' ? '✓' : '📋'}
+                      {copieChamp === 'tel' ? 'Copié' : 'Copier'}
                     </button>
                   )}
                 </div>
@@ -441,7 +441,7 @@ export default function DetailDemande() {
                       onClick={() => copier(demande.cin, 'cin')}
                       title="Copier le numéro de CIN"
                     >
-                      {copieChamp === 'cin' ? '✓' : '📋'}
+                      {copieChamp === 'cin' ? 'Copié' : 'Copier'}
                     </button>
                   )}
                 </div>
@@ -552,7 +552,7 @@ export default function DetailDemande() {
                     disabled={enTransition || ((code === 'REJETEE' || demande.statut_actuel === 'REJETEE') && !commentaire.trim())}
                     aria-busy={enTransition}
                   >
-                    {enTransition ? '…' : '→'} {LIBELLES_STATUT[code]}
+                    {enTransition ? '...' : ''} {LIBELLES_STATUT[code]}
                   </button>
                 ))}
               </div>

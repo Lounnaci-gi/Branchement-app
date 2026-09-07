@@ -92,7 +92,7 @@ export default function AffichageDevis() {
         <Breadcrumbs items={[
           { label: 'Demandes', path: '/demandes' },
           { label: demande.numero_demande, path: `/demandes/${id}` },
-          { label: devis.numero_devis, icon: '📄' }
+          { label: devis.numero_devis }
         ]} />
         <div className="page-header" style={{ marginBottom: 20 }}>
           <div>
@@ -100,8 +100,8 @@ export default function AffichageDevis() {
             <p style={{ color: 'var(--color-text-muted)', marginTop: 4 }}>Consultation du devis</p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Link to={`/demandes/${id}`} className="btn btn-secondary">← Retour au dossier</Link>
-            <button type="button" className="btn btn-primary" onClick={() => window.print()}>🖨 Imprimer</button>
+            <Link to={`/demandes/${id}`} className="btn btn-secondary">Retour au dossier</Link>
+            <button type="button" className="btn btn-primary" onClick={() => window.print()}>Imprimer</button>
           </div>
         </div>
       </div>

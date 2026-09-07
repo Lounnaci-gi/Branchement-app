@@ -12,9 +12,9 @@ export default function CommandPalette({ isOpen, onClose }) {
   const navigate = useNavigate();
 
   const quickLinks = [
-    { title: 'Tableau de bord', path: '/', icon: '📊', description: 'Indicateurs clés et pipeline' },
-    { title: 'Nouvelle demande', path: '/demandes/nouvelle', icon: '➕', description: 'Enregistrer une demande de branchement' },
-    { title: 'Liste des demandes', path: '/demandes', icon: '📋', description: 'Explorer et filtrer toutes les demandes' },
+    { title: 'Tableau de bord', path: '/', description: 'Indicateurs clés et pipeline' },
+    { title: 'Nouvelle demande', path: '/demandes/nouvelle', description: 'Enregistrer une demande de branchement' },
+    { title: 'Liste des demandes', path: '/demandes', description: 'Explorer et filtrer toutes les demandes' },
     { title: 'Gestion des communes', path: '/referentiels/communes', icon: '⌖', description: 'Référentiel des agences et communes' },
     { title: 'Articles de devis', path: '/referentiels/articles', icon: '▤', description: 'Créer et consulter les articles de chiffrage' },
     { title: 'Mon profil', path: '/profil', icon: '⚙', description: 'Modifier mot de passe et informations' }
@@ -110,7 +110,6 @@ export default function CommandPalette({ isOpen, onClose }) {
         onKeyDown={handleKeyDown}
       >
         <div className="cmd-palette-search-bar">
-          <span className="cmd-palette-search-icon" aria-hidden="true">🔍</span>
           <input
             ref={inputRef}
             type="text"
@@ -158,7 +157,6 @@ export default function CommandPalette({ isOpen, onClose }) {
                             <span className="cmd-palette-item-desc">{item.subtitle}</span>
                           </div>
                         </div>
-                        <span className="cmd-palette-item-arrow" aria-hidden="true">→</span>
                       </div>
                     )}
                   </li>

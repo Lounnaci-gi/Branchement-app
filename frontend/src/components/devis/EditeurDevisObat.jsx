@@ -83,6 +83,12 @@ function normaliserTypeLigne(type, choixPrix, modePrix, article = null, tousLesA
   return typesDispo[0] || 'F/';
 }
 
+function obtenirCategorieArticle(article, tousLesArticles = []) {
+  const code = article?.code || article?.code_article;
+  const reference = tousLesArticles.find((item) => item.code === code);
+  return article?.categorie || article?.libelleCategorie || article?.libelle_categorie || reference?.categorie || 'Sans catégorie';
+}
+
 // Modèles d'ouvrages types AEP (Spécifiques ADE pour eau potable)
 const PACKS_OUVRAGES_AEP = [
   {
@@ -211,11 +217,17 @@ export default function EditeurDevisObat({
   const [sections, setSections] = useState(() => {
     // Si devis existant avec articles, regrouper ou créer une section initiale
     if (devisInitial?.articles && Array.isArray(devisInitial.articles) && devisInitial.articles.length > 0) {
-      return [
-        {
-          id_section: 'sec_1',
-          titre: `Travaux : ${natureDefaut}`,
-          lignes: devisInitial.articles.map((art) => {
+      const references = articleFamilles.flatMap((famille) =>
+        (famille.articles || []).map((article) => ({
+          ...article,
+          categorie: famille.libelle_categorie || 'Sans catégorie'
+        }))
+      );
+      const lignesParCategorie = new Map();
+
+      devisInitial.articles.forEach((art) => {
+        const categorie = obtenirCategorieArticle(art, references);
+        const ligne = (() => {
             const typesDispo = determinerTypesDisponibles(art);
             const typeLigne = typesDispo.includes(art.type || art.type_ligne)
               ? (art.type || art.type_ligne)
@@ -238,17 +250,27 @@ export default function EditeurDevisObat({
               prixFourniture: art.prixFourniture != null ? Number(art.prixFourniture) : (art.prix_fourniture != null ? Number(art.prix_fourniture) : null),
               prixPose: art.prixPose != null ? Number(art.prixPose) : (art.prix_pose != null ? Number(art.prix_pose) : null),
               choixPrix: art.choixPrix || art.choix_prix || 'FOURNITURE_POSE',
+              categorie,
               sousElements: art.sousElements || []
             };
-          })
-        }
-      ];
+        })();
+        if (!lignesParCategorie.has(categorie)) lignesParCategorie.set(categorie, []);
+        lignesParCategorie.get(categorie).push(ligne);
+      });
+
+      return Array.from(lignesParCategorie.entries()).map(([categorie, lignes], index) => ({
+        id_section: `sec_${index + 1}`,
+        titre: categorie,
+        categorie,
+        lignes
+      }));
     }
     // Devis vierge : créer une section par défaut
     return [
       {
         id_section: 'sec_1',
         titre: `1. Travaux de branchement AEP (${natureDefaut})`,
+        categorie: 'Sans catégorie',
         lignes: []
       }
     ];
@@ -324,7 +346,11 @@ export default function EditeurDevisObat({
 
   // Tous les articles aplatis du référentiel
   const tousLesArticles = famillesLocales.flatMap((f) =>
-    (f.articles || []).map((art) => ({ ...art, famille: f.libelle || f.code }))
+    (f.articles || []).map((art) => ({
+      ...art,
+      famille: f.libelle || f.code,
+      categorie: f.libelle_categorie || 'Sans catégorie'
+    }))
   );
 
   // -------------------------------------------------------------
@@ -468,8 +494,9 @@ export default function EditeurDevisObat({
       }
     }
 
-    const targetId = idSection || idSectionActive || sections[0]?.id_section;
     const ref = tousLesArticles.find((a) => a.code === (article?.code || article?.code_article));
+    const categorieLigne = obtenirCategorieArticle(article, tousLesArticles);
+    let targetId = sections.find((section) => section.categorie === categorieLigne)?.id_section;
     let f = article?.prixFourniture != null ? Number(article.prixFourniture) : (article?.prix_fourniture != null ? Number(article.prix_fourniture) : (ref?.prixFourniture != null ? Number(ref.prixFourniture) : null));
     let p = article?.prixPose != null ? Number(article.prixPose) : (article?.prix_pose != null ? Number(article.prix_pose) : (ref?.prixPose != null ? Number(ref.prixPose) : null));
     let modePrix = article?.modePrix || article?.mode_prix || ref?.modePrix || null;
@@ -549,14 +576,28 @@ export default function EditeurDevisObat({
       prixFourniture: f,
       prixPose: p,
       choixPrix: choixPrix,
+      categorie: categorieLigne,
       sousElements: article?.sousElements || []
     };
 
     setSections((prev) =>
-      prev.map((s) =>
-        s.id_section === targetId ? { ...s, lignes: [...s.lignes, nouvelleLigne] } : s
-      )
+      (() => {
+        let sectionsAjour = [...prev];
+        if (!targetId || !sectionsAjour.some((section) => section.id_section === targetId)) {
+          targetId = `sec_cat_${Date.now()}`;
+          sectionsAjour.push({
+            id_section: targetId,
+            titre: categorieLigne,
+            categorie: categorieLigne,
+            lignes: []
+          });
+        }
+        return sectionsAjour.map((s) =>
+          s.id_section === targetId ? { ...s, lignes: [...s.lignes, nouvelleLigne] } : s
+        );
+      })()
     );
+    setIdSectionActive(targetId);
   }
 
   function changerChoixPrixLigne(idSection, idLigne, nouveauChoix) {
@@ -659,16 +700,25 @@ export default function EditeurDevisObat({
       return;
     }
 
-    const secCible = {
-      id_section: `sec_pack_${Date.now()}`,
-      titre: pack.titre,
-      lignes: pack.lignes.map((l) => ({
+    const lignesParCategorie = new Map();
+    pack.lignes.map((l) => ({
         ...l,
         id_ligne: `lig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        tauxTva: autoliquidationTva ? 0 : l.tauxTva
+        tauxTva: autoliquidationTva ? 0 : l.tauxTva,
+        categorie: obtenirCategorieArticle(l, tousLesArticles)
       }))
-    };
-    setSections((prev) => [...prev, secCible]);
+      .forEach((ligne) => {
+        if (!lignesParCategorie.has(ligne.categorie)) lignesParCategorie.set(ligne.categorie, []);
+        lignesParCategorie.get(ligne.categorie).push(ligne);
+      });
+
+    const sectionsPack = Array.from(lignesParCategorie.entries()).map(([categorie, lignes], index) => ({
+      id_section: `sec_pack_${Date.now()}_${index}`,
+      titre: categorie,
+      categorie,
+      lignes
+    }));
+    setSections((prev) => [...prev, ...sectionsPack]);
     setDrawerBiblioOuvert(false);
   }
 
@@ -1054,14 +1104,14 @@ export default function EditeurDevisObat({
               className={`obat-nav-tab ${modeOnglet === 'edition' ? 'active' : ''}`}
               onClick={() => setModeOnglet('edition')}
             >
-              <span>✏️</span> Mode Édition
+              Mode Édition
             </button>
             <button
               type="button"
               className={`obat-nav-tab ${modeOnglet === 'preview' ? 'active' : ''}`}
               onClick={() => setModeOnglet('preview')}
             >
-              <span>👁</span> Prévisualisation
+              Prévisualisation
             </button>
           </nav>
         </div>
@@ -1076,7 +1126,7 @@ export default function EditeurDevisObat({
               setEnEditionDuree(true);
             }}
           >
-            {debutTravaux && dureeEstimee ? '✓ Mentions d’exécution OK' : '⚠️ Mentions à renseigner'}
+            {debutTravaux && dureeEstimee ? 'Mentions d’exécution OK' : 'Mentions à renseigner'}
           </div>
 
           <div style={{ position: 'relative' }}>
@@ -1097,7 +1147,7 @@ export default function EditeurDevisObat({
                     setMenuOptionsOuvert(false);
                   }}
                 >
-                  {afficherColonneMarge ? '👁 Masquer la colonne Marge' : '👁 Afficher la colonne Marge'}
+                  {afficherColonneMarge ? 'Masquer la colonne Marge' : 'Afficher la colonne Marge'}
                 </button>
                 <button
                   type="button"
@@ -1107,7 +1157,7 @@ export default function EditeurDevisObat({
                     setMenuOptionsOuvert(false);
                   }}
                 >
-                  {autoliquidationTva ? '✓ Désactiver Autoliquidation TVA' : '⚖️ Activer Autoliquidation TVA (0%)'}
+                  {autoliquidationTva ? 'Désactiver Autoliquidation TVA' : 'Activer Autoliquidation TVA (0%)'}
                 </button>
                 <button
                   type="button"
@@ -1125,7 +1175,7 @@ export default function EditeurDevisObat({
                   className="obat-dropdown-item"
                   onClick={exporterCsv}
                 >
-                  📊 Exporter en CSV
+                  Exporter en CSV
                 </button>
                 <button
                   type="button"
@@ -1135,7 +1185,7 @@ export default function EditeurDevisObat({
                     setMenuOptionsOuvert(false);
                   }}
                 >
-                  🖨 Imprimer
+                  Imprimer
                 </button>
               </div>
             )}
@@ -1232,7 +1282,7 @@ export default function EditeurDevisObat({
                 className={`obat-drawer-tab ${ongletBiblio === 'packs' ? 'active' : ''}`}
                 onClick={() => setOngletBiblio('packs')}
               >
-                📦 Packs Ouvrages AEP ({PACKS_OUVRAGES_AEP.length})
+                Packs Ouvrages AEP ({PACKS_OUVRAGES_AEP.length})
               </button>
             </div>
 
@@ -1313,7 +1363,7 @@ export default function EditeurDevisObat({
                             <div className="obat-item-price">{formaterNombre(prixTotalFP)} DA</div>
                             {estDejaDansDevis ? (
                               <span title="Cet article est déjà présent dans le devis">
-                                ✓ Déjà dans le devis
+                                Déjà dans le devis
                               </span>
                             ) : aLesDeux ? (
                               <div className="obat-drawer-split-actions">
@@ -1385,13 +1435,13 @@ export default function EditeurDevisObat({
                   return (
                     <div key={pack.id} className={`obat-pack-card ${packADoublons ? 'deja-ajoute' : ''}`}>
                       <div className="obat-pack-header">
-                        <div className="obat-pack-title">📦 {pack.titre}</div>
+                        <div className="obat-pack-title">{pack.titre}</div>
                         <span className="obat-pack-count">{pack.lignes.length} éléments</span>
                       </div>
                       <p className="obat-pack-desc">{pack.description}</p>
                       {packADoublons && (
                         <div style={{ fontSize: 11, color: '#DC2626', marginBottom: 8, fontWeight: 500 }}>
-                          ⚠️ Contient des articles déjà dans le devis ({packDoublons.length})
+                          Contient des articles déjà dans le devis ({packDoublons.length})
                         </div>
                       )}
                       <div className="obat-pack-footer">
@@ -1547,7 +1597,7 @@ export default function EditeurDevisObat({
                     className="obat-desc-toggle"
                     onClick={() => setAfficherDescription((prev) => !prev)}
                   >
-                    <span>👁</span> {afficherDescription ? 'Masquer la description générale' : '+ Ajouter une description générale'}
+                    {afficherDescription ? 'Masquer la description générale' : '+ Ajouter une description générale'}
                   </button>
                   {afficherDescription && (
                     <textarea
@@ -1598,7 +1648,6 @@ export default function EditeurDevisObat({
                 >
                   <div className="obat-section-bar">
                     <div className="obat-section-bar-left">
-                      <span className="obat-section-icon">📁</span>
                       {modeOnglet === 'edition' ? (
                         <input
                           type="text"
@@ -1697,7 +1746,7 @@ export default function EditeurDevisObat({
                                           }}
                                           title="Préciser la famille de cet article avant l'enregistrement"
                                         >
-                                          <option value="">🏷️ Famille de l'article *</option>
+                                          <option value="">Famille de l'article *</option>
                                           {famillesLocales.map((f) => (
                                             <option key={f.id_famille} value={f.id_famille}>
                                               {f.libelle || f.code}
@@ -1719,7 +1768,7 @@ export default function EditeurDevisObat({
                                           className="obat-btn-cfg-ouvrage"
                                           onClick={() => ouvrirConfigurateurOuvrage(section.id_section, ligne)}
                                         >
-                                          ⚙️ Configurer mes éléments d'ouvrage ({ligne.sousElements?.length || 2})
+                                          Configurer mes éléments d'ouvrage ({ligne.sousElements?.length || 2})
                                         </button>
                                       )}
                                     </div>
@@ -1957,7 +2006,7 @@ export default function EditeurDevisObat({
                       setDrawerBiblioOuvert(true);
                     }}
                   >
-                    📦 Packs AEP Types
+                    Packs AEP Types
                   </button>
                 </div>
 
@@ -2112,7 +2161,7 @@ export default function EditeurDevisObat({
 
               <div className="obat-dechets-card">
                 <div className="obat-dechets-header">
-                  <span>♻️ GESTION DES DÉCHETS DE CHANTIER (BTP / AEP)</span>
+                  <span>GESTION DES DÉCHETS DE CHANTIER (BTP / AEP)</span>
                   {modeOnglet === 'edition' && (
                     <button
                       type="button"
@@ -2322,7 +2371,7 @@ export default function EditeurDevisObat({
       {modalFamilleOuvert && (
         <div className="obat-modal-overlay">
           <div className="obat-modal-card" style={{ maxWidth: 680, width: '95%' }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 6 }}>🏷️ Classement des nouveaux articles</h3>
+            <h3 style={{ marginBottom: 6 }}>Classement des nouveaux articles</h3>
             <p style={{ fontSize: 13, color: '#64748B', marginBottom: 16 }}>
               {lignesLibresAPersister.length} article{lignesLibresAPersister.length > 1 ? 's' : ''} saisi{lignesLibresAPersister.length > 1 ? 's' : ''} manuellement sera enregistré dans le référentiel.
               <br />Choisissez la <strong>famille</strong> de chaque article avant de continuer.
@@ -2388,8 +2437,8 @@ export default function EditeurDevisObat({
                 style={{ minWidth: 180 }}
               >
                 {enregistrementEnCours
-                  ? '⏳ Enregistrement…'
-                  : `✅ Enregistrer et continuer`}
+                  ? 'Enregistrement…'
+                  : `Enregistrer et continuer`}
               </button>
             </div>
           </div>
@@ -2401,7 +2450,6 @@ export default function EditeurDevisObat({
         <div className="obat-modal-overlay">
           <div className="obat-modal-card obat-warning-card">
             <div className="obat-warning-header">
-              <span className="obat-warn-icon">⚠️</span>
               <h3>Mentions obligatoires non renseignées</h3>
             </div>
 
@@ -2429,7 +2477,7 @@ export default function EditeurDevisObat({
                   }, 100);
                 }}
               >
-                ✏️ Renseigner maintenant
+                Renseigner maintenant
               </button>
 
               <button
@@ -2467,7 +2515,7 @@ export default function EditeurDevisObat({
             </div>
 
             <p style={{ fontSize: 13, color: '#64748B', margin: '6px 0 14px' }}>
-              Décomposez cet ouvrage en fournitures et main d’œuvre. Cliquez sur le cadenas 🔒 pour déverrouiller et ajuster un composant.
+              Décomposez cet ouvrage en fournitures et main d’œuvre. Déverrouillez pour ajuster un composant.
             </p>
 
             <div className="obat-ouvrage-items-list">
@@ -2577,7 +2625,7 @@ export default function EditeurDevisObat({
                             }));
                           }}
                         >
-                          {se.verrouille ? '🔒' : '🔓'}
+                          {se.verrouille ? 'Verrouillé' : 'Déverrouillé'}
                         </button>
                       </td>
                       <td className="center">
@@ -2652,7 +2700,7 @@ export default function EditeurDevisObat({
                   className="obat-btn-action-primary"
                   onClick={appliquerConfigurationOuvrage}
                 >
-                  ✓ Valider et recalculer l’ouvrage
+                  Valider et recalculer l’ouvrage
                 </button>
               </div>
             </div>
@@ -2789,7 +2837,7 @@ export default function EditeurDevisObat({
                   verifierAvantSauvegarde(true);
                 }}
               >
-                ✓ Confirmer et émettre
+                Confirmer et émettre
               </button>
             </div>
           </div>

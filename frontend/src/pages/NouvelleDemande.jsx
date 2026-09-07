@@ -332,7 +332,7 @@ export default function NouvelleDemande() {
     <div className="page" style={{ maxWidth: 1100 }}>
       <Breadcrumbs
         items={[
-          { label: 'Tableau de bord', path: '/', icon: '📊' },
+          { label: 'Tableau de bord', path: '/' },
           { label: 'Demandes', path: '/demandes' },
           { label: modeEdition ? 'Modifier la demande' : 'Nouvelle demande' }
         ]}
@@ -352,7 +352,6 @@ export default function NouvelleDemande() {
       {autofillSource && (
         <div style={{ background: 'var(--color-success-bg)', border: '1px solid rgba(74, 222, 128, 0.3)', padding: '12px 16px', borderRadius: 10, color: 'var(--color-success)', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>✓</span>
             <span>Données du demandeur préremplies depuis la demande <strong className="mono">{autofillSource}</strong></span>
           </div>
           <button type="button" onClick={() => setAutofillSource(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -367,7 +366,7 @@ export default function NouvelleDemande() {
           {/* Bloc 1: Identité du demandeur */}
           <div className="card" style={{ padding: 28 }}>
             <h3 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>👤</span> Identité du demandeur
+              Identité du demandeur
             </h3>
 
           <div className="champ">
@@ -710,7 +709,7 @@ export default function NouvelleDemande() {
             </div>
 
             <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid var(--color-border)', fontSize: 11.5, color: 'var(--color-text-muted)' }}>
-              🖨 Après soumission, vous pourrez choisir d'imprimer l'accusé de réception et le formulaire A4.
+              Après soumission, vous pourrez choisir d'imprimer l'accusé de réception et le formulaire A4.
             </div>
           </div>
         </div>

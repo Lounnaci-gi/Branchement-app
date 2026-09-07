@@ -176,7 +176,7 @@ export default function ListeDemandes() {
 
   return (
     <div className="page">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Demandes' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Demandes' }]} />
 
       <header className="obat-page-header">
         <div>
@@ -210,10 +210,10 @@ export default function ListeDemandes() {
             disabled={demandesTriees.length === 0 || demandesTriees.some((d) => d.est_verrouillee)}
             title="Créer un devis depuis la première demande visible"
           >
-            <span>📄</span> Créer un devis
+                    Créer un devis
           </button>
           <Link to="/demandes/nouvelle" className="obat-btn obat-btn-pri">
-            <span>✨</span> Nouvelle demande
+                    Nouvelle demande
           </Link>
         </div>
       </header>
@@ -222,7 +222,6 @@ export default function ListeDemandes() {
       <div className="obat-filter-bar">
         <div className="obat-filter-row">
           <div className="obat-search-box">
-            <span className="obat-search-box-icon">🔍</span>
             <input
               placeholder="Recherche instantanée par N°, nom de client, commune ou téléphone..."
               value={recherche}
@@ -384,7 +383,6 @@ export default function ListeDemandes() {
               <tr>
                 <td colSpan={8}>
                   <div className="etat-vide" role="alert">
-                    <span className="etat-vide-icone" aria-hidden="true">⚠️</span>
                     <strong className="etat-vide-titre">Échec du chargement</strong>
                     <p className="etat-vide-texte">
                       Impossible de récupérer la liste des demandes. Vérifiez votre connexion et réessayez.
@@ -502,7 +500,7 @@ export default function ListeDemandes() {
                         title="Créer un devis pour cette demande"
                         aria-label={`Créer un devis pour la demande ${d.numero_demande}`}
                       >
-                        <span>💳</span> Devis
+                        Devis
                       </button>
                     )}
                     {!d.est_verrouillee && (
@@ -512,7 +510,6 @@ export default function ListeDemandes() {
                         title="Modifier la demande"
                         aria-label={`Modifier la demande ${d.numero_demande}`}
                       >
-                        ✎
                       </Link>
                     )}
                     {demandeSupprimable(d) && (
@@ -523,7 +520,6 @@ export default function ListeDemandes() {
                         title="Supprimer la demande"
                         aria-label={`Supprimer la demande ${d.numero_demande}`}
                       >
-                        🗑
                       </button>
                     )}
                   </div>

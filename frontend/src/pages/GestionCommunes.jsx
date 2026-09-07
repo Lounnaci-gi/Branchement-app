@@ -47,7 +47,7 @@ export default function GestionCommunes() {
 
   return (
     <div className="page">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '📊' }, { label: 'Gestion des communes' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Gestion des communes' }]} />
       <header className="obat-page-header">
         <div>
           <span>ADE • RÉFÉRENTIEL TERRITORIAL</span>
@@ -59,7 +59,7 @@ export default function GestionCommunes() {
       <div className="obat-section-card" style={{ maxWidth: 860 }}>
         <div className="obat-section-card-header">
           <div className="obat-section-card-title">
-            <span>➕</span> Ajouter une nouvelle commune
+              Ajouter une nouvelle commune
           </div>
         </div>
         <div className="obat-section-card-body">
@@ -84,7 +84,7 @@ export default function GestionCommunes() {
               </div>
             </div>
             <button type="submit" className="obat-btn obat-btn-pri" style={{ marginTop: 12 }} disabled={envoi}>
-              {envoi ? 'Enregistrement...' : '✓ Ajouter la commune'}
+              {envoi ? 'Enregistrement...' : 'Ajouter la commune'}
             </button>
           </form>
         </div>

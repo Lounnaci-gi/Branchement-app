@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
-import { notifierErreur, notifierSucces } from '../utils/notifications';
+import { demanderConfirmation, notifierErreur, notifierSucces } from '../utils/notifications';
 import './GestionArticles.css';
 
 const UNITES = [
@@ -459,6 +459,26 @@ export default function GestionArticles() {
     }
   }
 
+  async function supprimerCategorie(categorie) {
+    const countFamilles = familles.filter((famille) => famille.id_categorie === categorie.id_categorie).length;
+    if (countFamilles > 0) {
+      notifierErreur('Impossible de supprimer une catégorie qui contient des familles.');
+      return;
+    }
+
+    const confirme = await demanderConfirmation(`Supprimer la catégorie « ${categorie.libelle} » ?`);
+    if (!confirme) return;
+
+    try {
+      await client.delete(`/referentiels/articles/categories/${categorie.id_categorie}`);
+      if (categorieSelectionnee === categorie.id_categorie) setCategorieSelectionnee(null);
+      await chargerDonnees();
+      await notifierSucces('Catégorie supprimée avec succès.');
+    } catch (error) {
+      notifierErreur(error.response?.data?.erreur || 'Erreur lors de la suppression de la catégorie.');
+    }
+  }
+
   // Calculs en direct pour la modale article (Signature Obat)
   const calculArticleLive = useMemo(() => {
     if (form.mode_prix === 'PRESTATION') {
@@ -503,7 +523,7 @@ export default function GestionArticles() {
 
   return (
     <div className="obat-articles-wrapper">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/', icon: '⌂' }, { label: 'Bibliothèque d’articles' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Bibliothèque d’articles' }]} />
 
       {/* 1. EN-TÊTE DE LA BIBLIOTHÈQUE (STYLE OBAT) */}
       <header className="obat-articles-header">
@@ -521,7 +541,7 @@ export default function GestionArticles() {
             className="obat-btn-secondary"
             onClick={() => ouvrirModalFamille(null)}
           >
-            📁 + Nouvelle famille
+            + Nouvelle famille
           </button>
           <button
             type="button"
@@ -532,7 +552,7 @@ export default function GestionArticles() {
               setModalNouvelArticleOuvert(true);
             }}
           >
-            ✨ + Nouvel article
+            + Nouvel article
           </button>
         </div>
       </header>
@@ -540,7 +560,7 @@ export default function GestionArticles() {
       {/* 2. STATISTIQUES GLOBALES */}
       <div className="obat-stats-grid">
         <div className="obat-stat-card">
-          <div className="obat-stat-icon blue">📦</div>
+          <div className="obat-stat-icon blue" />
           <div>
             <div className="obat-stat-val">{totalArticles}</div>
             <div className="obat-stat-lbl">Articles au catalogue</div>
@@ -548,7 +568,7 @@ export default function GestionArticles() {
         </div>
 
         <div className="obat-stat-card">
-          <div className="obat-stat-icon green">📁</div>
+          <div className="obat-stat-icon green" />
           <div>
             <div className="obat-stat-val">{familles.length}</div>
             <div className="obat-stat-lbl">Familles de matériels</div>
@@ -556,7 +576,7 @@ export default function GestionArticles() {
         </div>
 
         <div className="obat-stat-card">
-          <div className="obat-stat-icon purple">🗂️</div>
+          <div className="obat-stat-icon purple" />
           <div>
             <div className="obat-stat-val">{categories.length}</div>
             <div className="obat-stat-lbl">Catégories</div>
@@ -564,7 +584,7 @@ export default function GestionArticles() {
         </div>
 
         <div className="obat-stat-card">
-          <div className="obat-stat-icon amber">⚡</div>
+          <div className="obat-stat-icon amber" />
           <div>
             <div className="obat-stat-val">{totalPrestations}</div>
             <div className="obat-stat-lbl">Prestations & Essais</div>
@@ -576,7 +596,6 @@ export default function GestionArticles() {
       <div className="obat-filter-panel">
         <div className="obat-search-row">
           <div className="obat-search-input-wrap">
-            <span className="obat-search-icon">🔍</span>
             <input
               type="text"
               className="obat-search-input"
@@ -620,21 +639,21 @@ export default function GestionArticles() {
           className={`obat-main-tab ${ongletPrincipal === 'catalogue' ? 'active' : ''}`}
           onClick={() => setOngletPrincipal('catalogue')}
         >
-          📦 Catalogue des articles ({articlesFiltres.length})
+          Catalogue des articles ({articlesFiltres.length})
         </button>
         <button
           type="button"
           className={`obat-main-tab ${ongletPrincipal === 'familles' ? 'active' : ''}`}
           onClick={() => setOngletPrincipal('familles')}
         >
-          📁 Familles ({familles.length})
+          Familles ({familles.length})
         </button>
         <button
           type="button"
           className={`obat-main-tab ${ongletPrincipal === 'categories' ? 'active' : ''}`}
           onClick={() => setOngletPrincipal('categories')}
         >
-          🗂️ Catégorie ({categories.length})
+          Catégorie ({categories.length})
         </button>
       </div>
 
@@ -643,7 +662,6 @@ export default function GestionArticles() {
         <>
           {articlesFiltres.length === 0 ? (
             <div className="obat-card-block" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
               <h3>Aucun article ne correspond à votre recherche</h3>
               <p style={{ fontSize: 13 }}>Essayez de modifier votre mot-clé ou réinitialisez les filtres.</p>
               <button
@@ -665,10 +683,10 @@ export default function GestionArticles() {
               <div key={groupe.code} className="obat-card-block">
                 <div className="obat-card-header">
                   <div className="obat-card-title">
-                    <span>📁</span> {groupe.libelle}
+                    {groupe.libelle}
                     {groupe.libelleCategorie && (
                       <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: 'var(--color-primary)', background: 'var(--color-primary-selection)', borderRadius: 4, padding: '2px 7px' }}>
-                        🗂️ {groupe.libelleCategorie}
+                        {groupe.libelleCategorie}
                       </span>
                     )}
                   </div>
@@ -979,7 +997,7 @@ export default function GestionArticles() {
           {ongletPrincipal === 'categories' && <div className="obat-card-block">
             <div className="obat-card-header">
               <div className="obat-card-title">
-                <span>🗂️</span> Catégories d'articles ({categories.length})
+                Catégories d'articles ({categories.length})
               </div>
               <button
                 type="button"
@@ -990,13 +1008,13 @@ export default function GestionArticles() {
               </button>
             </div>
 
-            <table className="obat-articles-table">
+            <table className="obat-articles-table categories-table">
               <thead>
                 <tr>
                   <th style={{ width: 140 }}>Code</th>
-                  <th>Libellé de la catégorie</th>
-                  <th className="center" style={{ width: 140 }}>Familles associées</th>
-                  <th className="center" style={{ width: 90 }}>Actions</th>
+                  <th>Catégorie</th>
+                  <th className="center" style={{ width: 160 }}>Familles</th>
+                  <th className="center" style={{ width: 110 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1017,10 +1035,10 @@ export default function GestionArticles() {
                           ancienne === cat.id_categorie ? null : cat.id_categorie
                         ))}
                       >
-                        <td><span>{cat.code_categorie}</span></td>
-                        <td><strong>{cat.libelle}</strong></td>
-                        <td className="center"><span>{countFam} famille(s)</span></td>
-                        <td className="center">
+                        <td><span className="category-code">{cat.code_categorie}</span></td>
+                        <td><strong className="category-label">{cat.libelle}</strong></td>
+                        <td className="center"><span className="category-family-count">{countFam} famille(s)</span></td>
+                        <td className="center category-actions">
                           <button
                             type="button"
                             className="obat-btn-action-icon"
@@ -1036,6 +1054,24 @@ export default function GestionArticles() {
                               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                             </svg>
                           </button>
+                          <button
+                            type="button"
+                            className="obat-btn-action-icon"
+                            disabled={countFam > 0}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              supprimerCategorie(cat);
+                            }}
+                            title={countFam > 0 ? 'Supprimez d’abord les familles associées' : 'Supprimer la catégorie'}
+                            aria-label={`Supprimer la catégorie ${cat.libelle}`}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -1049,7 +1085,7 @@ export default function GestionArticles() {
           {ongletPrincipal === 'familles' && <div className="obat-card-block">
             <div className="obat-card-header">
               <div className="obat-card-title">
-                <span>📁</span> {categorieSelectionnee
+                {categorieSelectionnee
                   ? `Familles de la catégorie (${familles.filter((fam) => fam.id_categorie === categorieSelectionnee).length})`
                   : `Familles d'articles (${familles.length})`}
               </div>
@@ -1109,12 +1145,12 @@ export default function GestionArticles() {
                         <td><strong>{fam.libelle}</strong></td>
                         <td>
                           {fam.libelle_categorie
-                            ? <span style={{ fontSize: 12, color: 'var(--color-primary)', background: 'var(--color-primary-selection)', borderRadius: 4, padding: '2px 7px', fontWeight: 500 }}>🗂️ {fam.libelle_categorie}</span>
+                            ? <span style={{ fontSize: 12, color: 'var(--color-primary)', background: 'var(--color-primary-selection)', borderRadius: 4, padding: '2px 7px', fontWeight: 500 }}>{fam.libelle_categorie}</span>
                             : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>— Non classée</span>
                           }
                         </td>
                         <td className="center"><span>{count} article(s)</span></td>
-                        <td className="center">
+                        <td className="center famille-actions">
                           <button
                             type="button"
                             className="obat-btn-action-icon"
@@ -1148,7 +1184,7 @@ export default function GestionArticles() {
         <div className="obat-modal-overlay" onClick={() => setModalNouvelArticleOuvert(false)}>
           <div className="obat-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="obat-modal-header">
-              <h3>✨ Ajouter un nouvel article au référentiel</h3>
+              <h3>Ajouter un nouvel article au référentiel</h3>
               <button
                 type="button"
                 className="obat-btn-close-sm"
@@ -1397,7 +1433,7 @@ export default function GestionArticles() {
                   className="obat-btn-primary"
                   disabled={envoi}
                 >
-                  {envoi ? 'Création en cours…' : '✓ Enregistrer l’article'}
+                  {envoi ? 'Création en cours…' : 'Enregistrer l’article'}
                 </button>
               </div>
             </form>
@@ -1548,7 +1584,7 @@ export default function GestionArticles() {
                   className="obat-btn-primary"
                   disabled={envoiTarif}
                 >
-                  {envoiTarif ? 'Application…' : '✓ Appliquer le tarif'}
+                  {envoiTarif ? 'Application…' : 'Appliquer le tarif'}
                 </button>
               </div>
             </form>
@@ -1619,7 +1655,7 @@ export default function GestionArticles() {
                   className="obat-btn-primary"
                   disabled={envoiFamille}
                 >
-                  {envoiFamille ? 'Enregistrement…' : '✓ Enregistrer la famille'}
+                  {envoiFamille ? 'Enregistrement…' : 'Enregistrer la famille'}
                 </button>
               </div>
             </form>
@@ -1678,7 +1714,7 @@ export default function GestionArticles() {
                   className="obat-btn-primary"
                   disabled={envoiCategorie}
                 >
-                  {envoiCategorie ? 'Enregistrement…' : '✓ Enregistrer la catégorie'}
+                  {envoiCategorie ? 'Enregistrement…' : 'Enregistrer la catégorie'}
                 </button>
               </div>
             </form>
