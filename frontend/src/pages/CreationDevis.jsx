@@ -12,6 +12,7 @@ export default function CreationDevis() {
 
   const [fiche, setFiche] = useState(null);
   const [articleFamilles, setArticleFamilles] = useState([]);
+  const [tvaPrestation, setTvaPrestation] = useState(19);
   const [numeroDevisPreview, setNumeroDevisPreview] = useState('');
   const [chargement, setChargement] = useState(true);
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false);
@@ -26,15 +27,20 @@ export default function CreationDevis() {
         return null;
       }),
       client.get('/referentiels/articles').catch(() => ({ data: [] })),
+      client.get('/parametres/tva').catch(() => ({ data: {} })),
       client.get(`/demandes/${id}/devis/preview`).catch(() => ({ data: {} }))
     ])
-      .then(([resFiche, resArticles, resPreview]) => {
+      .then(([resFiche, resArticles, resTva, resPreview]) => {
         if (ignore) return;
         if (resFiche?.data) {
           setFiche(resFiche.data);
         }
         if (Array.isArray(resArticles?.data)) {
           setArticleFamilles(resArticles.data);
+        }
+        const tauxPrestation = Number(resTva?.data?.tvaPrestation);
+        if (Number.isFinite(tauxPrestation)) {
+          setTvaPrestation(tauxPrestation);
         }
         if (resPreview?.data?.numero_devis) {
           setNumeroDevisPreview(resPreview.data.numero_devis);
@@ -140,6 +146,7 @@ export default function CreationDevis() {
         etude={etude}
         devisInitial={devisAEditer}
         articleFamilles={articleFamilles}
+        tvaPrestation={tvaPrestation}
         numeroDevisPreview={numeroDevisPreview}
         chargement={sauvegardeEnCours}
         onEnregistrer={(payload) => enregistrerDevis(payload, false)}

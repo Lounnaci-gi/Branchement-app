@@ -154,10 +154,10 @@ export default function AffichageDevis() {
                   <tr key={art.id_ligne || art.code}>
                     <td className="col-desig">
                       <strong>{art.libelle}</strong>
-                      {art.code ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{art.code}</small> : null}
-                      {(art.matiere || art.couleur) ? <small style={{ display: 'block', color: 'var(--color-text-muted, #666)' }}>{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
+                      {art.code ? <small className="devis-article-meta">{art.code}</small> : null}
+                      {(art.matiere || art.couleur) ? <small className="devis-article-meta">{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
                       {art.choixPrix && art.choixPrix !== 'FOURNITURE_POSE' && (
-                        <span style={{
+                        <span className="devis-choix-badge" style={{
                           display: 'inline-block',
                           fontSize: 10.5,
                           fontWeight: 700,
@@ -215,7 +215,7 @@ export default function AffichageDevis() {
         .page-affichage-devis { padding: 0; background: #fff; }
         .devis-document { box-shadow: none; border: 1px solid #000; margin: 0; max-width: none; }
       }
-      .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: #111; background: #fff; border: 1px solid #a9a9a9; }
+      .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: 1px solid var(--color-border, #a9a9a9); }
       .devis-document-entete { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; gap: 16px; padding-bottom: 15px; border-bottom: 1px solid #111; }
       .devis-institution, .devis-agence { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
       .devis-institution strong { font-size: 12px; }
@@ -252,6 +252,13 @@ export default function AffichageDevis() {
       .devis-total-ttc { font-size: 14px; font-weight: 800; background: #e9e9e9; }
       .devis-validite { margin: 18px 0 45px; font-size: 11px; }
       .devis-signature { text-align: right; font-weight: 800; font-size: 12px; }
+      .devis-article-meta { display: block; color: var(--color-text-muted, #666); }
+      :root[data-theme='dark'] .devis-document { background: var(--color-surface, #1A2235); color: var(--color-text, #E8EDF5); border-color: var(--color-border, #2A3550); }
+      :root[data-theme='dark'] .devis-document-entete, :root[data-theme='dark'] .devis-document-title { border-color: var(--color-border, #2A3550); }
+      :root[data-theme='dark'] .devis-client-box, :root[data-theme='dark'] .devis-client-box > div + div, :root[data-theme='dark'] .devis-articles-table th, :root[data-theme='dark'] .devis-articles-table td, :root[data-theme='dark'] .devis-totaux, :root[data-theme='dark'] .devis-totaux div { border-color: var(--color-border, #2A3550); }
+      :root[data-theme='dark'] .devis-articles-table th, :root[data-theme='dark'] .devis-total-ttc { background: var(--color-surface-sunken, #141B2A); }
+      :root[data-theme='dark'] .devis-choix-badge { background-color: var(--color-primary-selection, rgba(59, 170, 232, 0.14)) !important; color: var(--color-primary, #3BAAE8) !important; border-color: var(--color-border-primary, rgba(59, 170, 232, 0.25)) !important; }
+      :root[data-theme='dark'] .devis-document small, :root[data-theme='dark'] .devis-article-meta { color: var(--color-text-muted, #8B99B3); }
       @media (max-width: 640px) { .devis-document { padding: 18px 12px; } .devis-document-entete { grid-template-columns: 1fr 58px; } .devis-logo { width: 55px; height: 55px; } .devis-agence { grid-column: 1 / -1; text-align: left; } .devis-client-box { grid-template-columns: 1fr; } .devis-client-box > div + div { border-left: 0; border-top: 1px solid #111; } .devis-totaux { width: 100%; } .devis-articles-table { font-size: 10px; } }
       `}</style>
     </div>

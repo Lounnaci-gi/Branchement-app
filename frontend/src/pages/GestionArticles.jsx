@@ -754,34 +754,6 @@ export default function GestionArticles() {
                                     title="Désignation de l’article"
                                     autoFocus
                                   />
-                                  <div className="obat-inline-caracts-row">
-                                    <input
-                                      type="text"
-                                      className="obat-inline-subinput"
-                                      value={formInlineTarif.matiere}
-                                      onChange={(e) =>
-                                        setFormInlineTarif({
-                                          ...formInlineTarif,
-                                          matiere: e.target.value
-                                        })
-                                      }
-                                      placeholder="Matière"
-                                      title="Matière (ex: PEHD, Fonte, Laiton...)"
-                                    />
-                                    <input
-                                      type="text"
-                                      className="obat-inline-subinput"
-                                      value={formInlineTarif.couleur}
-                                      onChange={(e) =>
-                                        setFormInlineTarif({
-                                          ...formInlineTarif,
-                                          couleur: e.target.value
-                                        })
-                                      }
-                                      placeholder="Couleur"
-                                      title="Couleur (ex: Bleu, Noir...)"
-                                    />
-                                  </div>
                                 </div>
                               ) : (
                                 <>

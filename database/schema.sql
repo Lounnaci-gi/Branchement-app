@@ -271,7 +271,6 @@ CREATE TABLE TarifsArticlesDevis (
     prix_fourniture DECIMAL(12,2) NULL CONSTRAINT CK_TarifsArticles_PrixFourniture CHECK (prix_fourniture IS NULL OR prix_fourniture >= 0),
     prix_pose       DECIMAL(12,2) NULL CONSTRAINT CK_TarifsArticles_PrixPose CHECK (prix_pose IS NULL OR prix_pose >= 0),
     type_tva        NVARCHAR(20) NOT NULL CONSTRAINT CK_TarifsArticles_TypeTva CHECK (type_tva IN (N'PRESTATION', N'TRAVAUX')),
-    taux_tva        DECIMAL(5,2) NOT NULL CONSTRAINT CK_TarifsArticles_TauxTva CHECK (taux_tva >= 0 AND taux_tva <= 100),
     date_debut      DATE NOT NULL,
     date_fin        DATE NULL,
     CONSTRAINT CK_TarifsArticles_Periode CHECK (date_fin IS NULL OR date_fin >= date_debut)

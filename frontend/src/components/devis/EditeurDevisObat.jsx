@@ -18,6 +18,17 @@ function formaterNombre(val) {
   return n.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function normaliserQuantite(valeur) {
+  const quantite = Number(valeur);
+  if (!Number.isFinite(quantite) || quantite < 0) return 0;
+  return Math.floor(quantite);
+}
+
+function normaliserPrix(valeur) {
+  const prix = Number(valeur);
+  return Number.isFinite(prix) && prix >= 0 ? prix : 0;
+}
+
 function aTarifsFournitureEtPose(article) {
   if (!article) return false;
   const f = Number(article.prixFourniture ?? article.prix_fourniture ?? 0);
@@ -32,7 +43,6 @@ export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
     ? tousLesArticles.find((a) => a.code === (ligne.code || ligne.code_article))
     : null;
 
-  // Si c'est une ligne saisie librement (hors catalogue prédéfini), tous les types sont éditables
   if (!ref || ligne.estLigneLibre) {
     return ['FP/', 'F/', 'P/', 'PR/'];
   }
@@ -44,11 +54,9 @@ export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
 
   const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
   const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
-
   const aFourniture = f !== null && f > 0;
   const aPose = p !== null && p > 0;
   const aLesDeux = aFourniture && aPose;
-
   const types = [];
 
   if (aFourniture) types.push('F/');
@@ -137,6 +145,7 @@ export default function EditeurDevisObat({
   etude,
   devisInitial = null,
   articleFamilles = [],
+  tvaPrestation = 19,
   numeroDevisPreview = '',
   chargement = false,
   onEnregistrer,
@@ -647,6 +656,23 @@ export default function EditeurDevisObat({
     );
   }
 
+  function ouvrirEnregistrementLigneLibre(ligne) {
+    if (!ligne.estLigneLibre) {
+      notifierErreur("Cet article existe déjà dans le référentiel.");
+      return;
+    }
+
+    if (!ligne.libelle?.trim()) {
+      notifierErreur("Veuillez renseigner la désignation de l'article avant de l'enregistrer.");
+      return;
+    }
+
+    setLignesLibresAPersister([ligne]);
+    setFamillesChoisies({ [ligne.id_ligne]: ligne.id_famille || '' });
+    setCallbackApresEnregistrement(null);
+    setModalFamilleOuvert(true);
+  }
+
   function modifierChampLigne(idSection, idLigne, champ, valeur) {
     setSections((prev) =>
       prev.map((s) =>
@@ -655,7 +681,14 @@ export default function EditeurDevisObat({
               ...s,
               lignes: s.lignes.map((l) => {
                 if (l.id_ligne !== idLigne) return l;
-                const maj = { ...l, [champ]: valeur };
+                const maj = {
+                  ...l,
+                  [champ]: champ === 'quantite'
+                    ? normaliserQuantite(valeur)
+                    : champ === 'prix'
+                      ? normaliserPrix(valeur)
+                      : valeur
+                };
                 if (champ === 'type') {
                   if (valeur === 'PR/') {
                     maj.modePrix = 'PRESTATION';
@@ -783,6 +816,11 @@ export default function EditeurDevisObat({
   // -------------------------------------------------------------
   const toutesLesLignes = sections.flatMap((s) => s.lignes);
 
+  function obtenirTauxTvaLigne(ligne) {
+    if (ligne.type === 'PR/') return autoliquidationTva ? 0 : Number(tvaPrestation) || 19;
+    return autoliquidationTva ? 0 : Number(ligne.tauxTva) || 19;
+  }
+
   const totalNetHTBrut = toutesLesLignes.reduce((acc, l) => {
     const qte = Number(l.quantite) || 0;
     const pu = Number(l.prix) || 0;
@@ -797,7 +835,7 @@ export default function EditeurDevisObat({
     : toutesLesLignes.reduce((acc, l) => {
         const qte = Number(l.quantite) || 0;
         const pu = Number(l.prix) || 0;
-        const taux = Number(l.tauxTva) || 19;
+        const taux = obtenirTauxTvaLigne(l);
         const ligneHT = qte * pu;
         const ligneApresRemise = aRemise ? ligneHT * (1 - (Number(tauxRemise) || 0) / 100) : ligneHT;
         return acc + ligneApresRemise * (taux / 100);
@@ -1006,15 +1044,17 @@ export default function EditeurDevisObat({
 
     sourceSections.forEach((sec) => {
       sec.lignes.forEach((l) => {
+        const quantite = normaliserQuantite(l.quantite);
+        const prix = normaliserPrix(l.prix);
         articlesPayload.push({
           code: l.code,
           libelle: `[${sec.titre}] ${l.libelle}`,
           unite: l.unite,
           diametre: l.diametre || null,
-          quantite: Number(l.quantite) || 1,
-          prix: Number(l.prix) || 0,
-          montantLigne: (Number(l.quantite) || 1) * (Number(l.prix) || 0),
-          tauxTva: autoliquidationTva ? 0 : Number(l.tauxTva) || 19,
+          quantite,
+          prix,
+          montantLigne: quantite * prix,
+          tauxTva: obtenirTauxTvaLigne(l),
           type: l.type || 'F/',
           type_ligne: l.type || 'F/',
           typeTva: l.typeTva || 'PRESTATION',
@@ -1062,7 +1102,7 @@ export default function EditeurDevisObat({
           `"${l.unite}"`,
           p,
           Number(l.marge) || 0,
-          autoliquidationTva ? 0 : Number(l.tauxTva) || 19,
+          obtenirTauxTvaLigne(l),
           q * p
         ]);
       });
@@ -1424,7 +1464,7 @@ export default function EditeurDevisObat({
               </>
             ) : (
               <div className="obat-drawer-list">
-                <div style={{ padding: '8px 14px', fontSize: 12, color: '#64748B', background: '#F8FAFC' }}>
+                <div className="obat-pack-intro" style={{ padding: '8px 14px', fontSize: 12, color: '#64748B', background: '#F8FAFC' }}>
                   Ces packs regroupent l’ensemble des fournitures et prestations standard d’un branchement eau potable selon les normes ADE.
                 </div>
                 {PACKS_OUVRAGES_AEP.map((pack) => {
@@ -1440,7 +1480,7 @@ export default function EditeurDevisObat({
                       </div>
                       <p className="obat-pack-desc">{pack.description}</p>
                       {packADoublons && (
-                        <div style={{ fontSize: 11, color: '#DC2626', marginBottom: 8, fontWeight: 500 }}>
+                        <div className="obat-pack-warning" style={{ fontSize: 11, color: '#DC2626', marginBottom: 8, fontWeight: 500 }}>
                           Contient des articles déjà dans le devis ({packDoublons.length})
                         </div>
                       )}
@@ -1620,7 +1660,7 @@ export default function EditeurDevisObat({
                 <div className="obat-client-name">{nomClient}</div>
                 <div className="obat-client-line">{adresseClient}</div>
                 <div className="obat-client-line">{communeClient}</div>
-                <div className="obat-client-line" style={{ marginTop: 4, color: '#6B7280', fontSize: 12 }}>
+                <div className="obat-client-line obat-client-phone">
                   📞 {telClient}
                 </div>
               </div>
@@ -1703,9 +1743,21 @@ export default function EditeurDevisObat({
                         <tr>
                           <td
                             colSpan={modeOnglet === 'edition' ? (afficherColonneMarge ? 10 : 9) : 8}
-                            className="obat-table-empty"
+                            className={`obat-table-empty ${modeOnglet === 'edition' ? 'is-clickable' : ''}`}
+                            onClick={() => {
+                              if (modeOnglet !== 'edition') return;
+                              ajouterLigneVide(section.id_section);
+                            }}
+                            onKeyDown={(e) => {
+                              if (modeOnglet !== 'edition' || !['Enter', ' '].includes(e.key)) return;
+                              e.preventDefault();
+                              ajouterLigneVide(section.id_section);
+                            }}
+                            tabIndex={modeOnglet === 'edition' ? 0 : undefined}
+                            role={modeOnglet === 'edition' ? 'button' : undefined}
+                            aria-label={modeOnglet === 'edition' ? 'Créer un nouvel article dans cette section' : undefined}
                           >
-                            Cette section est vide. Cliquez sur "+ Fourniture", "+ Main d'œuvre" ou ouvrez la "Bibliothèque".
+                            Cette section est vide. Cliquez pour créer un nouvel article.
                           </td>
                         </tr>
                       ) : (
@@ -1729,40 +1781,7 @@ export default function EditeurDevisObat({
                                       style={{ fontWeight: estOuvrage ? 700 : 500 }}
                                       autoFocus={ligne.estLigneLibre && !ligne.libelle}
                                     />
-                                    <div className="obat-line-subdetail" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                                      <small style={{ color: '#94A3B8' }}>{ligne.code}</small>
-                                      {ligne.estLigneLibre && (
-                                        <select
-                                          value={ligne.id_famille || ''}
-                                          onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'id_famille', e.target.value)}
-                                          style={{
-                                            fontSize: 11,
-                                            padding: '1px 6px',
-                                            border: ligne.id_famille ? '1px solid #CBD5E1' : '1.5px solid #F97316',
-                                            borderRadius: 3,
-                                            background: ligne.id_famille ? '#FFF' : '#FFF7ED',
-                                            color: ligne.id_famille ? '#1E293B' : '#C2410C',
-                                            fontWeight: ligne.id_famille ? 400 : 600
-                                          }}
-                                          title="Préciser la famille de cet article avant l'enregistrement"
-                                        >
-                                          <option value="">Famille de l'article *</option>
-                                          {famillesLocales.map((f) => (
-                                            <option key={f.id_famille} value={f.id_famille}>
-                                              {f.libelle || f.code}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      )}
-                                      <input
-                                        type="text"
-                                        placeholder="Matière"
-                                        title="Matière (optionnel)"
-                                        value={ligne.matiere || ''}
-                                        onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'matiere', e.target.value)}
-                                        style={{ width: 80, fontSize: 11, padding: '1px 4px', border: '1px solid #CBD5E1', borderRadius: 3 }}
-                                      />
-                                      {estOuvrage && (
+                                    {estOuvrage && (
                                         <button
                                           type="button"
                                           className="obat-btn-cfg-ouvrage"
@@ -1771,7 +1790,6 @@ export default function EditeurDevisObat({
                                           Configurer mes éléments d'ouvrage ({ligne.sousElements?.length || 2})
                                         </button>
                                       )}
-                                    </div>
                                   </div>
                                 ) : (
                                   <div>
@@ -1862,7 +1880,7 @@ export default function EditeurDevisObat({
                                   <input
                                     type="number"
                                     min="0"
-                                    step="0.5"
+                                    step="1"
                                     value={ligne.quantite}
                                     onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'quantite', e.target.value)}
                                     style={{ textAlign: 'center', fontWeight: 600 }}
@@ -1899,7 +1917,7 @@ export default function EditeurDevisObat({
                                     type="number"
                                     min="0"
                                     step="10"
-                                    value={ligne.prix}
+                                    value={normaliserPrix(ligne.prix)}
                                     onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'prix', e.target.value)}
                                     style={{ textAlign: 'right' }}
                                   />
@@ -1925,8 +1943,9 @@ export default function EditeurDevisObat({
                                   <span className="obat-tva-zero">0% (Auto)</span>
                                 ) : modeOnglet === 'edition' ? (
                                   <select
-                                    value={ligne.tauxTva}
+                                    value={ligne.type === 'PR/' ? String(tvaPrestation) : ligne.tauxTva}
                                     onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'tauxTva', e.target.value)}
+                                    disabled={ligne.type === 'PR/'}
                                     style={{ textAlign: 'center' }}
                                   >
                                     <option value="19">19%</option>
@@ -1934,7 +1953,7 @@ export default function EditeurDevisObat({
                                     <option value="0">0%</option>
                                   </select>
                                 ) : (
-                                  <span>{ligne.tauxTva}%</span>
+                                  <span>{obtenirTauxTvaLigne(ligne)}%</span>
                                 )}
                               </td>
                               <td className="right obat-col-total">
@@ -1942,19 +1961,71 @@ export default function EditeurDevisObat({
                               </td>
                               {modeOnglet === 'edition' && (
                                 <td className="center obat-col-del">
-                                  <button
-                                    type="button"
-                                    className="obat-btn-del"
-                                    onClick={() => supprimerLigne(section.id_section, ligne.id_ligne)}
-                                    title="Supprimer la ligne"
-                                  >
-                                    ✕
-                                  </button>
+                                  <div className="obat-line-actions">
+                                    {ligne.estLigneLibre && (
+                                      <button
+                                        type="button"
+                                        className="obat-btn-save-line"
+                                        onClick={() => ouvrirEnregistrementLigneLibre(ligne)}
+                                        title="Valider et enregistrer l'article"
+                                        aria-label="Valider et enregistrer l'article"
+                                      >
+                                        <svg
+                                          width="16"
+                                          height="16"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2.5"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          aria-hidden="true"
+                                        >
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="obat-btn-del"
+                                      onClick={() => supprimerLigne(section.id_section, ligne.id_ligne)}
+                                      title="Supprimer la ligne"
+                                      aria-label="Supprimer la ligne"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
                                 </td>
                               )}
                             </tr>
                           );
                         })
+                      )}
+                      {modeOnglet === 'edition' && section.lignes.length > 0 && (
+                        <tr
+                          className={`obat-table-add-row ${section.lignes.some((ligne) => ligne.estLigneLibre) ? 'is-disabled' : ''}`}
+                          onClick={() => {
+                            if (section.lignes.some((ligne) => ligne.estLigneLibre)) return;
+                            ajouterLigneVide(section.id_section);
+                          }}
+                          onKeyDown={(e) => {
+                            if (!['Enter', ' '].includes(e.key) || section.lignes.some((ligne) => ligne.estLigneLibre)) return;
+                            e.preventDefault();
+                            ajouterLigneVide(section.id_section);
+                          }}
+                          tabIndex={section.lignes.some((ligne) => ligne.estLigneLibre) ? -1 : 0}
+                          role="button"
+                          aria-disabled={section.lignes.some((ligne) => ligne.estLigneLibre)}
+                          aria-label={section.lignes.some((ligne) => ligne.estLigneLibre)
+                            ? "Enregistrez d'abord l'article en cours avant d'en créer un autre"
+                            : 'Créer un autre article dans cette section'}
+                        >
+                          <td colSpan={afficherColonneMarge ? 10 : 9}>
+                            {section.lignes.some((ligne) => ligne.estLigneLibre)
+                              ? "Enregistrez l'article en cours avant d'en créer un autre"
+                              : 'Cliquez ici pour créer un autre article'}
+                          </td>
+                        </tr>
                       )}
                     </tbody>
                   </table>
@@ -2370,11 +2441,18 @@ export default function EditeurDevisObat({
       {/* 7b. MODAL DE SÉLECTION DE FAMILLE POUR LES ARTICLES LIBRES */}
       {modalFamilleOuvert && (
         <div className="obat-modal-overlay">
-          <div className="obat-modal-card" style={{ maxWidth: 680, width: '95%' }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 6 }}>Classement des nouveaux articles</h3>
+          <form
+            className="obat-modal-card obat-family-modal"
+            style={{ maxWidth: 680, width: '95%' }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              enregistrerArticlesLibresPuisSauvegarder();
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginBottom: 6 }}>Choisir la famille de l'article</h3>
             <p style={{ fontSize: 13, color: '#64748B', marginBottom: 16 }}>
-              {lignesLibresAPersister.length} article{lignesLibresAPersister.length > 1 ? 's' : ''} saisi{lignesLibresAPersister.length > 1 ? 's' : ''} manuellement sera enregistré dans le référentiel.
-              <br />Choisissez la <strong>famille</strong> de chaque article avant de continuer.
+              Sélectionnez la famille d'appartenance avant de valider l'enregistrement de cet article dans le référentiel.
             </p>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
@@ -2430,9 +2508,8 @@ export default function EditeurDevisObat({
                 Annuler
               </button>
               <button
-                type="button"
+                type="submit"
                 className="obat-btn-action-primary"
-                onClick={enregistrerArticlesLibresPuisSauvegarder}
                 disabled={enregistrementEnCours || lignesLibresAPersister.some((l) => !famillesChoisies[l.id_ligne])}
                 style={{ minWidth: 180 }}
               >
@@ -2441,7 +2518,7 @@ export default function EditeurDevisObat({
                   : `Enregistrer et continuer`}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
@@ -2564,9 +2641,11 @@ export default function EditeurDevisObat({
                         ) : (
                           <input
                             type="number"
+                            min="0"
+                            step="1"
                             value={se.quantite}
                             onChange={(e) => {
-                              const val = Number(e.target.value);
+                              const val = normaliserQuantite(e.target.value);
                               setOuvrageEnConfig((prev) => ({
                                 ...prev,
                                 sousElements: prev.sousElements.map((item, i) => (i === sIdx ? { ...item, quantite: val } : item))
@@ -2583,9 +2662,11 @@ export default function EditeurDevisObat({
                         ) : (
                           <input
                             type="number"
+                            min="0"
+                            step="any"
                             value={se.prixAchat}
                             onChange={(e) => {
-                              const val = Number(e.target.value);
+                              const val = normaliserPrix(e.target.value);
                               setOuvrageEnConfig((prev) => ({
                                 ...prev,
                                 sousElements: prev.sousElements.map((item, i) => (i === sIdx ? { ...item, prixAchat: val } : item))

@@ -26,20 +26,27 @@ router.get('/articles', async (req, res) => {
                     COALESCE(t.prix_fourniture, a.prix_fourniture) AS prix_fourniture,
                     COALESCE(t.prix_pose, a.prix_pose) AS prix_pose,
                     COALESCE(t.type_tva, a.type_tva) AS type_tva,
-                    COALESCE(t.taux_tva, a.taux_tva) AS taux_tva,
+                    COALESCE(tv.taux, 19) AS taux_tva,
                     ISNULL(a.avec_diametre, 0) AS avec_diametre
       FROM FamillesArticles f
       LEFT JOIN CategoriesArticles cat ON cat.id_categorie = f.id_categorie
       INNER JOIN ArticlesDevis a ON a.id_famille = f.id_famille
                   OUTER APPLY (
                SELECT TOP 1 tarif.mode_prix, tarif.prix_unitaire, tarif.prix_fourniture,
-                 tarif.prix_pose, tarif.type_tva, tarif.taux_tva
+                 tarif.prix_pose, tarif.type_tva
                FROM TarifsArticlesDevis tarif
                WHERE tarif.id_article = a.id_article
                  AND tarif.date_debut <= CONVERT(date, GETDATE())
                  AND (tarif.date_fin IS NULL OR tarif.date_fin >= CONVERT(date, GETDATE()))
                ORDER BY tarif.date_debut DESC, tarif.id_tarif DESC
                   ) t
+      OUTER APPLY (
+        SELECT TOP 1 h.taux
+        FROM HistoriqueTva h
+        WHERE h.type_tva = COALESCE(t.type_tva, a.type_tva)
+          AND h.date_effet <= CONVERT(date, GETDATE())
+        ORDER BY h.date_effet DESC
+      ) tv
       WHERE f.actif = 1 AND a.actif = 1
       ORDER BY f.libelle, a.libelle
     `);
@@ -434,10 +441,9 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
         .input('type_tva', sql.NVarChar(20), type_tva)
-        .input('taux_tva', sql.Decimal(5, 2), taux)
         .query(`INSERT INTO TarifsArticlesDevis
-          (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
-          VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, CONVERT(date, GETDATE()))`);
+          (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
+          VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, CONVERT(date, GETDATE()))`);
       await transaction.commit();
 
       const artCree = article.recordset[0];
@@ -594,13 +600,12 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
         .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
-        .input('taux_tva', sql.Decimal(5, 2), tauxTvaEffectif)
         .input('date_debut', sql.Date, debut)
         .query(`
           INSERT INTO TarifsArticlesDevis
-            (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
+            (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
           VALUES
-            (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, @date_debut)
+            (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @date_debut)
         `);
 
       await transaction.commit();
@@ -632,13 +637,12 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
 });
 
 router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
-  const { code_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut } = req.body;
+  const { code_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut } = req.body;
   const debut = new Date(`${date_debut}T00:00:00`);
   const prix = Number(prix_unitaire);
   const fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
   const pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
-  const taux = Number(taux_tva);
-  if (!texteValide(code_article, { maxLength: 50, obligatoire: true }) || !['PRESTATION', 'FOURNITURE_POSE'].includes(mode_prix) || !['PRESTATION', 'TRAVAUX'].includes(type_tva) || !Number.isFinite(taux) || taux < 0 || taux > 100 || !/^\d{4}-\d{2}-\d{2}$/.test(String(date_debut)) || Number.isNaN(debut.getTime())) {
+  if (!texteValide(code_article, { maxLength: 50, obligatoire: true }) || !['PRESTATION', 'FOURNITURE_POSE'].includes(mode_prix) || !['PRESTATION', 'TRAVAUX'].includes(type_tva) || !/^\d{4}-\d{2}-\d{2}$/.test(String(date_debut)) || Number.isNaN(debut.getTime())) {
     return res.status(400).json({ erreur: 'Les informations du nouveau tarif sont invalides.' });
   }
   if (mode_prix === 'PRESTATION' && (!Number.isFinite(prix) || prix < 0)) {
@@ -674,10 +678,9 @@ router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
         .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
-        .input('taux_tva', sql.Decimal(5, 2), taux)
         .input('date_debut', sql.Date, debut)
-        .query(`INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
-                VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, @date_debut)`);
+        .query(`INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
+          VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @date_debut)`);
       await transaction.commit();
     } catch (err) {
       await transaction.rollback();

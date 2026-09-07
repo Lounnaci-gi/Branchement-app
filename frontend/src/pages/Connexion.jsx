@@ -87,28 +87,39 @@ export default function Connexion() {
 
   return (
     <div className="login-container">
-      {/* Cercles d'ambiance aquatique en arrière-plan */}
-      <div className="login-bg-shape login-bg-shape-1" />
-      <div className="login-bg-shape login-bg-shape-2" />
-      <div className="login-bg-shape login-bg-shape-3" />
+      <div className="login-background-grid" aria-hidden="true" />
+      <div className="login-background-orb login-background-orb-one" aria-hidden="true" />
+      <div className="login-background-orb login-background-orb-two" aria-hidden="true" />
 
       {/* Sélecteur de thème clair/sombre interactif */}
       <div className="login-theme-wrapper">
         <ThemeToggle variant="pill" showLabel={true} />
       </div>
 
-      {/* Formulaire de connexion */}
-      <form onSubmit={soumettre} className="login-card" noValidate>
-        {/* En-tête avec Logo ADE */}
-        <div className="login-header">
-          <div className="login-logo-wrapper">
-            <img src="/ade.png" alt="ADE Logo" className="login-logo" />
+      <div className="login-card">
+        <aside className="login-brand-panel">
+          <div className="login-brand-mark">
+            <img src="/ade.png" alt="Algérienne des Eaux" className="login-logo" />
           </div>
-          <div className="login-title-group">
-            <h1>Suivi des Branchements</h1>
-            <div>Espace Agent ADE</div>
+          <div className="login-brand-copy">
+            <span className="login-kicker">Portail professionnel</span>
+            <h1>Suivi des<br />branchements</h1>
+            <p>Une vision simple et fiable de chaque demande, de l'étude à la réalisation.</p>
           </div>
-        </div>
+          <div className="login-brand-footer">
+            <span className="login-status-dot" aria-hidden="true" />
+            <span>Plateforme sécurisée ADE</span>
+          </div>
+        </aside>
+
+        <form onSubmit={soumettre} className="login-form" noValidate>
+          <div className="login-header">
+            <div className="login-title-group">
+              <span className="login-kicker">Espace agent</span>
+              <h2>Bon retour parmi nous</h2>
+              <p>Connectez-vous pour accéder à votre espace de travail.</p>
+            </div>
+          </div>
 
         {/* Alerte d'erreur interactive */}
         {erreur && (
@@ -117,10 +128,10 @@ export default function Connexion() {
             <button
               type="button"
               onClick={() => setErreur('')}
-              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: 16 }}
-              aria-label="Fermer"
+              className="login-alert-close"
+              aria-label="Fermer le message d'erreur"
             >
-              ✕
+              <span aria-hidden="true">×</span>
             </button>
           </div>
         )}
@@ -184,6 +195,10 @@ export default function Connexion() {
               title={afficherMotDePasse ? 'Masquer' : 'Afficher'}
               tabIndex={-1}
             >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                <circle cx="12" cy="12" r="2.5" />
+              </svg>
             </button>
           </div>
 
@@ -226,11 +241,13 @@ export default function Connexion() {
           )}
         </button>
 
-        {/* Pied de formulaire */}
-        <div className="login-footer">
-          <span>Algérienne Des Eaux · Direction de Zone</span>
-        </div>
-      </form>
+          <div className="login-footer">
+            <span>Algérienne Des Eaux</span>
+            <span aria-hidden="true">•</span>
+            <span>Direction de Zone</span>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

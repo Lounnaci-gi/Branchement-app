@@ -493,8 +493,8 @@ GO
    deja un actuellement ouvert (date_fin IS NULL) - evite les doublons
    si ce script est relance ou execute apres le seed initial.
    ------------------------------------------------------------ */
-INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
-SELECT ad.id_article, ad.mode_prix, ad.prix_unitaire, ad.prix_fourniture, ad.prix_pose, ad.type_tva, ad.taux_tva, CONVERT(date, GETDATE())
+INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
+SELECT ad.id_article, ad.mode_prix, ad.prix_unitaire, ad.prix_fourniture, ad.prix_pose, ad.type_tva, CONVERT(date, GETDATE())
 FROM ArticlesDevis ad
 WHERE ad.code_article IN (
     N'TER-0001', N'TER-0002', N'CAN-0001', N'CAN-0002', N'CAN-0003', N'ACC-0001', N'COL-0001',

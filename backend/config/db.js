@@ -178,10 +178,23 @@ async function verifierEtMigrerBase(pool) {
           prix_fourniture DECIMAL(12,2) NULL,
           prix_pose DECIMAL(12,2) NULL,
           type_tva NVARCHAR(20) NOT NULL,
-          taux_tva DECIMAL(5,2) NOT NULL,
           date_debut DATE NOT NULL,
           date_fin DATE NULL
         );
+      END;
+      IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.TarifsArticlesDevis') AND name = 'taux_tva')
+      BEGIN
+        DECLARE @dropTauxConstraints NVARCHAR(MAX) = N'';
+        SELECT @dropTauxConstraints += N'ALTER TABLE dbo.TarifsArticlesDevis DROP CONSTRAINT ' + QUOTENAME(dc.name) + N';'
+        FROM sys.default_constraints dc
+        INNER JOIN sys.columns c ON c.default_object_id = dc.object_id
+        WHERE c.object_id = OBJECT_ID('dbo.TarifsArticlesDevis') AND c.name = 'taux_tva';
+        SELECT @dropTauxConstraints += N'ALTER TABLE dbo.TarifsArticlesDevis DROP CONSTRAINT ' + QUOTENAME(cc.name) + N';'
+        FROM sys.check_constraints cc
+        WHERE cc.parent_object_id = OBJECT_ID('dbo.TarifsArticlesDevis')
+          AND cc.definition LIKE '%taux_tva%';
+        IF @dropTauxConstraints <> N'' EXEC sp_executesql @dropTauxConstraints;
+        ALTER TABLE dbo.TarifsArticlesDevis DROP COLUMN taux_tva;
       END;
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'avec_diametre')
       BEGIN
@@ -201,8 +214,8 @@ async function verifierEtMigrerBase(pool) {
       END;
       IF NOT EXISTS (SELECT 1 FROM TarifsArticlesDevis)
       BEGIN
-        INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, date_debut)
-        SELECT id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, CONVERT(date, GETDATE())
+        INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
+        SELECT id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, CONVERT(date, GETDATE())
         FROM ArticlesDevis;
       END;
     `;
