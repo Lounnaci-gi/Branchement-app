@@ -160,6 +160,8 @@ export default function EditeurDevisObat({
   const [ongletBiblio, setOngletBiblio] = useState('articles'); // 'articles' ou 'packs'
   const [filtreFamille, setFiltreFamille] = useState('TOUS');
   const [rechercheBiblio, setRechercheBiblio] = useState('');
+  const [recherchesLignes, setRecherchesLignes] = useState({});
+  const [suggestionsLignes, setSuggestionsLignes] = useState({});
 
   // Dropdown options
   const [menuOptionsOuvert, setMenuOptionsOuvert] = useState(false);
@@ -361,6 +363,23 @@ export default function EditeurDevisObat({
       categorie: f.libelle_categorie || 'Sans catégorie'
     }))
   );
+
+  useEffect(() => {
+    const minuteur = setTimeout(() => {
+      const resultat = {};
+      Object.entries(recherchesLignes).forEach(([idLigne, recherche]) => {
+        const texte = String(recherche || '').trim().toLowerCase();
+        if (texte.length < 2) return;
+        resultat[idLigne] = tousLesArticles
+          .filter((article) => [article.libelle, article.code, article.matiere, article.couleur]
+            .some((valeur) => String(valeur || '').toLowerCase().includes(texte)))
+          .slice(0, 8);
+      });
+      setSuggestionsLignes(resultat);
+    }, 300);
+
+    return () => clearTimeout(minuteur);
+  }, [recherchesLignes, tousLesArticles]);
 
   // -------------------------------------------------------------
   // AJOUT D'UNE NOUVELLE LIGNE / ARTICLE VIDE DANS LE DEVIS
@@ -714,6 +733,71 @@ export default function EditeurDevisObat({
           : s
       )
     );
+  }
+
+  function selectionnerSuggestionArticle(idSection, idLigne, article) {
+    const codeArticle = String(article.code || article.code_article || '').trim().toUpperCase();
+    const dejaPresent = sections.some((section) => section.lignes.some((ligne) => (
+      ligne.id_ligne !== idLigne &&
+      String(ligne.code || ligne.code_article || '').trim().toUpperCase() === codeArticle
+    )));
+
+    if (dejaPresent) {
+      notifierErreur(`L'article « ${article.libelle || codeArticle} » est déjà présent dans le devis.`);
+      return;
+    }
+
+    setSections((prev) => prev.map((section) => (
+      section.id_section !== idSection
+        ? section
+        : {
+            ...section,
+            lignes: section.lignes.map((ligne) => {
+              if (ligne.id_ligne !== idLigne) return ligne;
+              const modePrix = article.modePrix || (article.typeTva === 'PRESTATION' ? 'PRESTATION' : 'FOURNITURE_POSE');
+              const estPrestation = modePrix === 'PRESTATION';
+              return {
+                ...ligne,
+                code: article.code,
+                libelle: article.libelle,
+                unite: article.unite || 'U',
+                modePrix,
+                type: estPrestation ? 'PR/' : 'FP/',
+                typeTva: estPrestation ? 'PRESTATION' : 'TRAVAUX',
+                tauxTva: estPrestation ? tvaPrestation : (Number(article.tauxTva) || 19),
+                prix: Number(article.prix) || 0,
+                prixFourniture: article.prixFourniture ?? null,
+                prixPose: article.prixPose ?? null,
+                choixPrix: estPrestation ? null : 'FOURNITURE_POSE',
+                estLigneLibre: false
+              };
+            })
+          }
+    )));
+    setRecherchesLignes((prev) => ({ ...prev, [idLigne]: '' }));
+    setSuggestionsLignes((prev) => ({ ...prev, [idLigne]: [] }));
+  }
+
+  function modifierDesignationLigne(idSection, idLigne, valeur) {
+    setSections((prev) => prev.map((section) => (
+      section.id_section !== idSection
+        ? section
+        : {
+            ...section,
+            lignes: section.lignes.map((ligne) => {
+              if (ligne.id_ligne !== idLigne) return ligne;
+              if (valeur.trim()) return { ...ligne, libelle: valeur };
+              return {
+                ...ligne,
+                libelle: '',
+                quantite: '',
+                prix: '',
+                marge: '',
+                tauxTva: ''
+              };
+            })
+          }
+    )));
   }
 
   // Insérer un pack complet d'ouvrages types AEP
@@ -1773,14 +1857,38 @@ export default function EditeurDevisObat({
                               <td className="obat-col-desig">
                                 {modeOnglet === 'edition' ? (
                                   <div>
-                                    <input
-                                      type="text"
-                                      placeholder="Désignation de l'article…"
-                                      value={ligne.libelle}
-                                      onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'libelle', e.target.value)}
-                                      style={{ fontWeight: estOuvrage ? 700 : 500 }}
-                                      autoFocus={ligne.estLigneLibre && !ligne.libelle}
-                                    />
+                                    <div className="obat-line-designation-editor">
+                                      <input
+                                        type="text"
+                                        placeholder="Désignation de l'article…"
+                                        value={ligne.libelle}
+                                        onChange={(e) => {
+                                          const valeur = e.target.value;
+                                          modifierDesignationLigne(section.id_section, ligne.id_ligne, valeur);
+                                          setRecherchesLignes((prev) => ({ ...prev, [ligne.id_ligne]: valeur }));
+                                        }}
+                                        style={{ fontWeight: estOuvrage ? 700 : 500 }}
+                                        autoFocus={ligne.estLigneLibre && !ligne.libelle}
+                                      />
+                                      {(suggestionsLignes[ligne.id_ligne] || []).length > 0 && (
+                                        <div className="obat-line-suggestions" role="listbox">
+                                          {suggestionsLignes[ligne.id_ligne].map((article) => (
+                                            <button
+                                              key={article.code}
+                                              type="button"
+                                              className="obat-line-suggestion"
+                                              onClick={() => selectionnerSuggestionArticle(section.id_section, ligne.id_ligne, article)}
+                                              role="option"
+                                            >
+                                              <span className="obat-line-suggestion-name">{article.libelle}</span>
+                                              <span className="obat-line-suggestion-meta">
+                                                {article.code} · {LIBELLES_UNITES[article.unite] || article.unite || 'U'}
+                                              </span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
                                     {estOuvrage && (
                                         <button
                                           type="button"

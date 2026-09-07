@@ -607,7 +607,9 @@
   width: 100%;
   border: 1px solid #D1D5DB;
   border-radius: 4px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
   margin-bottom: 14px;
 }
 
@@ -842,6 +844,60 @@
 
 .obat-table-add-row.is-disabled td {
   border-color: #E5E7EB;
+}
+
+.obat-line-designation-editor {
+  position: relative;
+  z-index: 30;
+}
+
+.obat-line-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 5px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+}
+
+.obat-line-suggestion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid #F1F5F9;
+  background: #FFFFFF;
+  color: #1F2937;
+  text-align: left;
+  cursor: pointer;
+}
+
+.obat-line-suggestion:last-child {
+  border-bottom: 0;
+}
+
+.obat-line-suggestion:hover,
+.obat-line-suggestion:focus-visible {
+  background: #EEF7FF;
+  outline: none;
+}
+
+.obat-line-suggestion-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.obat-line-suggestion-meta {
+  margin-top: 2px;
+  color: #64748B;
+  font-size: 11px;
 }
 
 :root[data-theme='dark'] .obat-devis-wrapper {
@@ -1448,7 +1504,7 @@
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: border-color 0.15s ease;
 }
@@ -2192,6 +2248,26 @@
 
 :root[data-theme='dark'] .obat-table-add-row.is-disabled {
   background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+:root[data-theme='dark'] .obat-line-suggestions {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+:root[data-theme='dark'] .obat-line-suggestion {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+:root[data-theme='dark'] .obat-line-suggestion:hover,
+:root[data-theme='dark'] .obat-line-suggestion:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+:root[data-theme='dark'] .obat-line-suggestion-meta {
   color: var(--color-text-muted);
 }
 
