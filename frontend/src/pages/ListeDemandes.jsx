@@ -5,6 +5,7 @@ import Pipeline from '../components/Pipeline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { ETAPES_PIPELINE, STATUTS_TERMINAUX, LIBELLES_STATUT } from '../constants/statuts';
 import { demanderConfirmation, notifierErreur } from '../utils/notifications';
+import { FileText, Pencil, Trash2 } from 'lucide-react';
 
 function nettoyerTexte(valeur, defaut = '') {
   const texte = String(valeur ?? '').replace(/[<>"']/g, '').replace(/\s{2,}/g, ' ').trim();
@@ -494,32 +495,33 @@ export default function ListeDemandes() {
                     {!d.est_verrouillee && (
                       <button
                         type="button"
-                        className="btn btn-primary"
-                        style={{ padding: '6px 10px', fontSize: 12, whiteSpace: 'nowrap' }}
+                        className="btn btn-primary btn-icon action-icon action-icon-devis"
                         onClick={() => navigate(`/demandes/${d.id_demande}/devis/nouveau`)}
                         title="Créer un devis pour cette demande"
                         aria-label={`Créer un devis pour la demande ${d.numero_demande}`}
                       >
-                        Devis
+                        <FileText size={18} strokeWidth={2} aria-hidden="true" />
                       </button>
                     )}
                     {!d.est_verrouillee && (
                       <Link
                         to={`/demandes/${d.id_demande}/modifier`}
-                        className="btn btn-secondary btn-icon"
+                        className="btn btn-secondary btn-icon action-icon action-icon-modifier"
                         title="Modifier la demande"
                         aria-label={`Modifier la demande ${d.numero_demande}`}
                       >
+                        <Pencil size={18} strokeWidth={2} aria-hidden="true" />
                       </Link>
                     )}
                     {demandeSupprimable(d) && (
                       <button
                         type="button"
-                        className="btn btn-danger btn-icon"
+                        className="btn btn-danger btn-icon action-icon action-icon-supprimer"
                         onClick={() => supprimerDemande(d)}
                         title="Supprimer la demande"
                         aria-label={`Supprimer la demande ${d.numero_demande}`}
                       >
+                        <Trash2 size={18} strokeWidth={2} aria-hidden="true" />
                       </button>
                     )}
                   </div>

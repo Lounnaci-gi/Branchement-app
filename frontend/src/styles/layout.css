@@ -36,9 +36,10 @@
   font-size: 12px;
 }
 
-/* Les actions restent textuelles; les pictogrammes SVG ne sont plus affiches. */
-svg {
-  display: none;
+/* Les pictogrammes des actions restent visibles dans l'interface. */
+.action-icon svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .obat-btn-action-icon svg {

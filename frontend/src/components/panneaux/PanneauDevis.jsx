@@ -136,20 +136,10 @@ export default function PanneauDevis({
   formulaireUniquement = false,
   onAnnule,
   afficherActionsCreation = false,
-  afficherResumeDemande = true,
-  masquerArticlesSelectionnes = false
+  afficherResumeDemande = true
 }) {
   const navigate = useNavigate();
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
-  const etudeRenseignee = Boolean(
-    etude && (
-      etude.date_visite ||
-      etude.faisabilite ||
-      (etude.distance_reseau_m !== null && etude.distance_reseau_m !== undefined) ||
-      etude.diametre_conduite ||
-      etude.observations
-    )
-  );
   const [devisSelectionne, setDevisSelectionne] = useState(null);
   const [ouvert, setOuvert] = useState(false);
   const [form, setForm] = useState({
@@ -169,7 +159,6 @@ export default function PanneauDevis({
   const [enregistrerPaiement, setEnregistrerPaiement] = useState(false);
   const [numeroDevisPreview, setNumeroDevisPreview] = useState('');
   const [articleFamilles, setArticleFamilles] = useState([]);
-  const [articlesSelectionnes, setArticlesSelectionnes] = useState({});
   const [lignesDevis, setLignesDevis] = useState([]);
   const [rechercheArticle, setRechercheArticle] = useState('');
   const [suggestionsFiltrees, setSuggestionsFiltrees] = useState([]);
@@ -179,7 +168,6 @@ export default function PanneauDevis({
 
   const devisActuel = devisListe.find((item) => item.id_devis === devisSelectionne) || null;
   const montantTotalCumule = devisListe.reduce((acc, curr) => acc + (Number(curr.montant) || 0), 0);
-  const montantEstime = estimerMontantDevis({ type_branchement: etude?.type_branchement, type_autre: etude?.type_autre }, etude);
 
   const totalArticles = lignesDevis.reduce((acc, ligne) => acc + (Number(ligne.quantite) || 0) * prixArticle(ligne), 0);
   const totalTvaPrestation = lignesDevis.reduce((acc, ligne) => {
@@ -192,14 +180,6 @@ export default function PanneauDevis({
   }, 0);
   const totalTva = totalTvaPrestation + totalTvaTravaux;
   const totalTTC = totalArticles + totalTva;
-
-  function ajusterArticle(articleCode, delta) {
-    setArticlesSelectionnes((prev) => {
-      const actuel = Number(prev[articleCode] || 0);
-      const next = Math.max(0, actuel + delta);
-      return { ...prev, [articleCode]: next };
-    });
-  }
 
   function rechercherArticles(valeur) {
     setRechercheArticle(valeur);

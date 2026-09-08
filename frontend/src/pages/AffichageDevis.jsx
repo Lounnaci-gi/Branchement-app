@@ -149,7 +149,6 @@ export default function AffichageDevis() {
             {aDesArticles ? (
               devis.articles.map((art) => {
                 const codeType = normaliserTypeLigne(art.type || art.type_ligne, art.choixPrix || art.choix_prix, art.modePrix || art.mode_prix, art);
-                const typeClass = codeType === 'P/' ? 'p' : codeType === 'PR/' ? 'pr' : codeType === 'FP/' ? 'fp' : 'f';
                 return (
                   <tr key={art.id_ligne || art.code}>
                     <td className="col-desig">

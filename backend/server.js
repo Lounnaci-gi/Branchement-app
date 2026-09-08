@@ -61,18 +61,24 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === JWT_SECRET_DEFAUT) {
 
 app.disable('x-powered-by');
 
-// CORS — restreint à l'origine déclarée dans .env (jamais de wildcard *)
-const originesAutorisees = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+// CORS — restreint aux origines autorisées
+const originesAutorisees = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://127.0.0.1:5173')
   .split(',')
-  .map((o) => o.trim())
+  .map((o) => o.trim().replace(/\/$/, ''))
   .filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Autoriser les requêtes sans origin (ex: Postman en dev, appels serveur-à-serveur)
+    // Autoriser les requêtes sans origin (ex: Postman en dev, proxy même origine, serveur-à-serveur)
     if (!origin) return callback(null, true);
-    if (originesAutorisees.includes(origin)) return callback(null, true);
-    return callback(new Error(`Origine CORS non autorisée : ${origin}`));
+    const originNormalisee = origin.replace(/\/$/, '');
+    if (originesAutorisees.includes(originNormalisee)) return callback(null, true);
+    // En environnement de développement, autoriser localhost et 127.0.0.1 sur n'importe quel port
+    if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(originNormalisee)) {
+      return callback(null, true);
+    }
+    // Refuser poliment le CORS sans lever d'erreur bloquante (qui provoquerait une 500)
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

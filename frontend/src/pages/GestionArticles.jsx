@@ -141,7 +141,6 @@ export default function GestionArticles() {
 
   // Statistiques Obat
   const totalArticles = tousLesArticles.length;
-  const totalFourniturePose = tousLesArticles.filter((a) => a.modePrix === 'FOURNITURE_POSE').length;
   const totalPrestations = tousLesArticles.filter((a) => a.modePrix === 'PRESTATION').length;
 
   // Filtrage dynamique des articles (comme dans EditeurDevisObat)
@@ -660,7 +659,12 @@ export default function GestionArticles() {
       {/* 5. VUE CATALOGUE D'ARTICLES */}
       {ongletPrincipal === 'catalogue' && (
         <>
-          {articlesFiltres.length === 0 ? (
+          {chargement ? (
+            <div className="obat-card-block" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              <div className="spinner" style={{ margin: '0 auto 12px' }} aria-hidden="true" />
+              <p style={{ fontSize: 13, margin: 0 }}>Chargement de la bibliothèque d’articles…</p>
+            </div>
+          ) : articlesFiltres.length === 0 ? (
             <div className="obat-card-block" style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-muted)' }}>
               <h3>Aucun article ne correspond à votre recherche</h3>
               <p style={{ fontSize: 13 }}>Essayez de modifier votre mot-clé ou réinitialisez les filtres.</p>

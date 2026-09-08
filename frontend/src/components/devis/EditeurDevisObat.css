@@ -1569,24 +1569,13 @@
   font-size: 16px;
 }
 
-.obat-section-title-input {
+.obat-section-title-fixed {
+  margin: 0;
   font-size: 14.5px;
   font-weight: 700;
   color: #1E293B;
-  border: 1px solid transparent;
-  background: transparent;
-  padding: 4px 8px;
-  border-radius: 4px;
   width: 100%;
   max-width: 500px;
-  transition: all 0.15s ease;
-}
-
-.obat-section-title-input:hover,
-.obat-section-title-input:focus {
-  background: #FFFFFF;
-  border-color: #CBD5E1;
-  outline: none;
 }
 
 .obat-section-preview-title {
@@ -2183,7 +2172,7 @@
 :root[data-theme='dark'] .obat-item-name,
 :root[data-theme='dark'] .obat-item-price,
 :root[data-theme='dark'] .obat-pack-title,
-:root[data-theme='dark'] .obat-section-title-input,
+:root[data-theme='dark'] .obat-section-title-fixed,
 :root[data-theme='dark'] .obat-section-preview-title,
 :root[data-theme='dark'] .obat-accord-title {
   color: var(--color-text);
@@ -2220,8 +2209,7 @@
 
 :root[data-theme='dark'] .obat-devis-wrapper input,
 :root[data-theme='dark'] .obat-devis-wrapper select,
-:root[data-theme='dark'] .obat-devis-wrapper textarea,
-:root[data-theme='dark'] .obat-section-title-input {
+:root[data-theme='dark'] .obat-devis-wrapper textarea {
   background: var(--color-surface-sunken);
   border-color: var(--color-border);
   color: var(--color-text);
@@ -2229,17 +2217,14 @@
 }
 
 :root[data-theme='dark'] .obat-table input,
-:root[data-theme='dark'] .obat-table select,
-:root[data-theme='dark'] .obat-section-title-input {
+:root[data-theme='dark'] .obat-table select {
   background: transparent;
 }
 
 :root[data-theme='dark'] .obat-table input:hover,
 :root[data-theme='dark'] .obat-table select:hover,
 :root[data-theme='dark'] .obat-table input:focus,
-:root[data-theme='dark'] .obat-table select:focus,
-:root[data-theme='dark'] .obat-section-title-input:hover,
-:root[data-theme='dark'] .obat-section-title-input:focus {
+:root[data-theme='dark'] .obat-table select:focus {
   background: var(--color-surface);
   border-color: var(--color-primary);
 }

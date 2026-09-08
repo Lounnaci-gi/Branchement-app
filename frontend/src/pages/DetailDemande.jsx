@@ -5,7 +5,7 @@ import Pipeline from '../components/Pipeline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { LIBELLES_STATUT } from '../constants/statuts';
 import PanneauEtude from '../components/panneaux/PanneauEtude';
-import PanneauDevis, { estimerMontantDevis } from '../components/panneaux/PanneauDevis';
+import PanneauDevis from '../components/panneaux/PanneauDevis';
 import PanneauTravaux from '../components/panneaux/PanneauTravaux';
 import { imprimerAccuse } from '../utils/impressionAccuse';
 import { imprimerDemande } from '../utils/impressionDemande';
@@ -203,8 +203,6 @@ export default function DetailDemande() {
       || new Date();
     imprimerDevis({ ...demande, date_etude_terminee: dateEtude, etude, historique }, null, dateEtude);
   }
-
-  const montantEstimeDevis = estimerMontantDevis(demande, etude);
 
   function ouvrirCreateurDevis() {
     if (demandeEstVerrouillee) {

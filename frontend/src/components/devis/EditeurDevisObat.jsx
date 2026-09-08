@@ -109,21 +109,18 @@ export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
   return types;
 }
 
-function normaliserTypeLigne(type, choixPrix, modePrix, article = null, tousLesArticles = []) {
-  const typesDispo = determinerTypesDisponibles(article || { type, choixPrix, modePrix }, tousLesArticles);
-  const t = String(type || '').trim();
-  if (typesDispo.includes(t)) return t;
-  if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) return 'F/';
-  if (choixPrix === 'POSE' && typesDispo.includes('P/')) return 'P/';
-  if (choixPrix === 'FOURNITURE_POSE' && typesDispo.includes('FP/')) return 'FP/';
-  if (typesDispo.includes('PR/')) return 'PR/';
-  return typesDispo[0] || 'F/';
-}
-
 function obtenirCategorieArticle(article, tousLesArticles = []) {
   const code = article?.code || article?.code_article;
   const reference = tousLesArticles.find((item) => item.code === code);
   return article?.categorie || article?.libelleCategorie || article?.libelle_categorie || reference?.categorie || 'Sans catégorie';
+}
+
+function extraireTitreSection(libelle) {
+  const valeur = String(libelle || '');
+  const correspondance = valeur.match(/^\[([^\]]+)\]\s*(.*)$/s);
+  return correspondance
+    ? { titre: correspondance[1].trim(), libelle: correspondance[2].trim() }
+    : { titre: '', libelle: valeur };
 }
 
 // Modèles d'ouvrages types AEP (Spécifiques ADE pour eau potable)
@@ -198,7 +195,6 @@ export default function EditeurDevisObat({
   const [ventilationOuverte, setVentilationOuverte] = useState(false);
 
   // Options d'affichage Obat
-  const [afficherColonneMarge, setAfficherColonneMarge] = useState(true);
   const [afficherColonneUnite, setAfficherColonneUnite] = useState(true);
   const [modeNumerotationSections, setModeNumerotationSections] = useState('ROMAIN');
   const [masquerDetailsOuvragesPreview, setMasquerDetailsOuvragesPreview] = useState(true);
@@ -268,6 +264,8 @@ export default function EditeurDevisObat({
 
       devisInitial.articles.forEach((art) => {
         const categorie = obtenirCategorieArticle(art, references);
+        const designation = extraireTitreSection(art.libelle);
+        const cleSection = designation.titre || categorie;
         const ligne = (() => {
             const typesDispo = determinerTypesDisponibles(art);
             const typeLigne = typesDispo.includes(art.type || art.type_ligne)
@@ -276,7 +274,7 @@ export default function EditeurDevisObat({
             return {
               id_ligne: art.id_ligne || Math.random().toString(),
               code: art.code || art.code_article || '',
-              libelle: art.libelle || '',
+              libelle: designation.libelle,
               type: typeLigne,
               quantite: Number(art.quantite) || 1,
               unite: art.unite || 'U',
@@ -295,15 +293,17 @@ export default function EditeurDevisObat({
               sousElements: art.sousElements || []
             };
         })();
-        if (!lignesParCategorie.has(categorie)) lignesParCategorie.set(categorie, []);
-        lignesParCategorie.get(categorie).push(ligne);
+        if (!lignesParCategorie.has(cleSection)) {
+          lignesParCategorie.set(cleSection, { titre: designation.titre || categorie, categorie, lignes: [] });
+        }
+        lignesParCategorie.get(cleSection).lignes.push(ligne);
       });
 
-      return Array.from(lignesParCategorie.entries()).map(([categorie, lignes], index) => ({
+      return Array.from(lignesParCategorie.values()).map((section, index) => ({
         id_section: `sec_${index + 1}`,
-        titre: categorie,
-        categorie,
-        lignes
+        titre: section.titre,
+        categorie: section.categorie,
+        lignes: section.lignes
       }));
     }
     // Devis vierge : créer une section par défaut
@@ -538,12 +538,6 @@ export default function EditeurDevisObat({
       return;
     }
     setSections((prev) => prev.filter((s) => s.id_section !== idSection));
-  }
-
-  function modifierTitreSection(idSection, nouveauTitre) {
-    setSections((prev) =>
-      prev.map((s) => (s.id_section === idSection ? { ...s, titre: nouveauTitre } : s))
-    );
   }
 
   function ajouterLigneDansSection(idSection, article, categorie = 'Fourniture', choixPrixInitial = null) {
@@ -1002,15 +996,6 @@ export default function EditeurDevisObat({
   const montantRetenue = aRetenueGarantie ? (totalTTC * (Number(tauxRetenueGarantie) || 0)) / 100 : 0;
   const netAPayerTTC = Math.max(0, totalTTC - montantRetenue);
 
-  const margeBruteHT = toutesLesLignes.reduce((acc, l) => {
-    const qte = Number(l.quantite) || 0;
-    const pu = Number(l.prix) || 0;
-    const tauxMarge = Number(l.marge) || 0;
-    return acc + qte * pu * (tauxMarge / 100);
-  }, 0);
-
-  const tauxMargeGlobal = totalNetHT > 0 ? (margeBruteHT / totalNetHT) * 100 : 0;
-
   const montantAcompte = (netAPayerTTC * (Number(tauxAcompte) || 0)) / 100;
   const montantReste = Math.max(0, netAPayerTTC - montantAcompte);
 
@@ -1242,7 +1227,7 @@ export default function EditeurDevisObat({
 
   // Export CSV
   function exporterCsv() {
-    const headers = ['Section', 'N°', 'Code', 'Désignation', 'Quantité', 'Unité', 'Prix U. HT', 'Marge %', 'TVA %', 'Total HT'];
+    const headers = ['Section', 'N°', 'Code', 'Désignation', 'Quantité', 'Unité', 'Prix U. HT', 'Total HT'];
     const rows = [];
 
     sections.forEach((sec) => {
@@ -1257,8 +1242,6 @@ export default function EditeurDevisObat({
           q,
           `"${l.unite}"`,
           p,
-          Number(l.marge) || 0,
-          obtenirTauxTvaLigne(l),
           q * p
         ]);
       });
@@ -1339,21 +1322,21 @@ export default function EditeurDevisObat({
                   type="button"
                   className="obat-dropdown-item"
                   onClick={() => {
-                    setAfficherColonneMarge((p) => !p);
-                    setMenuOptionsOuvert(false);
-                  }}
-                >
-                  {afficherColonneMarge ? 'Masquer la colonne Marge' : 'Afficher la colonne Marge'}
-                </button>
-                <button
-                  type="button"
-                  className="obat-dropdown-item"
-                  onClick={() => {
                     setAutoliquidationTva((p) => !p);
                     setMenuOptionsOuvert(false);
                   }}
                 >
                   {autoliquidationTva ? 'Désactiver Autoliquidation TVA' : 'Activer Autoliquidation TVA (0%)'}
+                </button>
+                <button
+                  type="button"
+                  className="obat-dropdown-item"
+                  onClick={() => {
+                    setAfficherColonneUnite((p) => !p);
+                    setMenuOptionsOuvert(false);
+                  }}
+                >
+                  {afficherColonneUnite ? 'Masquer la colonne Unité' : 'Afficher la colonne Unité'}
                 </button>
                 <button
                   type="button"
@@ -1839,10 +1822,6 @@ export default function EditeurDevisObat({
                   <th className="center obat-col-qte">Qté</th>
                   {afficherColonneUnite && <th className="center obat-col-unite">Unité</th>}
                   <th className="right obat-col-pu">Prix U. HT</th>
-                  {afficherColonneMarge && modeOnglet === 'edition' && (
-                    <th className="center obat-col-marge">Marge</th>
-                  )}
-                  <th className="center obat-col-tva">TVA</th>
                   <th className="right obat-col-total">Total HT</th>
                   {modeOnglet === 'edition' && <th className="center obat-col-del" />}
                 </tr>
@@ -1865,17 +1844,11 @@ export default function EditeurDevisObat({
                       <span className="obat-section-number">
                         {numeroSection(sIdx, modeNumerotationSections)} -
                       </span>
-                      {modeOnglet === 'edition' ? (
-                        <input
-                          type="text"
-                          className="obat-section-title-input"
-                          value={section.titre}
-                          onChange={(e) => modifierTitreSection(section.id_section, e.target.value)}
-                          placeholder="Titre de la section..."
-                        />
-                      ) : (
-                        <h3 className="obat-section-preview-title">{section.titre}</h3>
-                      )}
+                      <h3
+                        className={modeOnglet === 'edition' ? 'obat-section-title-fixed' : 'obat-section-preview-title'}
+                      >
+                        {section.titre}
+                      </h3>
                     </div>
 
                     <div className="obat-section-bar-right">
@@ -1903,7 +1876,7 @@ export default function EditeurDevisObat({
                       {section.lignes.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={modeOnglet === 'edition' ? (afficherColonneMarge ? 10 : 9) : 8}
+                            colSpan={modeOnglet === 'edition' ? (afficherColonneUnite ? 8 : 7) : (afficherColonneUnite ? 7 : 6)}
                             className={`obat-table-empty ${modeOnglet === 'edition' ? 'is-clickable' : ''}`}
                             onClick={() => {
                               if (modeOnglet !== 'edition') return;
@@ -2110,37 +2083,6 @@ export default function EditeurDevisObat({
                                   <span>{formaterNombre(ligne.prix)} DA</span>
                                 )}
                               </td>
-                              {afficherColonneMarge && modeOnglet === 'edition' && (
-                                <td className="center obat-col-marge">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    value={ligne.marge || 0}
-                                    onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'marge', e.target.value)}
-                                    style={{ textAlign: 'center', width: 45 }}
-                                  />
-                                  <span style={{ fontSize: 10 }}>%</span>
-                                </td>
-                              )}
-                              <td className="center obat-col-tva">
-                                {autoliquidationTva ? (
-                                  <span className="obat-tva-zero">0% (Auto)</span>
-                                ) : modeOnglet === 'edition' ? (
-                                  <select
-                                    value={ligne.type === 'PR/' ? String(tvaPrestation) : ligne.tauxTva}
-                                    onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'tauxTva', e.target.value)}
-                                    disabled={ligne.type === 'PR/'}
-                                    style={{ textAlign: 'center' }}
-                                  >
-                                    <option value="19">19%</option>
-                                    <option value="9">9%</option>
-                                    <option value="0">0%</option>
-                                  </select>
-                                ) : (
-                                  <span>{obtenirTauxTvaLigne(ligne)}%</span>
-                                )}
-                              </td>
                               <td className="right obat-col-total">
                                 <strong>{formaterNombre(ligneHT)} DA</strong>
                               </td>
@@ -2205,7 +2147,7 @@ export default function EditeurDevisObat({
                             ? "Enregistrez d'abord l'article en cours avant d'en créer un autre"
                             : 'Créer un autre article dans cette section'}
                         >
-                          <td colSpan={afficherColonneMarge ? 10 : 9}>
+                          <td colSpan={afficherColonneUnite ? 8 : 7}>
                             {section.lignes.some((ligne) => ligne.estLigneLibre)
                               ? "Enregistrez l'article en cours avant d'en créer un autre"
                               : 'Cliquez ici pour créer un autre article'}
@@ -2363,9 +2305,32 @@ export default function EditeurDevisObat({
                   <span>Retenue de garantie :</span>
                 </label>
                 {aRetenueGarantie ? (
-                  <span>
-                    <strong>{tauxRetenueGarantie} %</strong> ({formaterNombre(montantRetenue)} DA) pendant {dureeRetenueMois} mois
-                  </span>
+                  modeOnglet === 'edition' ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={tauxRetenueGarantie}
+                        onChange={(e) => setTauxRetenueGarantie(e.target.value)}
+                        style={{ width: 45, textAlign: 'center', padding: '1px 4px', fontSize: 13 }}
+                      />
+                      % ({formaterNombre(montantRetenue)} DA) pendant
+                      <input
+                        type="number"
+                        min="1"
+                        max="36"
+                        value={dureeRetenueMois}
+                        onChange={(e) => setDureeRetenueMois(e.target.value)}
+                        style={{ width: 45, textAlign: 'center', padding: '1px 4px', fontSize: 13 }}
+                      />
+                      mois
+                    </span>
+                  ) : (
+                    <span>
+                      <strong>{tauxRetenueGarantie} %</strong> ({formaterNombre(montantRetenue)} DA) pendant {dureeRetenueMois} mois
+                    </span>
+                  )
                 ) : (
                   <span style={{ color: '#9CA3AF' }}>Aucune</span>
                 )}
@@ -2532,13 +2497,6 @@ export default function EditeurDevisObat({
                   <div className="obat-summary-line" style={{ color: '#D97706' }}>
                     <span>Retenue de garantie ({tauxRetenueGarantie}%)</span>
                     <strong>- {formaterNombre(montantRetenue)} DA</strong>
-                  </div>
-                )}
-
-                {afficherColonneMarge && (
-                  <div className="obat-summary-line obat-summary-marge">
-                    <span>Marge estimée ({formaterNombre(tauxMargeGlobal)}%)</span>
-                    <span>{formaterNombre(margeBruteHT)} DA HT</span>
                   </div>
                 )}
 

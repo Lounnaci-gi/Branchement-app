@@ -8,6 +8,10 @@ router.use(verifierToken);
 // GET /api/dashboard - indicateurs clés
 router.get('/', async (req, res) => {
   try {
+    if (!req.agent?.role || (req.agent.role !== 'admin' && !Number.isInteger(req.agent.id_agence))) {
+      return res.status(401).json({ erreur: 'Session invalide. Veuillez vous reconnecter.' });
+    }
+
     const pool = await getPool();
     const agenceFilter = req.agent.role === 'admin' ? '' : ' AND d.id_agence = @id_agence';
     const demandeRequest = pool.request();
@@ -45,13 +49,13 @@ router.get('/', async (req, res) => {
     `);
 
     res.json({
-      parStatut: parStatut.recordset,
-      demandesCeMois: ceMois.recordset[0].total,
-      enAttentePaiement: enAttentePaiement.recordset[0],
-      delaiMoyenJours: delaiMoyenJours.recordset[0].delai_moyen || 0
+      parStatut: parStatut.recordset || [],
+      demandesCeMois: ceMois.recordset?.[0]?.total ?? 0,
+      enAttentePaiement: enAttentePaiement.recordset?.[0] ?? { total: 0, montant_total: 0 },
+      delaiMoyenJours: delaiMoyenJours.recordset?.[0]?.delai_moyen || 0
     });
   } catch (err) {
-    console.error(err);
+    console.error('[DASHBOARD ERROR]', err);
     res.status(500).json({ erreur: 'Erreur lors du chargement du tableau de bord.' });
   }
 });

@@ -85,6 +85,7 @@ export async function genererHtmlAccuse(demande) {
           <div class="agence-ligne">${echapperHtml(agenceTexte)}</div>
         </div>
         <div class="entete-droite">
+          ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" class="qrcode-img" />` : ''}
         </div>
       </div>
 
