@@ -104,7 +104,7 @@ export default function Connexion() {
           <div className="login-brand-copy">
             <span className="login-kicker">Portail professionnel</span>
             <h1>Suivi des<br />branchements</h1>
-            <p>Une vision simple et fiable de chaque demande, de l'étude à la réalisation.</p>
+            <p>Une vision simple et fiable de chaque demande, du dépôt à la réalisation.</p>
           </div>
           <div className="login-brand-footer">
             <span className="login-status-dot" aria-hidden="true" />

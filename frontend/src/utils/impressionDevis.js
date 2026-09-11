@@ -43,17 +43,13 @@ export function genererHtmlDevis(demande, dateEmission = null) {
   const natureTravauxAffichee = [natureTravaux, typeBranchement].filter(Boolean).join(' - ');
   const numeroAffiche = valeurNumero(demande);
 
-  // Date de l'étude technique terminée
-  const dateEtude = dateEmission
-    || demande.date_etude_terminee
-    || demande.date_visite
-    || demande.etude?.date_visite
-    || (Array.isArray(demande.historique) ? demande.historique.find((h) => h.code_statut === 'ETUDE_TERMINEE')?.date_changement : null)
-    || (demande.statut_actuel === 'ETUDE_TERMINEE' ? demande.date_maj : null)
+  const dateDocument = dateEmission
+    || demande.date_emission
+    || demande.date_maj
     || demande.date_depot
     || new Date();
 
-  const dateAffichee = valeurDate(dateEtude);
+  const dateAffichee = valeurDate(dateDocument);
 
   return `<!doctype html>
 <html lang="fr">
@@ -149,24 +145,7 @@ export function genererHtmlDevis(demande, dateEmission = null) {
 </html>`;
 }
 
-const STATUTS_AVEC_ETUDE = new Set([
-  'ETUDE_TERMINEE',
-  'DEVIS_EMIS',
-  'DEVIS_PAYE',
-  'TRAVAUX_EN_COURS',
-  'TRAVAUX_TERMINES'
-]);
-
 export function imprimerDevis(demande, fenetre = null, dateEmission = null) {
-  const estEtudeTerminee = STATUTS_AVEC_ETUDE.has(demande?.statut_actuel)
-    || Boolean(dateEmission || demande?.date_etude_terminee || demande?.date_visite || demande?.etude?.date_visite)
-    || Boolean(Array.isArray(demande?.historique) && demande.historique.some((h) => h.code_statut === 'ETUDE_TERMINEE'));
-
-  if (!estEtudeTerminee) {
-    if (fenetre && !fenetre.closed) fenetre.close();
-    return false;
-  }
-
   const win = fenetre || window.open('', '_blank', 'width=900,height=1000');
   if (!win) return false;
   win.document.open();

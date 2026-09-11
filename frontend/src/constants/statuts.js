@@ -1,8 +1,6 @@
 // Ordre et apparence des statuts du pipeline — reflète le workflow métier ADE
 export const ETAPES_PIPELINE = [
   { code: 'DEPOSEE', libelle: 'Déposée', abrev: 'Dépôt' },
-  { code: 'ETUDE_EN_COURS', libelle: 'Étude en cours', abrev: 'Étude' },
-  { code: 'ETUDE_TERMINEE', libelle: 'Étude terminée', abrev: 'Étude ✓' },
   { code: 'DEVIS_EMIS', libelle: 'Devis émis', abrev: 'Devis' },
   { code: 'DEVIS_PAYE', libelle: 'Devis payé', abrev: 'Payé' },
   { code: 'TRAVAUX_EN_COURS', libelle: 'Travaux en cours', abrev: 'Travaux' },

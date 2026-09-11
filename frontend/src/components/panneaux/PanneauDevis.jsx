@@ -90,12 +90,12 @@ function tvaArticle(article) {
   return prixArticle(article) * (Number(article.tauxTva ?? 19) / 100);
 }
 
-export function estimerMontantDevis(demande, etude) {
-  if (!demande || !etude) return 0;
+export function estimerMontantDevis(demande) {
+  if (!demande) return 0;
 
   const texteType = String(demande.type_branchement || demande.type_autre || '').trim().toLowerCase();
-  const distance = Number(etude.distance_reseau_m ?? 0) || 0;
-  const diametreTexte = String(etude.diametre_conduite ?? '').replace(/[^\d.]/g, '');
+  const distance = Number(demande.distance_reseau_m ?? 0) || 0;
+  const diametreTexte = String(demande.diametre_defaut ?? demande.diametre_conduite ?? '').replace(/[^\d.]/g, '');
   const diametre = Number(diametreTexte) || 0;
 
   const tarifsParUsage = {
@@ -127,7 +127,6 @@ export default function PanneauDevis({
   idDemande,
   demande,
   devis,
-  etude,
   onAfficherDevis,
   demandeVerrouillee = false,
   onEnregistre,

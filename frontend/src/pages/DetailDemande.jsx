@@ -4,7 +4,6 @@ import client from '../api/client';
 import Pipeline from '../components/Pipeline';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { LIBELLES_STATUT } from '../constants/statuts';
-import PanneauEtude from '../components/panneaux/PanneauEtude';
 import PanneauDevis from '../components/panneaux/PanneauDevis';
 import PanneauTravaux from '../components/panneaux/PanneauTravaux';
 import { imprimerAccuse } from '../utils/impressionAccuse';
@@ -171,20 +170,7 @@ export default function DetailDemande() {
     ? demande.raison_sociale
     : `${demande.demandeur_nom} ${demande.demandeur_prenom}`;
 
-  const STATUTS_AVEC_ETUDE = new Set([
-    'ETUDE_TERMINEE',
-    'DEVIS_EMIS',
-    'DEVIS_PAYE',
-    'TRAVAUX_EN_COURS',
-    'TRAVAUX_TERMINES'
-  ]);
-
-  const estEtudeTerminee = STATUTS_AVEC_ETUDE.has(demande.statut_actuel)
-    || Boolean(etude?.date_visite || etude?.faisabilite)
-    || Boolean(historique?.some((h) => h.code_statut === 'ETUDE_TERMINEE'));
-
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
-  const estDevisPaye = devisListe.some((item) => item.statut_paiement === 'PAYE');
   const estDevisPayeOuTravaux = Boolean(
     travaux ||
     ['DEVIS_PAYE', 'TRAVAUX_EN_COURS', 'TRAVAUX_TERMINES'].includes(demande.statut_actuel) ||
@@ -192,16 +178,7 @@ export default function DetailDemande() {
   );
 
   function handleImprimerDevis() {
-    if (!estEtudeTerminee) {
-      notifierErreur("L'étude technique doit être terminée avant de pouvoir imprimer la demande d'établissement de devis.");
-      return;
-    }
-    const dateEtude = historique?.find((h) => h.code_statut === 'ETUDE_TERMINEE')?.date_changement
-      || etude?.date_visite
-      || etude?.date_creation
-      || (demande.statut_actuel === 'ETUDE_TERMINEE' ? demande.date_maj : null)
-      || new Date();
-    imprimerDevis({ ...demande, date_etude_terminee: dateEtude, etude, historique }, null, dateEtude);
+    imprimerDevis({ ...demande, historique, etude });
   }
 
   function ouvrirCreateurDevis() {
@@ -320,8 +297,7 @@ export default function DetailDemande() {
             type="button"
             className="obat-btn obat-btn-sec"
             onClick={handleImprimerDevis}
-            style={{ opacity: estEtudeTerminee ? 1 : 0.6 }}
-            title={estEtudeTerminee ? "Imprimer la demande d'établissement de devis" : "L'étude technique doit être terminée pour imprimer la demande de devis"}
+            title="Imprimer la demande d'établissement de devis"
           >
             Demande devis
           </button>
@@ -377,7 +353,6 @@ export default function DetailDemande() {
             Avancement dans le pipeline d'exécution
           </div>
           <nav className="pipeline-nav" aria-label="Accès rapide aux panneaux du dossier">
-            <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-etude')}>Étude ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-devis')}>Devis ↓</button>
             <button type="button" className="btn-lien" onClick={() => defilerVers('panneau-travaux')}>Travaux ↓</button>
           </nav>
@@ -460,22 +435,11 @@ export default function DetailDemande() {
           </div>
 
           {/* Panneaux avec ancres de défilement fluide */}
-          <div id="panneau-etude">
-            <PanneauEtude
-              idDemande={id}
-              demande={demande}
-              etude={etude}
-              devisPaye={estDevisPaye}
-              demandeVerrouillee={demandeEstVerrouillee}
-              onEnregistre={recharger}
-            />
-          </div>
           <div id="panneau-devis">
             <PanneauDevis
               idDemande={id}
               demande={demande}
               devis={devis}
-              etude={etude}
               onAfficherDevis={(idDevis) => navigate(`/demandes/${id}/devis/${idDevis}`)}
               demandeVerrouillee={demandeEstVerrouillee}
               onEnregistre={recharger}

@@ -184,7 +184,7 @@ export default function ListeDemandes() {
           <span>ADE • DOSSIERS D'ABONNÉS</span>
           <h1 className="obat-page-title">Demandes de branchement</h1>
           <p className="obat-page-subtitle">
-            {total} dossier{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''} · Suivi des étapes, étude technique et devis
+            {total} dossier{total > 1 ? 's' : ''} enregistré{total > 1 ? 's' : ''} · Suivi des étapes, devis et travaux
           </p>
         </div>
         <div className="obat-page-actions">

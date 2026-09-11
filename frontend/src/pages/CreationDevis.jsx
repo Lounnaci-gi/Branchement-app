@@ -76,7 +76,7 @@ export default function CreationDevis() {
     );
   }
 
-  const { demande, etude, devis = [] } = fiche;
+  const { demande, devis = [] } = fiche;
   const demandeVerrouillee =
     demande.est_verrouillee === true || demande.est_verrouillee === 1 || demande.est_verrouillee === '1';
 
@@ -143,7 +143,6 @@ export default function CreationDevis() {
     <div style={{ margin: '-24px', position: 'relative' }}>
       <EditeurDevisObat
         demande={demande}
-        etude={etude}
         devisInitial={devisAEditer}
         articleFamilles={articleFamilles}
         tvaPrestation={tvaPrestation}

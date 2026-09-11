@@ -196,21 +196,15 @@ async function verifierEtMigrerBase(pool) {
         IF @dropTauxConstraints <> N'' EXEC sp_executesql @dropTauxConstraints;
         ALTER TABLE dbo.TarifsArticlesDevis DROP COLUMN taux_tva;
       END;
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'avec_diametre')
+      IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ArticlesDevis') AND name = 'avec_diametre')
       BEGIN
-        ALTER TABLE ArticlesDevis ADD avec_diametre BIT NOT NULL CONSTRAINT DF_ArticlesDevis_AvecDiametre DEFAULT 0;
-        -- Activer avec_diametre pour les articles de raccordement, vannes, tuyaux / conduites
-        UPDATE ArticlesDevis
-        SET avec_diametre = 1
-        WHERE code_article LIKE 'RAC-%'
-           OR code_article LIKE 'VAN-%'
-           OR code_article LIKE 'TR-RE%'
-           OR libelle LIKE '%Raccord%'
-           OR libelle LIKE '%Vanne%'
-           OR libelle LIKE '%Tuyau%'
-           OR libelle LIKE '%Conduite%'
-           OR libelle LIKE '%PEHD%'
-           OR libelle LIKE '%Compteur%';
+        DECLARE @dropAvecDiametre NVARCHAR(MAX) = N'';
+        SELECT @dropAvecDiametre += N'ALTER TABLE dbo.ArticlesDevis DROP CONSTRAINT ' + QUOTENAME(dc.name) + N';'
+        FROM sys.default_constraints dc
+        INNER JOIN sys.columns c ON c.default_object_id = dc.object_id
+        WHERE c.object_id = OBJECT_ID('dbo.ArticlesDevis') AND c.name = 'avec_diametre';
+        IF @dropAvecDiametre <> N'' EXEC sp_executesql @dropAvecDiametre;
+        ALTER TABLE dbo.ArticlesDevis DROP COLUMN avec_diametre;
       END;
       IF NOT EXISTS (SELECT 1 FROM TarifsArticlesDevis)
       BEGIN
@@ -218,8 +212,27 @@ async function verifierEtMigrerBase(pool) {
         SELECT id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, CONVERT(date, GETDATE())
         FROM ArticlesDevis;
       END;
+
+      UPDATE ArticlesDevis
+      SET libelle = LTRIM(SUBSTRING(libelle, 5, LEN(libelle)))
+      WHERE LEFT(libelle, 4) = N'F/P ';
     `;
     await pool.request().query(migrationArticlesSQL);
+
+    const droitsReferentielArticlesSQL = `
+      IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'db_aep_app_role' AND type = 'R')
+      BEGIN
+        IF OBJECT_ID(N'dbo.CategoriesArticles', N'U') IS NOT NULL
+          GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
+        IF OBJECT_ID(N'dbo.FamillesArticles', N'U') IS NOT NULL
+          GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.FamillesArticles TO db_aep_app_role;
+        IF OBJECT_ID(N'dbo.ArticlesDevis', N'U') IS NOT NULL
+          GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
+        IF OBJECT_ID(N'dbo.TarifsArticlesDevis', N'U') IS NOT NULL
+          GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
+      END
+    `;
+    await pool.request().query(droitsReferentielArticlesSQL);
 
     const migrationVerrouillageSQL = `
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Demandes') AND name = 'est_verrouillee')
@@ -245,6 +258,38 @@ async function verifierEtMigrerBase(pool) {
       END
     `;
     await pool.request().query(migrationVerrouillageSQL);
+
+    const migrationWorkflowSQL = `
+      -- Les dossiers historiques sortent de l'étape d'étude sans supprimer leurs données techniques.
+      IF OBJECT_ID('dbo.Demandes', 'U') IS NOT NULL
+         AND OBJECT_ID('dbo.HistoriqueStatuts', 'U') IS NOT NULL
+      BEGIN
+        DECLARE @migrations TABLE (
+          id_demande INT,
+          ancien_statut NVARCHAR(30),
+          nouveau_statut NVARCHAR(30),
+          id_agent INT
+        );
+
+        UPDATE d
+        SET statut_actuel = CASE d.statut_actuel
+          WHEN 'ETUDE_EN_COURS' THEN 'DEPOSEE'
+          WHEN 'ETUDE_TERMINEE' THEN 'DEVIS_EMIS'
+        END,
+        date_maj = SYSDATETIME()
+        OUTPUT inserted.id_demande, deleted.statut_actuel,
+          inserted.statut_actuel, inserted.id_agent_creation
+        INTO @migrations (id_demande, ancien_statut, nouveau_statut, id_agent)
+        FROM Demandes AS d
+        WHERE d.statut_actuel IN ('ETUDE_EN_COURS', 'ETUDE_TERMINEE');
+
+        INSERT INTO HistoriqueStatuts (id_demande, code_statut, id_agent, commentaire)
+        SELECT id_demande, nouveau_statut, id_agent,
+          CONCAT(N'Migration du statut historique ', ancien_statut, N' vers ', nouveau_statut)
+        FROM @migrations;
+      END;
+    `;
+    await pool.request().query(migrationWorkflowSQL);
 
     const migrationLignesDevisSQL = `
       IF OBJECT_ID('dbo.LignesDevis', 'U') IS NULL

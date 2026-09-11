@@ -17,8 +17,8 @@ async function main() {
     process.exit(1);
   }
 
-  if (motDePasse.length < 8) {
-    console.error('Erreur : le mot de passe doit comporter au moins 8 caractères.');
+  if (motDePasse.length < 6) {
+    console.error('Erreur : le mot de passe doit comporter au moins 6 caractères.');
     process.exit(1);
   }
 

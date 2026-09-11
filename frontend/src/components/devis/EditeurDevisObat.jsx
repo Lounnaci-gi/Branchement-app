@@ -168,7 +168,6 @@ const PACKS_OUVRAGES_AEP = [
 
 export default function EditeurDevisObat({
   demande,
-  etude,
   devisInitial = null,
   articleFamilles = [],
   tvaPrestation = 19,
@@ -1129,8 +1128,7 @@ export default function EditeurDevisObat({
           prix_fourniture,
           prix_pose,
           type_tva,
-          taux_tva: Number(ligne.tauxTva) || 19,
-          avec_diametre: Boolean(ligne.diametre)
+          taux_tva: Number(ligne.tauxTva) || 19
         };
 
         const res = await client.post('/referentiels/articles', payload);
@@ -1273,7 +1271,6 @@ export default function EditeurDevisObat({
       <header className="obat-topbar">
         <div className="obat-topbar-left">
           <div className="obat-doc-title">
-            <span>ADE</span>
             {modeOnglet === 'edition' ? 'Édition de Devis' : 'Aperçu du Devis'}
           </div>
 

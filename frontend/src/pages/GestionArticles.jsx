@@ -15,22 +15,30 @@ const UNITES = [
 ];
 
 const FORMULAIRE_VIDE = {
+  code_article: '',
   id_famille: '',
   libelle: '',
   matiere: '',
   couleur: '',
   unite: 'U',
   mode_prix: 'FOURNITURE_POSE',
+  type_article: 'FP',
   prix_unitaire: '',
   prix_fourniture: '',
   prix_pose: '',
   type_tva: 'TRAVAUX',
-  taux_tva: '19',
-  avec_diametre: false
+  taux_tva: '19'
 };
 
 const FAMILLE_VIDE = { libelle: '', id_categorie: '' };
 const CATEGORIE_VIDE = { libelle: '' };
+
+function dateLocaleYYYYMMDD(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 const TARIF_VIDE = {
   code_article: '',
@@ -40,12 +48,29 @@ const TARIF_VIDE = {
   prix_pose: '',
   type_tva: 'PRESTATION',
   taux_tva: '19',
-  date_debut: new Date().toISOString().slice(0, 10)
+  date_debut: dateLocaleYYYYMMDD()
 };
 
 function formaterNombre(val) {
   const n = Number(val) || 0;
   return n.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function typeArticleDepuisTarifs(article) {
+  if (article.modePrix === 'PRESTATION') return 'PR';
+  const fourniture = Number(article.prixFourniture || 0);
+  const pose = Number(article.prixPose || 0);
+  return `${fourniture > 0 ? 'F' : ''}${pose > 0 ? 'P' : ''}` || 'FP';
+}
+
+function typeArticleDepuisFormulaire(form) {
+  if (form.mode_prix === 'PRESTATION') return 'PR';
+  const fourniture = Number(form.prix_fourniture) > 0;
+  const pose = Number(form.prix_pose) > 0;
+  if (fourniture && pose) return 'FP';
+  if (fourniture) return 'F';
+  if (pose) return 'P';
+  return 'FP';
 }
 
 export default function GestionArticles() {
@@ -131,6 +156,7 @@ export default function GestionArticles() {
     return articles.flatMap((fam) =>
       (fam.articles || []).map((art) => ({
         ...art,
+        id_famille: art.id_famille ?? fam.id_famille,
         codeFamille: fam.code,
         libelleFamille: fam.libelle,
         idCategorie: fam.id_categorie,
@@ -188,8 +214,8 @@ export default function GestionArticles() {
     setForm((ancien) => {
       if (champ !== 'mode_prix') return { ...ancien, [champ]: valeur };
       return valeur === 'PRESTATION'
-        ? { ...ancien, mode_prix: valeur, prix_fourniture: '', prix_pose: '', type_tva: 'PRESTATION', taux_tva: String(parametresTva.prestation) }
-        : { ...ancien, mode_prix: valeur, prix_unitaire: '', type_tva: 'TRAVAUX', taux_tva: String(parametresTva.travaux) };
+        ? { ...ancien, mode_prix: valeur, type_article: 'PR', prix_fourniture: '', prix_pose: '', type_tva: 'PRESTATION', taux_tva: String(parametresTva.prestation) }
+        : { ...ancien, mode_prix: valeur, type_article: 'FP', prix_unitaire: '', type_tva: 'TRAVAUX', taux_tva: String(parametresTva.travaux) };
     });
     setErreurs((anciennes) => ({ ...anciennes, [champ]: undefined }));
   }
@@ -213,6 +239,32 @@ export default function GestionArticles() {
     return err;
   }
 
+  function ouvrirFormulaireModificationArticle(article) {
+    const idFamille =
+      article?.id_famille ??
+      article?.idFamille ??
+      familles.find((fam) => [fam.code_famille, fam.code].filter(Boolean).includes(article?.codeFamille))?.id_famille ??
+      '';
+
+    setForm({
+      code_article: article.code,
+      id_famille: idFamille ? String(idFamille) : '',
+      libelle: article.libelle || '',
+      matiere: article.matiere || '',
+      couleur: article.couleur || '',
+      unite: article.unite || 'U',
+      mode_prix: article.modePrix || 'FOURNITURE_POSE',
+      type_article: typeArticleDepuisTarifs(article),
+      prix_unitaire: article.modePrix === 'PRESTATION' ? String(article.prix ?? '') : '',
+      prix_fourniture: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixFourniture ?? '') : '',
+      prix_pose: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixPose ?? '') : '',
+      type_tva: article.typeTva || (article.modePrix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX'),
+      taux_tva: String(article.tauxTva ?? parametresTva.travaux)
+    });
+    setErreurs({});
+    setModalNouvelArticleOuvert(true);
+  }
+
   async function enregistrerArticle(e) {
     e.preventDefault();
     const err = validerArticle();
@@ -221,16 +273,40 @@ export default function GestionArticles() {
 
     setEnvoi(true);
     try {
-      await client.post('/referentiels/articles', {
-        ...form,
-        type_tva: form.mode_prix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX'
-      });
-      await chargerDonnees();
-      setModalNouvelArticleOuvert(false);
-      setForm({ ...FORMULAIRE_VIDE, taux_tva: String(parametresTva.travaux) });
-      await notifierSucces('Article ajouté avec succès à la bibliothèque !');
+      if (form.code_article) {
+        const payload = {
+          id_famille: Number(form.id_famille),
+          libelle: form.libelle,
+          unite: form.unite,
+          matiere: form.matiere,
+          couleur: form.couleur,
+          mode_prix: form.mode_prix,
+          prix_unitaire: form.mode_prix === 'PRESTATION' ? Number(form.prix_unitaire) : (Number(form.prix_fourniture) || 0) + (Number(form.prix_pose) || 0),
+          prix_fourniture: form.mode_prix === 'FOURNITURE_POSE' ? (form.prix_fourniture === '' ? null : Number(form.prix_fourniture)) : null,
+          prix_pose: form.mode_prix === 'FOURNITURE_POSE' ? (form.prix_pose === '' ? null : Number(form.prix_pose)) : null,
+          type_tva: form.mode_prix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
+          taux_tva: Number(form.taux_tva),
+          date_debut: dateLocaleYYYYMMDD(),
+          type_article: typeArticleDepuisFormulaire(form)
+        };
+
+        await client.put(`/referentiels/articles/${encodeURIComponent(form.code_article)}`, payload);
+        await chargerDonnees();
+        setModalNouvelArticleOuvert(false);
+        setForm({ ...FORMULAIRE_VIDE, taux_tva: String(parametresTva.travaux) });
+        await notifierSucces('Article mis à jour avec succès dans la bibliothèque !');
+      } else {
+        await client.post('/referentiels/articles', {
+          ...form,
+          type_tva: form.mode_prix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX'
+        });
+        await chargerDonnees();
+        setModalNouvelArticleOuvert(false);
+        setForm({ ...FORMULAIRE_VIDE, taux_tva: String(parametresTva.travaux) });
+        await notifierSucces('Article ajouté avec succès à la bibliothèque !');
+      }
     } catch (error) {
-      notifierErreur(error.response?.data?.erreur || 'Erreur lors de la création de l’article.');
+      notifierErreur(error.response?.data?.erreur || (form.code_article ? 'Erreur lors de la mise à jour de l’article.' : 'Erreur lors de la création de l’article.'));
     } finally {
       setEnvoi(false);
     }
@@ -244,12 +320,13 @@ export default function GestionArticles() {
     setFormTarif({
       code_article: article.code,
       mode_prix: article.modePrix,
+      type_article: typeArticleDepuisTarifs(article),
       prix_unitaire: article.modePrix === 'PRESTATION' ? String(article.prix ?? '') : '',
       prix_fourniture: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixFourniture ?? '') : '',
       prix_pose: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixPose ?? '') : '',
       type_tva: article.modePrix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
       taux_tva: String(article.tauxTva ?? 19),
-      date_debut: new Date().toISOString().slice(0, 10)
+      date_debut: dateLocaleYYYYMMDD()
     });
     setErreursTarif({});
     setModalTarifOuvert(true);
@@ -294,15 +371,16 @@ export default function GestionArticles() {
     setArticleEnEditionCode(article.code);
     setFormInlineTarif({
       code_article: article.code,
+      id_famille: article.id_famille ?? article.idFamille ?? '',
       libelle: article.libelle || '',
       matiere: article.matiere || '',
       couleur: article.couleur || '',
-      avec_diametre: Boolean(article.avecDiametre),
       unite: article.unite || 'U',
       mode_prix: article.modePrix || 'FOURNITURE_POSE',
       prix_unitaire: article.modePrix === 'PRESTATION' ? String(article.prix ?? '') : '',
       prix_fourniture: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixFourniture ?? '') : '',
       prix_pose: article.modePrix === 'FOURNITURE_POSE' ? String(article.prixPose ?? '') : '',
+      type_article: typeArticleDepuisTarifs(article),
       type_tva: article.modePrix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
       taux_tva: Number(article.tauxTva ?? 19)
     });
@@ -343,20 +421,20 @@ export default function GestionArticles() {
     }
 
     // Applicable à compter de la date de modification (date du jour)
-    const dateAujourdhui = new Date().toISOString().slice(0, 10);
     const payload = {
+      id_famille: Number(formInlineTarif.id_famille || article.id_famille || article.idFamille),
       libelle,
       unite: formInlineTarif.unite || 'U',
       matiere: formInlineTarif.matiere || '',
       couleur: formInlineTarif.couleur || '',
-      avec_diametre: Boolean(formInlineTarif.avec_diametre),
+      type_article: String(formInlineTarif.type_article || typeArticleDepuisFormulaire(formInlineTarif)).trim().toUpperCase(),
       mode_prix: formInlineTarif.mode_prix,
       prix_unitaire: mode === 'PRESTATION' ? prix : fourniture + pose,
       prix_fourniture: mode === 'FOURNITURE_POSE' ? fourniture : null,
       prix_pose: mode === 'FOURNITURE_POSE' ? pose : null,
       type_tva: mode === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX',
       taux_tva: formInlineTarif.taux_tva || 19,
-      date_debut: dateAujourdhui
+      date_debut: dateLocaleYYYYMMDD()
     };
 
     setEnvoiInlineTarif(true);
@@ -366,7 +444,10 @@ export default function GestionArticles() {
       setArticleEnEditionCode(null);
       setFormInlineTarif(null);
       const dateFormatee = new Date().toLocaleDateString('fr-FR');
-      await notifierSucces(`Article « ${libelle} » mis à jour avec succès (applicable à compter du ${dateFormatee}).`);
+      const detailsPrix = mode === 'PRESTATION'
+        ? `prestation ${formaterNombre(prix)} DA`
+        : `fourniture ${formaterNombre(fourniture)} DA + pose ${formaterNombre(pose)} DA`;
+      await notifierSucces(`Article ${formInlineTarif.code_article} « ${libelle} » mis à jour : ${detailsPrix} (applicable à compter du ${dateFormatee}).`);
     } catch (error) {
       notifierErreur(error.response?.data?.erreur || 'Erreur lors de la mise à jour de l’article.');
     } finally {
@@ -546,7 +627,7 @@ export default function GestionArticles() {
             type="button"
             className="obat-btn-primary"
             onClick={() => {
-              setForm({ ...FORMULAIRE_VIDE, taux_tva: String(parametresTva.travaux) });
+              setForm({ ...FORMULAIRE_VIDE, code_article: '', taux_tva: String(parametresTva.travaux) });
               setErreurs({});
               setModalNouvelArticleOuvert(true);
             }}
@@ -714,7 +795,8 @@ export default function GestionArticles() {
                     <tbody>
                       {groupe.articles.map((art) => {
                         const enEdition = articleEnEditionCode === art.code;
-                        const estPrestation = art.modePrix === 'PRESTATION';
+                        const modeEdition = formInlineTarif?.mode_prix || art.modePrix;
+                        const estPrestation = modeEdition === 'PRESTATION';
 
                         let fournitureAffichee = Number(art.prixFourniture || 0);
                         let poseAffichee = Number(art.prixPose || 0);
@@ -729,9 +811,9 @@ export default function GestionArticles() {
                           }
                         }
 
-                        const typeArticle = estPrestation
-                          ? 'PR'
-                          : `${fournitureAffichee > 0 ? 'F' : ''}${poseAffichee > 0 ? 'P' : ''}` || 'FP';
+                        const typeArticle = enEdition && formInlineTarif
+                          ? formInlineTarif.type_article
+                          : typeArticleDepuisTarifs(art);
                         return (
                           <tr key={art.code} className={enEdition ? 'obat-row-editing' : ''}>
                             <td>
@@ -791,7 +873,43 @@ export default function GestionArticles() {
                               )}
                             </td>
                             <td className="center">
-                              <span>{typeArticle}</span>
+                              {enEdition && formInlineTarif ? (
+                                <select
+                                  className="obat-inline-select"
+                                  value={formInlineTarif.type_article}
+                                  onChange={(e) => {
+                                    const type = e.target.value;
+                                    setFormInlineTarif((ancien) => {
+                                      if (type === 'PR') {
+                                        return {
+                                          ...ancien,
+                                          type_article: type,
+                                          mode_prix: 'PRESTATION',
+                                          prix_unitaire: ancien.prix_unitaire || String((Number(ancien.prix_fourniture) || 0) + (Number(ancien.prix_pose) || 0)),
+                                          prix_fourniture: '',
+                                          prix_pose: ''
+                                        };
+                                      }
+                                      return {
+                                        ...ancien,
+                                        type_article: type,
+                                        mode_prix: 'FOURNITURE_POSE',
+                                        prix_unitaire: '',
+                                        prix_fourniture: type === 'P' ? '0' : (ancien.prix_fourniture || '0'),
+                                        prix_pose: type === 'F' ? '0' : (ancien.prix_pose || '0')
+                                      };
+                                    });
+                                  }}
+                                  title="Type de tarif"
+                                >
+                                  <option value="F">Fourniture</option>
+                                  <option value="P">Pose</option>
+                                  <option value="FP">Fourniture + pose</option>
+                                  <option value="PR">Prestation</option>
+                                </select>
+                              ) : (
+                                <span>{typeArticle}</span>
+                              )}
                             </td>
                             <td className="right obat-price-cell">
                               {estPrestation ? (
@@ -933,9 +1051,9 @@ export default function GestionArticles() {
                                 <button
                                   type="button"
                                   className="obat-btn-action-icon"
-                                  onClick={() => demarrerEditionInline(art)}
-                                  title="Modifier le tarif directement dans le tableau"
-                                  aria-label={`Modifier le tarif de ${art.libelle}`}
+                                  onClick={() => ouvrirFormulaireModificationArticle(art)}
+                                  title="Ouvrir le formulaire de création pour modifier l’article"
+                                  aria-label={`Modifier ${art.libelle}`}
                                 >
                                   <svg
                                     width="16"
@@ -1160,7 +1278,7 @@ export default function GestionArticles() {
         <div className="obat-modal-overlay" onClick={() => setModalNouvelArticleOuvert(false)}>
           <div className="obat-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="obat-modal-header">
-              <h3>Ajouter un nouvel article au référentiel</h3>
+              <h3>{form.code_article ? 'Modifier l’article du référentiel' : 'Ajouter un nouvel article au référentiel'}</h3>
               <button
                 type="button"
                 className="obat-btn-close-sm"
@@ -1409,7 +1527,9 @@ export default function GestionArticles() {
                   className="obat-btn-primary"
                   disabled={envoi}
                 >
-                  {envoi ? 'Création en cours…' : 'Enregistrer l’article'}
+                  {envoi
+                    ? (form.code_article ? 'Mise à jour…' : 'Création en cours…')
+                    : (form.code_article ? 'Enregistrer les modifications' : 'Enregistrer l’article')}
                 </button>
               </div>
             </form>

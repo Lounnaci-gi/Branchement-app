@@ -15,7 +15,13 @@
         ces tables sont créées vides. Seules les données de
         référence organisationnelles (Centres/Agences/Communes)
         et les TypesBranchement sont conservées.
-   Date : 2026-09-06
+     4) LignesDevis.choix_prix est maintenant contraint aux
+        valeurs PRESTATION / FOURNITURE / POSE / FOURNITURE_POSE.
+     5) Ajout de la fonction fn_PrixArticle : calcule le prix
+        effectif d'une ligne selon choix_prix, a partir du tarif
+        ouvert de l'article (permet de facturer fourniture seule,
+        pose seule, ou les deux, pour les articles FOURNITURE_POSE).
+   Date : 2026-09-11
    ============================================================ */
 
 /* ============================================================
@@ -110,8 +116,8 @@ CREATE TABLE TypesBranchement (
 );
 
 /* ------------------------------------------------------------
-   5. STATUTS (referentiel du workflow - 6 etapes + rejets)
-   ------------------------------------------------------------ */
+    5. STATUTS (workflow principal + statuts historiques)
+    ------------------------------------------------------------ */
 CREATE TABLE Statuts (
     code_statut     NVARCHAR(30) PRIMARY KEY,
     libelle         NVARCHAR(100) NOT NULL,
@@ -121,8 +127,9 @@ CREATE TABLE Statuts (
 
 INSERT INTO Statuts (code_statut, libelle, ordre, est_final) VALUES
 ('DEPOSEE',            N'Demande déposée',            1, 0),
-('ETUDE_EN_COURS',      N'Étude technique en cours',   2, 0),
-('ETUDE_TERMINEE',      N'Étude technique terminée',   3, 0),
+-- Conservés pour les historiques existants ; ils ne sont plus des étapes actives.
+('ETUDE_EN_COURS',      N'Étude technique en cours (historique)',   2, 0),
+('ETUDE_TERMINEE',      N'Étude technique terminée (historique)',   3, 0),
 ('DEVIS_EMIS',          N'Devis émis',                 4, 0),
 ('DEVIS_PAYE',          N'Devis payé',                 5, 0),
 ('TRAVAUX_EN_COURS',    N'Travaux en cours',           6, 0),
@@ -219,7 +226,7 @@ CREATE TABLE LignesDevis (
     type_tva            NVARCHAR(20) NULL,
     taux_tva            DECIMAL(5,2) NOT NULL DEFAULT 19,
     ordre               INT NOT NULL DEFAULT 0,
-    choix_prix          NVARCHAR(20) NULL,
+    choix_prix          NVARCHAR(20) NULL CONSTRAINT CK_LignesDevis_ChoixPrix CHECK (choix_prix IS NULL OR choix_prix IN (N'PRESTATION', N'FOURNITURE', N'POSE', N'FOURNITURE_POSE')),
     type_ligne          NVARCHAR(20) NULL,
     prix_fourniture     DECIMAL(12,2) NULL,
     prix_pose           DECIMAL(12,2) NULL
@@ -259,7 +266,6 @@ CREATE TABLE ArticlesDevis (
     prix_pose       DECIMAL(12,2) NULL CONSTRAINT CK_ArticlesDevis_PrixPose CHECK (prix_pose IS NULL OR prix_pose >= 0),
     type_tva        NVARCHAR(20) NOT NULL DEFAULT N'PRESTATION' CONSTRAINT CK_ArticlesDevis_TypeTva CHECK (type_tva IN (N'PRESTATION', N'TRAVAUX')),
     taux_tva        DECIMAL(5,2) NOT NULL DEFAULT 19 CONSTRAINT CK_ArticlesDevis_TauxTva CHECK (taux_tva >= 0 AND taux_tva <= 100),
-    avec_diametre   BIT NOT NULL DEFAULT 0,
     actif           BIT NOT NULL DEFAULT 1
 );
 
@@ -366,6 +372,34 @@ BEGIN
     VALUES (@id_demande, @nouveau_statut, @id_agent, @commentaire);
 
     COMMIT TRANSACTION;
+END
+GO
+
+/* ============================================================
+   FONCTION : prix effectif d'un article selon le choix_prix
+   Utilisee lors de l'ajout d'une ligne de devis pour calculer
+   prix_unitaire a partir du tarif ouvert (date_fin IS NULL) :
+     - PRESTATION       -> prix_unitaire (fourniture/pose NULL)
+     - FOURNITURE       -> prix_fourniture seul
+     - POSE             -> prix_pose seul
+     - FOURNITURE_POSE  -> prix_unitaire (= fourniture + pose)
+   Retourne NULL si aucun tarif ouvert n'existe pour l'article,
+   ou si le choix_prix demande une composante non definie
+   (ex. FOURNITURE sur un article en mode PRESTATION).
+   ============================================================ */
+CREATE FUNCTION fn_PrixArticle (@id_article INT, @choix_prix NVARCHAR(20))
+RETURNS DECIMAL(12,2)
+AS
+BEGIN
+    DECLARE @prix DECIMAL(12,2);
+    SELECT @prix = CASE @choix_prix
+        WHEN N'FOURNITURE' THEN t.prix_fourniture
+        WHEN N'POSE'       THEN t.prix_pose
+        ELSE t.prix_unitaire   -- PRESTATION ou FOURNITURE_POSE (les deux)
+    END
+    FROM TarifsArticlesDevis t
+    WHERE t.id_article = @id_article AND t.date_fin IS NULL;
+    RETURN @prix;
 END
 GO
 
@@ -520,10 +554,10 @@ GRANT SELECT, INSERT, UPDATE ON OBJECT::dbo.Agents TO db_aep_app_role;
 -- Tables couvertes par le schéma mais absentes du script de sécurité d'origine
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.LignesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueModificationsDemandes TO db_aep_app_role;
-GRANT SELECT ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
-GRANT SELECT ON OBJECT::dbo.FamillesArticles TO db_aep_app_role;
-GRANT SELECT ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
-GRANT SELECT ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.FamillesArticles TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
 
 -- Permissions en lecture sur les référentiels et vues
 GRANT SELECT ON OBJECT::dbo.Centres TO db_aep_app_role;
@@ -533,8 +567,9 @@ GRANT SELECT ON OBJECT::dbo.TypesBranchement TO db_aep_app_role;
 GRANT SELECT ON OBJECT::dbo.Statuts TO db_aep_app_role;
 GRANT SELECT ON OBJECT::dbo.vw_DemandesSynthese TO db_aep_app_role;
 
--- Droit d'exécution sur les procédures stockées
+-- Droit d'exécution sur les procédures stockées et fonctions
 GRANT EXECUTE ON OBJECT::dbo.sp_ChangerStatutDemande TO db_aep_app_role;
+GRANT EXECUTE ON OBJECT::dbo.fn_PrixArticle TO db_aep_app_role;
 
 -- Ajout de l'utilisateur au rôle applicatif
 ALTER ROLE db_aep_app_role ADD MEMBER ade_app_user;

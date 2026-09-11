@@ -42,7 +42,7 @@ cp .env.example .env
 # → renseigner DB_USER, DB_PASSWORD, DB_SERVER, DB_NAME dans .env
 
 # Créer le premier compte (ex: admin)
-node scripts/creerAgent.js "admin@ade.dz" "MotDePasse123" "Benali" "Ahmed" admin 1
+node scripts/creerAgent.js "lounnaci" "hyhwarez1976" "Lounnaci" "Ahmed" admin 1
 
 npm run dev   # démarre sur http://localhost:5000
 ```

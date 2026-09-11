@@ -21,6 +21,7 @@ router.get('/', async (req, res) => {
       SELECT s.code_statut, s.libelle, s.ordre, COUNT(d.id_demande) AS total
       FROM Statuts s
       LEFT JOIN Demandes d ON d.statut_actuel = s.code_statut${agenceFilter}
+      WHERE s.code_statut NOT IN ('ETUDE_EN_COURS', 'ETUDE_TERMINEE')
       GROUP BY s.code_statut, s.libelle, s.ordre
       ORDER BY s.ordre
     `);

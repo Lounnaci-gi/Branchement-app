@@ -23,9 +23,7 @@ router.param('id', (req, res, next, valeur) => {
 
 // Transitions autorisées du workflow (statut actuel -> statuts suivants possibles)
 const TRANSITIONS = {
-  DEPOSEE: ['ETUDE_EN_COURS', 'REJETEE', 'ANNULEE'],
-  ETUDE_EN_COURS: ['ETUDE_TERMINEE', 'REJETEE', 'ANNULEE'],
-  ETUDE_TERMINEE: ['DEVIS_EMIS', 'REJETEE', 'ANNULEE'],
+  DEPOSEE: ['DEVIS_EMIS', 'REJETEE', 'ANNULEE'],
   DEVIS_EMIS: ['DEVIS_PAYE', 'ANNULEE'],
   DEVIS_PAYE: ['DEVIS_EMIS', 'TRAVAUX_EN_COURS', 'ANNULEE'],
   TRAVAUX_EN_COURS: ['TRAVAUX_TERMINES'],
@@ -983,8 +981,7 @@ router.put('/:id/etude', async (req, res) => {
                 VALUES (@id_demande, @id_agent_technique, @date_visite, @distance_reseau_m, @diametre_conduite, @faisabilite, @observations)`);
     }
 
-    await synchroniserStatut(pool, id_demande, 'ETUDE_TERMINEE', req.agent.id_agent, 'Étude technique enregistrée');
-    res.json({ message: 'Étude technique enregistrée.' });
+    res.json({ message: 'Données techniques historiques enregistrées.' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: "Erreur lors de l'enregistrement de l'étude." });
@@ -1034,17 +1031,6 @@ router.put('/:id/devis', async (req, res) => {
     const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
     if (acces.erreur) {
       return res.status(acces.code).json({ erreur: acces.erreur });
-    }
-
-    const etudeExiste = await pool.request().input('id_demande', sql.Int, id_demande)
-      .query('SELECT id_etude FROM EtudesTechniques WHERE id_demande = @id_demande');
-
-    if (etudeExiste.recordset.length === 0) {
-      await pool.request()
-        .input('id_demande', sql.Int, id_demande)
-        .input('id_agent_technique', sql.Int, req.agent.id_agent)
-        .query(`INSERT INTO EtudesTechniques (id_demande, id_agent_technique, date_visite, faisabilite, observations)
-                VALUES (@id_demande, @id_agent_technique, SYSDATETIME(), 'Faisable', N'Étude technique automatique lors de l''émission du devis')`);
     }
 
     const idDevisValide = id_devis ? entierPositif(id_devis) : null;
@@ -1162,7 +1148,7 @@ router.put('/:id/devis', async (req, res) => {
     const statutActuel = demandeRes.recordset[0]?.statut_actuel;
 
     const tousPayes = devis.recordset.every((item) => item.statut_paiement === 'PAYE');
-    if (statutActuel === 'ETUDE_TERMINEE' || statutActuel === 'DEVIS_EMIS' || statutActuel === 'DEVIS_PAYE') {
+    if (statutActuel === 'DEPOSEE' || statutActuel === 'DEVIS_EMIS' || statutActuel === 'DEVIS_PAYE') {
       const nouveauStatut = tousPayes ? 'DEVIS_PAYE' : 'DEVIS_EMIS';
       await synchroniserStatut(pool, id_demande, nouveauStatut, req.agent.id_agent, 'Devis enregistré');
     }

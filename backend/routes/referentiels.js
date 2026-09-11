@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
+const { normaliserTypeArticleTarif } = require('./referentiels.normalisation');
 
 function texteValide(valeur, { maxLength = 200, obligatoire = false } = {}) {
   const text = typeof valeur === 'string' ? valeur.trim() : '';
@@ -9,6 +10,48 @@ function texteValide(valeur, { maxLength = 200, obligatoire = false } = {}) {
   if (!text && obligatoire) return false;
   if (text.length > maxLength) return false;
   return !/[<>]|javascript:|on\w+\s*=|[\u0000-\u001F\u007F]/i.test(text);
+}
+
+function dateCalendrier(valeur) {
+  const texte = String(valeur || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(texte) ? texte : null;
+}
+
+async function remplacerTarifCourant(transaction, {
+  idArticle,
+  modePrix,
+  prixUnitaire,
+  prixFourniture,
+  prixPose,
+  typeTva,
+  dateDebut
+}) {
+  await new sql.Request(transaction)
+    .input('id_article', sql.Int, idArticle)
+    .input('mode_prix', sql.NVarChar(20), modePrix)
+    .input('prix_unitaire', sql.Decimal(12, 2), prixUnitaire)
+    .input('prix_fourniture', sql.Decimal(12, 2), prixFourniture)
+    .input('prix_pose', sql.Decimal(12, 2), prixPose)
+    .input('type_tva', sql.NVarChar(20), typeTva)
+    .input('date_debut', sql.NVarChar(10), dateCalendrier(dateDebut))
+    .query(`
+      DECLARE @debut DATE = COALESCE(TRY_CONVERT(date, @date_debut), CONVERT(date, GETDATE()));
+
+      DELETE FROM TarifsArticlesDevis
+      WHERE id_article = @id_article
+        AND date_debut >= @debut;
+
+      UPDATE TarifsArticlesDevis
+      SET date_fin = DATEADD(day, -1, @debut)
+      WHERE id_article = @id_article
+        AND date_debut < @debut
+        AND (date_fin IS NULL OR date_fin >= @debut);
+
+      INSERT INTO TarifsArticlesDevis
+        (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
+      VALUES
+        (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @debut);
+    `);
 }
 
 router.use(verifierToken);
@@ -26,8 +69,7 @@ router.get('/articles', async (req, res) => {
                     COALESCE(t.prix_fourniture, a.prix_fourniture) AS prix_fourniture,
                     COALESCE(t.prix_pose, a.prix_pose) AS prix_pose,
                     COALESCE(t.type_tva, a.type_tva) AS type_tva,
-                    COALESCE(tv.taux, 19) AS taux_tva,
-                    ISNULL(a.avec_diametre, 0) AS avec_diametre
+                    COALESCE(tv.taux, 19) AS taux_tva
       FROM FamillesArticles f
       LEFT JOIN CategoriesArticles cat ON cat.id_categorie = f.id_categorie
       INNER JOIN ArticlesDevis a ON a.id_famille = f.id_famille
@@ -65,6 +107,7 @@ router.get('/articles', async (req, res) => {
       }
       famille.articles.push({
         id_article: article.id_article,
+        id_famille: article.id_famille,
         code: article.code_article,
         libelle: article.libelle,
         matiere: article.matiere,
@@ -75,8 +118,7 @@ router.get('/articles', async (req, res) => {
         prixFourniture: article.prix_fourniture === null ? null : Number(article.prix_fourniture),
         prixPose: article.prix_pose === null ? null : Number(article.prix_pose),
         typeTva: article.type_tva,
-        tauxTva: Number(article.taux_tva),
-        avecDiametre: Boolean(article.avec_diametre)
+        tauxTva: Number(article.taux_tva)
       });
       return acc;
     }, []);
@@ -360,8 +402,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
     prix_fourniture,
     prix_pose,
     type_tva,
-    taux_tva,
-    avec_diametre
+    taux_tva
   } = req.body;
 
   const familleId = Number(id_famille);
@@ -371,7 +412,6 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
   const fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
   const pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
   const taux = Number(taux_tva);
-  const avecDiametre = avec_diametre === true || avec_diametre === 1 || avec_diametre === 'true';
 
   if (
     !Number.isInteger(familleId) || familleId <= 0 ||
@@ -421,11 +461,10 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
         .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
         .input('taux_tva', sql.Decimal(5, 2), taux)
-        .input('avec_diametre', sql.Bit, avecDiametre)
         .query(`INSERT INTO ArticlesDevis
-          (id_famille, code_article, libelle, matiere, couleur, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva, avec_diametre)
+          (id_famille, code_article, libelle, matiere, couleur, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva)
           OUTPUT INSERTED.id_article
-          VALUES (@id_famille, CONCAT(N'__ART_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @matiere, @couleur, @unite, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva, @avec_diametre)`);
+          VALUES (@id_famille, CONCAT(N'__ART_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @matiere, @couleur, @unite, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva)`);
 
       const article = await new sql.Request(transaction)
         .input('id_article', sql.Int, creation.recordset[0].id_article)
@@ -468,8 +507,6 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
         typeTva: artCree.type_tva,
         taux_tva: Number(artCree.taux_tva),
         tauxTva: Number(artCree.taux_tva),
-        avec_diametre: Boolean(artCree.avec_diametre),
-        avecDiametre: Boolean(artCree.avec_diametre),
         id_famille: familleId,
         famille: famInfo.libelle || famInfo.code_famille
       });
@@ -489,18 +526,19 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
 router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
   const codeArticle = String(req.params.code || '').trim();
   const {
+    id_famille,
     libelle,
     unite,
     matiere,
     couleur,
-    avec_diametre,
     mode_prix,
     prix_unitaire,
     prix_fourniture,
     prix_pose,
     type_tva,
     taux_tva,
-    date_debut
+    date_debut,
+    type_article
   } = req.body;
 
   if (!codeArticle) {
@@ -520,45 +558,65 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
 
   const matiereArticle = typeof matiere === 'string' ? matiere.trim() : '';
   const couleurArticle = typeof couleur === 'string' ? couleur.trim() : '';
-  const avecDiametre = avec_diametre === true || avec_diametre === 1 || avec_diametre === 'true';
 
   try {
     const pool = await getPool();
     const existant = await pool.request()
       .input('code_article', sql.NVarChar(50), codeArticle)
-      .query('SELECT id_article, mode_prix, type_tva, taux_tva FROM ArticlesDevis WHERE code_article = @code_article AND actif = 1');
+      .query('SELECT id_article, id_famille, mode_prix, type_tva, taux_tva FROM ArticlesDevis WHERE code_article = @code_article AND actif = 1');
 
     if (!existant.recordset[0]) {
       return res.status(404).json({ erreur: 'Article introuvable.' });
     }
 
     const idArticle = existant.recordset[0].id_article;
-    const modeEffectif = mode_prix || existant.recordset[0].mode_prix || 'FOURNITURE_POSE';
-    const typeTvaEffectif = modeEffectif === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX';
+    const familleIdDemande = Number(id_famille);
+    const familleId = Number.isInteger(familleIdDemande) && familleIdDemande > 0
+      ? familleIdDemande
+      : Number(existant.recordset[0].id_famille);
+
+    if (!Number.isInteger(familleId) || familleId <= 0) {
+      return res.status(400).json({ erreur: 'La famille de l’article est invalide.' });
+    }
+
+    const typeArticle = String(type_article || '').trim().toUpperCase();
+    let modeEffectif = ['PRESTATION', 'FOURNITURE_POSE'].includes(mode_prix)
+      ? mode_prix
+      : (existant.recordset[0].mode_prix || 'FOURNITURE_POSE');
+
+    const typeTvaEffectif = ['PRESTATION', 'TRAVAUX'].includes(type_tva)
+      ? type_tva
+      : (modeEffectif === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX');
     const tauxTvaEffectif = Number.isFinite(Number(taux_tva)) ? Number(taux_tva) : Number(existant.recordset[0].taux_tva || 19);
 
     const prix = Number(prix_unitaire);
-    const fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
-    const pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
+    let fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
+    let pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
 
-    const prixFinal = modeEffectif === 'FOURNITURE_POSE'
-      ? (Number.isFinite(fourniture) && Number.isFinite(pose) ? fourniture + pose : Number(prix || 0))
-      : Number.isFinite(prix) ? prix : 0;
-    const fournitureFinale = modeEffectif === 'FOURNITURE_POSE' ? fourniture : null;
-    const poseFinale = modeEffectif === 'FOURNITURE_POSE' ? pose : null;
+    const normalise = normaliserTypeArticleTarif({
+      type_article: typeArticle,
+      mode_prix,
+      prix_unitaire,
+      prix_fourniture,
+      prix_pose
+    });
+
+    modeEffectif = normalise.mode_prix;
+    const prixFinal = normalise.prix_unitaire;
+    const fournitureFinale = normalise.prix_fourniture;
+    const poseFinale = normalise.prix_pose;
 
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
-      // 1. Mettre à jour la définition de l'article dans ArticlesDevis
       await new sql.Request(transaction)
         .input('id_article', sql.Int, idArticle)
+        .input('id_famille', sql.Int, familleId)
         .input('libelle', sql.NVarChar(150), libelleValide)
         .input('matiere', sql.NVarChar(50), matiereArticle || null)
         .input('couleur', sql.NVarChar(50), couleurArticle || null)
         .input('unite', sql.NVarChar(20), uniteValide)
-        .input('avec_diametre', sql.Bit, avecDiametre)
         .input('mode_prix', sql.NVarChar(20), modeEffectif)
         .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
@@ -567,11 +625,11 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
         .input('taux_tva', sql.Decimal(5, 2), tauxTvaEffectif)
         .query(`
           UPDATE ArticlesDevis
-          SET libelle = @libelle,
+          SET id_famille = @id_famille,
+              libelle = @libelle,
               matiere = @matiere,
               couleur = @couleur,
               unite = @unite,
-              avec_diametre = @avec_diametre,
               mode_prix = @mode_prix,
               prix_unitaire = @prix_unitaire,
               prix_fourniture = @prix_fourniture,
@@ -581,32 +639,15 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
           WHERE id_article = @id_article
         `);
 
-      // 2. Mettre à jour l'historique des tarifs dans TarifsArticlesDevis
-      const dateDebutStr = String(date_debut || '').trim() || new Date().toISOString().slice(0, 10);
-      const debut = new Date(`${dateDebutStr}T00:00:00`);
-
-      await new sql.Request(transaction)
-        .input('id_article', sql.Int, idArticle)
-        .input('date_debut', sql.Date, debut)
-        .query(`
-          UPDATE TarifsArticlesDevis SET date_fin = DATEADD(day, -1, @date_debut)
-          WHERE id_article = @id_article AND date_fin IS NULL AND date_debut < @date_debut
-        `);
-
-      await new sql.Request(transaction)
-        .input('id_article', sql.Int, idArticle)
-        .input('mode_prix', sql.NVarChar(20), modeEffectif)
-        .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
-        .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
-        .input('prix_pose', sql.Decimal(12, 2), poseFinale)
-        .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
-        .input('date_debut', sql.Date, debut)
-        .query(`
-          INSERT INTO TarifsArticlesDevis
-            (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
-          VALUES
-            (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @date_debut)
-        `);
+      await remplacerTarifCourant(transaction, {
+        idArticle,
+        modePrix: modeEffectif,
+        prixUnitaire: prixFinal,
+        prixFourniture: fournitureFinale,
+        prixPose: poseFinale,
+        typeTva: typeTvaEffectif,
+        dateDebut: date_debut
+      });
 
       await transaction.commit();
 
@@ -619,7 +660,6 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
           matiere: matiereArticle || null,
           couleur: couleurArticle || null,
           unite: uniteValide,
-          avec_diametre: avecDiametre,
           mode_prix: modeEffectif,
           prix: prixFinal,
           prix_fourniture: fournitureFinale,
@@ -637,25 +677,37 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
 });
 
 router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
-  const { code_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut } = req.body;
-  const debut = new Date(`${date_debut}T00:00:00`);
-  const prix = Number(prix_unitaire);
-  const fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
-  const pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
-  if (!texteValide(code_article, { maxLength: 50, obligatoire: true }) || !['PRESTATION', 'FOURNITURE_POSE'].includes(mode_prix) || !['PRESTATION', 'TRAVAUX'].includes(type_tva) || !/^\d{4}-\d{2}-\d{2}$/.test(String(date_debut)) || Number.isNaN(debut.getTime())) {
+  const { code_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut, type_article } = req.body;
+  const typeArticle = String(type_article || '').trim().toUpperCase();
+
+  const normalise = normaliserTypeArticleTarif({
+    type_article: typeArticle,
+    mode_prix,
+    prix_unitaire,
+    prix_fourniture,
+    prix_pose
+  });
+
+  const prix = Number(normalise.prix_unitaire);
+  const fourniture = normalise.prix_fourniture === null || normalise.prix_fourniture === '' ? null : Number(normalise.prix_fourniture);
+  const pose = normalise.prix_pose === null || normalise.prix_pose === '' ? null : Number(normalise.prix_pose);
+  const modeNormalise = normalise.mode_prix;
+
+  if (!texteValide(code_article, { maxLength: 50, obligatoire: true }) || !['PRESTATION', 'FOURNITURE_POSE'].includes(modeNormalise) || !['PRESTATION', 'TRAVAUX'].includes(type_tva) || !dateCalendrier(date_debut)) {
     return res.status(400).json({ erreur: 'Les informations du nouveau tarif sont invalides.' });
   }
-  if (mode_prix === 'PRESTATION' && (!Number.isFinite(prix) || prix < 0)) {
+
+  if (modeNormalise === 'PRESTATION' && (!Number.isFinite(prix) || prix < 0)) {
     return res.status(400).json({ erreur: 'Le prix de prestation est obligatoire.' });
   }
-  if (mode_prix === 'FOURNITURE_POSE' && (!Number.isFinite(fourniture) || fourniture < 0 || !Number.isFinite(pose) || pose < 0)) {
+  if (modeNormalise === 'FOURNITURE_POSE' && (!Number.isFinite(fourniture) || fourniture < 0 || !Number.isFinite(pose) || pose < 0)) {
     return res.status(400).json({ erreur: 'Les prix Fourniture et Pose sont obligatoires.' });
   }
 
-  const prixFinal = mode_prix === 'FOURNITURE_POSE' ? fourniture + pose : prix;
-  const fournitureFinale = mode_prix === 'FOURNITURE_POSE' ? fourniture : null;
-  const poseFinale = mode_prix === 'FOURNITURE_POSE' ? pose : null;
-  const typeTvaEffectif = mode_prix === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX';
+  const prixFinal = modeNormalise === 'FOURNITURE_POSE' ? fourniture + pose : prix;
+  const fournitureFinale = modeNormalise === 'FOURNITURE_POSE' ? fourniture : null;
+  const poseFinale = modeNormalise === 'FOURNITURE_POSE' ? pose : null;
+  const typeTvaEffectif = type_tva;
 
   try {
     const pool = await getPool();
@@ -663,24 +715,37 @@ router.post('/articles/tarifs', autoriserRoles('admin'), async (req, res) => {
       .input('code_article', sql.NVarChar(50), code_article.trim())
       .query('SELECT id_article FROM ArticlesDevis WHERE code_article = @code_article AND actif = 1');
     if (!article.recordset[0]) return res.status(404).json({ erreur: 'Article introuvable.' });
+
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
     try {
       await new sql.Request(transaction)
         .input('id_article', sql.Int, article.recordset[0].id_article)
-        .input('date_debut', sql.Date, debut)
-        .query(`UPDATE TarifsArticlesDevis SET date_fin = DATEADD(day, -1, @date_debut)
-                WHERE id_article = @id_article AND date_fin IS NULL AND date_debut < @date_debut`);
-      await new sql.Request(transaction)
-        .input('id_article', sql.Int, article.recordset[0].id_article)
-        .input('mode_prix', sql.NVarChar(20), mode_prix)
+        .input('mode_prix', sql.NVarChar(20), modeNormalise)
         .input('prix_unitaire', sql.Decimal(12, 2), prixFinal)
         .input('prix_fourniture', sql.Decimal(12, 2), fournitureFinale)
         .input('prix_pose', sql.Decimal(12, 2), poseFinale)
         .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
-        .input('date_debut', sql.Date, debut)
-        .query(`INSERT INTO TarifsArticlesDevis (id_article, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, date_debut)
-          VALUES (@id_article, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @date_debut)`);
+        .query(`
+          UPDATE ArticlesDevis
+          SET mode_prix = @mode_prix,
+              prix_unitaire = @prix_unitaire,
+              prix_fourniture = @prix_fourniture,
+              prix_pose = @prix_pose,
+              type_tva = @type_tva
+          WHERE id_article = @id_article
+        `);
+
+      await remplacerTarifCourant(transaction, {
+        idArticle: article.recordset[0].id_article,
+        modePrix: modeNormalise,
+        prixUnitaire: prixFinal,
+        prixFourniture: fournitureFinale,
+        prixPose: poseFinale,
+        typeTva: typeTvaEffectif,
+        dateDebut: date_debut
+      });
+
       await transaction.commit();
     } catch (err) {
       await transaction.rollback();
