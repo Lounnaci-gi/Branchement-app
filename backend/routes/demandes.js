@@ -53,9 +53,19 @@ function emailValide(email) {
   return !value || EMAIL_REGEX.test(value);
 }
 
+function normaliserTelephone(valeur) {
+  const texte = String(valeur || '').trim();
+  const chiffres = texte.replace(/\D/g, '');
+  if (!chiffres) return '';
+  if (/^0[2-7]\d{8}$/.test(chiffres)) {
+    return chiffres.replace(/(\d{4})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+  }
+  return texte;
+}
+
 function coordonneesValides(demandeur) {
-  const telephone = String(demandeur.telephone || '').trim();
-  const telephoneSecondaire = String(demandeur.telephone_secondaire || '').trim();
+  const telephone = normaliserTelephone(demandeur.telephone);
+  const telephoneSecondaire = normaliserTelephone(demandeur.telephone_secondaire);
   const email = String(demandeur.email || '').trim();
   const telephoneValide = (valeur) => !valeur || /^0[2-7]\d{2} \d{2} \d{2} \d{2}$/.test(valeur);
   return telephoneValide(telephone) && telephoneValide(telephoneSecondaire)
@@ -284,8 +294,8 @@ router.put('/:id', async (req, res) => {
       .input('cin', sql.NVarChar, demandeur.cin || null)
       .input('cin_delivre_le', sql.Date, estPersonneMorale ? null : demandeur.cin_delivre_le || null)
       .input('cin_delivre_par', sql.NVarChar(150), estPersonneMorale ? null : demandeur.cin_delivre_par?.trim() || null)
-      .input('telephone', sql.NVarChar, demandeur.telephone?.trim() || null)
-      .input('telephone_secondaire', sql.NVarChar, demandeur.telephone_secondaire?.trim() || null)
+      .input('telephone', sql.NVarChar, normaliserTelephone(demandeur.telephone) || null)
+      .input('telephone_secondaire', sql.NVarChar, normaliserTelephone(demandeur.telephone_secondaire) || null)
       .input('email', sql.NVarChar, demandeur.email || null)
       .input('adresse', sql.NVarChar, demandeur.adresse.trim())
       .input('id_commune', sql.Int, demandeur.id_commune || id_commune)
@@ -775,8 +785,8 @@ router.post('/', async (req, res) => {
       .input('cin', sql.NVarChar, demandeur.cin || null)
       .input('cin_delivre_le', sql.Date, estPersonneMorale ? null : demandeur.cin_delivre_le || null)
       .input('cin_delivre_par', sql.NVarChar(150), estPersonneMorale ? null : demandeur.cin_delivre_par?.trim() || null)
-      .input('telephone', sql.NVarChar, demandeur.telephone?.trim() || null)
-      .input('telephone_secondaire', sql.NVarChar, demandeur.telephone_secondaire?.trim() || null)
+      .input('telephone', sql.NVarChar, normaliserTelephone(demandeur.telephone) || null)
+      .input('telephone_secondaire', sql.NVarChar, normaliserTelephone(demandeur.telephone_secondaire) || null)
       .input('email', sql.NVarChar, demandeur.email || null)
       .input('adresse', sql.NVarChar, demandeur.adresse)
       .input('id_commune', sql.Int, demandeur.id_commune)

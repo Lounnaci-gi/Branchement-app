@@ -56,6 +56,23 @@ function libelleTypeBranchement(libelle) {
   }[libelle] || libelle;
 }
 
+function trouverIdTypeCompatible(types, natureTravaux, idTypeCourant = '') {
+  const typesAutorises = TYPES_PAR_NATURE[natureTravaux] || null;
+  if (!typesAutorises) return idTypeCourant;
+
+  const typeCourant = types.find((type) => String(type.id_type) === String(idTypeCourant));
+  if (typeCourant && typesAutorises.includes(typeCourant.libelle)) {
+    return String(typeCourant.id_type);
+  }
+
+  const typeCompatible = types.find((type) => typesAutorises.includes(type.libelle));
+  return typeCompatible ? String(typeCompatible.id_type) : '';
+}
+
+function nettoyerPrecisionAutres(valeur) {
+  return String(valeur ?? '').trim().replace(/^Autres?\s*[-:]\s*/i, '').trim();
+}
+
 function nettoyerSaisie(valeur) {
   return String(valeur ?? '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
@@ -138,6 +155,9 @@ export default function NouvelleDemande() {
       if (champ === 'nature_travaux') {
         const typesAutorises = TYPES_PAR_NATURE[valeurFormatee] || [];
         const idTypeValide = !typesAutorises.length || !f.id_type || types.some((type) => typesAutorises.includes(type.libelle) && String(type.id_type) === String(f.id_type));
+        if (valeurFormatee !== 'Branchement d\'eau potable') {
+          return { ...f, nature_travaux: valeurFormatee, id_type: trouverIdTypeCompatible(types, valeurFormatee, f.id_type) };
+        }
         return { ...f, nature_travaux: valeurFormatee, id_type: idTypeValide ? f.id_type : '' };
       }
       return { ...f, [champ]: valeurFormatee };
@@ -225,7 +245,7 @@ export default function NouvelleDemande() {
     }
 
     const cinSaisi = String(form.cin ?? '').trim();
-    if (!form.est_personne_morale && form.type_piece_identite === 'CIN' && cinSaisi && !/^\d{18}$/.test(cinSaisi)) {
+    if (!form.est_personne_morale && form.type_piece_identite === 'CIN' && !/^\d{18}$/.test(cinSaisi)) {
       notifierErreur('Le numéro de CIN doit contenir exactement 18 chiffres.');
       return;
     }
@@ -255,8 +275,23 @@ export default function NouvelleDemande() {
     setEnvoi(true);
     try {
       const natureTravaux = donneesFormulaire.nature_travaux || donneesFormulaire.type_autre || '';
-      const typeAutrePayload = natureTravaux === 'Autres' && donneesFormulaire.type_autre && donneesFormulaire.type_autre.trim() !== 'Autres'
-        ? `Autres - ${donneesFormulaire.type_autre.trim()}`
+      const idTypeAEnvoyer = trouverIdTypeCompatible(types, natureTravaux, donneesFormulaire.id_type);
+      const telephonePrincipal = formaterTelephone(donneesFormulaire.telephone || '');
+      const telephoneSecondaire = formaterTelephone(donneesFormulaire.telephone_secondaire || '');
+      const telephoneValide = (valeur) => !valeur || /^0[2-7]\d{2} \d{2} \d{2} \d{2}$/.test(valeur);
+
+      if (!idTypeAEnvoyer) {
+        notifierErreur('Veuillez sélectionner le type de branchement.');
+        return;
+      }
+      if (!telephoneValide(telephonePrincipal) || !telephoneValide(telephoneSecondaire)) {
+        notifierErreur('Le téléphone doit être au format 0552 11 74 33.');
+        return;
+      }
+
+      const precisionAutres = nettoyerPrecisionAutres(donneesFormulaire.type_autre);
+      const typeAutrePayload = natureTravaux === 'Autres' && precisionAutres
+        ? `Autres - ${precisionAutres}`
         : normaliserNatureTravaux(natureTravaux || donneesFormulaire.type_autre || '');
       const payload = {
         demandeur: {
@@ -265,11 +300,11 @@ export default function NouvelleDemande() {
           raison_sociale: donneesFormulaire.raison_sociale,
           nom: donneesFormulaire.nom, prenom: donneesFormulaire.prenom, fils_de: donneesFormulaire.fils_de, ne_le: donneesFormulaire.ne_le,
           type_piece_identite: donneesFormulaire.type_piece_identite, cin: donneesFormulaire.cin,
-          cin_delivre_le: donneesFormulaire.cin_delivre_le, cin_delivre_par: donneesFormulaire.cin_delivre_par, telephone: donneesFormulaire.telephone,
+          cin_delivre_le: donneesFormulaire.cin_delivre_le, cin_delivre_par: donneesFormulaire.cin_delivre_par, telephone: telephonePrincipal,
           email: emailSaisi, adresse: donneesFormulaire.adresse, id_commune: donneesFormulaire.id_commune_residence,
-          telephone_secondaire: donneesFormulaire.telephone_secondaire
+          telephone_secondaire: telephoneSecondaire
         },
-        id_type: donneesFormulaire.id_type,
+        id_type: idTypeAEnvoyer,
         type_autre: typeAutrePayload,
         adresse_branchement: donneesFormulaire.adresse_branchement,
         id_commune: donneesFormulaire.id_commune_branchement,

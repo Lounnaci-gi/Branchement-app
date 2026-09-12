@@ -247,7 +247,15 @@ export default function EditeurDevisObat({
   // -------------------------------------------------------------
   // STRUCTURE EN SECTIONS ET SOUS-SECTIONS (Obat 1:47 - 2:05)
   // -------------------------------------------------------------
-  const natureDefaut = demande?.type_autre || demande?.type_branchement || 'Branchement AEP';
+  const natureTravauxObjet = String(demande?.type_autre || '').trim();
+  const typeBranchementObjet = String(demande?.type_branchement || '').trim();
+  const natureDefaut = natureTravauxObjet || typeBranchementObjet || 'Branchement AEP';
+  const objetDevis = [natureTravauxObjet || 'Branchement d’eau potable', typeBranchementObjet]
+    .filter(Boolean)
+    .filter((valeur, index, liste) =>
+      liste.findIndex((item) => item.toLowerCase() === valeur.toLowerCase()) === index
+    )
+    .join(' - ');
   
   // Sections hiérarchiques
   const [sections, setSections] = useState(() => {
@@ -1803,7 +1811,7 @@ export default function EditeurDevisObat({
 
               <div className="obat-object-banner">
                 <span className="label">OBJET :</span>
-                <strong>Branchement au réseau de distribution d'eau potable</strong>
+                <strong>{objetDevis}</strong>
               </div>
             </div>
           </div>

@@ -571,10 +571,18 @@
 }
 
 .obat-object-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
   font-size: 13.5px;
   font-weight: 600;
   color: #1E293B;
   padding: 2px 0;
+}
+
+.obat-object-banner strong {
+  overflow-wrap: anywhere;
 }
 
 /* ---------- 5. SECTION CENTRALE / OBJET DU DEVIS ---------- */
