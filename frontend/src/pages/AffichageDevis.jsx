@@ -58,16 +58,66 @@ function normaliserTypeLigne(type, choixPrix, modePrix, article = null) {
   return typesDispo[0] || 'F/';
 }
 
+function numeroRomain(valeur) {
+  const nombres = [
+    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+  ];
+  let reste = valeur;
+  return nombres.reduce((resultat, [nombre, symbole]) => {
+    const repetitions = Math.floor(reste / nombre);
+    reste %= nombre;
+    return resultat + symbole.repeat(repetitions);
+  }, '');
+}
+
+function formaterMontant(valeur) {
+  const montant = Number(valeur);
+  return (Number.isFinite(montant) ? montant : 0).toLocaleString('fr-DZ', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function libelleArticleSansCategorie(libelle) {
+  return String(libelle || '—').replace(/^\s*\[[^\]]+\]\s*/, '').trim() || '—';
+}
+
+function obtenirCategorieArticle(art, mapCategories = new Map()) {
+  const libelles = [
+    art?.categorie,
+    art?.libelleCategorie,
+    art?.libelle_categorie,
+    art?.categorie_article,
+    art?.libelleCategorieArticle,
+    art?.categorieArticle,
+    art?.categorie_libelle
+  ].filter(Boolean);
+
+  if (libelles.length > 0) return libelles[0];
+
+  const codeArticle = String(art?.code || art?.code_article || '').trim().toUpperCase();
+  if (codeArticle && mapCategories.has(codeArticle)) return mapCategories.get(codeArticle);
+
+  return 'Sans catégorie';
+}
+
 export default function AffichageDevis() {
   const { id, idDevis } = useParams();
   const [fiche, setFiche] = useState(null);
   const [chargement, setChargement] = useState(true);
+  const [catalogueArticles, setCatalogueArticles] = useState([]);
 
   useEffect(() => {
     client.get(`/demandes/${id}`)
       .then((res) => setFiche(res.data))
       .catch((err) => notifierErreur(err.response?.data?.erreur || 'Impossible de charger le devis.'))
       .finally(() => setChargement(false));
+
+    client.get('/referentiels/articles')
+      .then((res) => setCatalogueArticles(res.data || []))
+      .catch(() => setCatalogueArticles([]));
   }, [id]);
 
   if (chargement) return <div className="page" aria-busy="true"><div className="squelette squelette-titre" /></div>;
@@ -78,12 +128,38 @@ export default function AffichageDevis() {
 
   const demande = fiche.demande;
   const nature = demande.type_autre || demande.type_branchement || 'Branchement d’eau potable';
-  const aDesArticles = Array.isArray(devis.articles) && devis.articles.length > 0;
+
+  const mapCategories = new Map();
+  for (const famille of catalogueArticles) {
+    for (const article of famille.articles || []) {
+      const code = String(article.code || article.code_article || '').trim().toUpperCase();
+      if (!code) continue;
+      mapCategories.set(code, article.libelleCategorie || famille.libelle_categorie || famille.libelleCategorie || 'Sans catégorie');
+    }
+  }
+
+  const articlesAvecCategorie = (Array.isArray(devis.articles) ? devis.articles : []).map((art) => ({
+    ...art,
+    categorie: obtenirCategorieArticle(art, mapCategories)
+  }));
+
+  const articlesParCategorie = new Map();
+  articlesAvecCategorie.forEach((art) => {
+    const categorie = art.categorie || 'Sans catégorie';
+    if (!articlesParCategorie.has(categorie)) {
+      articlesParCategorie.set(categorie, []);
+    }
+    articlesParCategorie.get(categorie).push(art);
+  });
+
+  const categoriesTriees = Array.from(articlesParCategorie.keys()).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+  const aDesArticles = articlesAvecCategorie.length > 0;
   const totalHtArticles = aDesArticles
-    ? devis.articles.reduce((sum, a) => sum + Number(a.montantLigne || (a.quantite * a.prix) || 0), 0)
+    ? articlesAvecCategorie.reduce((sum, a) => sum + Number(a.montantLigne || (a.quantite * a.prix) || 0), 0)
     : Number(devis.montant);
   const totalTvaArticles = aDesArticles
-    ? devis.articles.reduce((sum, a) => sum + (Number(a.quantite || 0) * Number(a.prix || 0) * (Number(a.tauxTva ?? 19) / 100)), 0)
+    ? articlesAvecCategorie.reduce((sum, a) => sum + (Number(a.quantite || 0) * Number(a.prix || 0) * (Number(a.tauxTva ?? 19) / 100)), 0)
     : 0;
 
   return (
@@ -127,9 +203,17 @@ export default function AffichageDevis() {
           <span>{new Date(devis.date_emission).toLocaleDateString('fr-FR')}</span>
         </div>
 
-        <section className="devis-client-box">
-          <div><span>ABONNÉ</span><strong>{nomAbonne(demande)}</strong><small>{demande.telephone || demande.telephone_secondaire || 'Téléphone non renseigné'}</small></div>
-          <div><span>ADRESSE DES TRAVAUX</span><strong>{demande.adresse_branchement || '—'}</strong><small>{demande.nom_commune || 'Commune non renseignée'}</small></div>
+        <section className="devis-client-box devis-client-box-droite">
+          <div>
+            <span>Doit :</span>
+            <strong>Nom &amp; prénom : {nomAbonne(demande)}</strong>
+            <small>N° téléphone : {demande.telephone || demande.telephone_secondaire || 'Non renseigné'}</small>
+          </div>
+          <div>
+            <span>Adresse des travaux :</span>
+            <strong>Adresse : {demande.adresse_branchement || '—'}</strong>
+            <small>Commune : {demande.nom_commune || 'Non renseignée'}</small>
+          </div>
         </section>
 
         <div className="devis-objet"><b>Objet :</b> {nature}</div>
@@ -147,39 +231,49 @@ export default function AffichageDevis() {
           </thead>
           <tbody>
             {aDesArticles ? (
-              devis.articles.map((art) => {
-                const codeType = normaliserTypeLigne(art.type || art.type_ligne, art.choixPrix || art.choix_prix, art.modePrix || art.mode_prix, art);
-                return (
-                  <tr key={art.id_ligne || art.code}>
-                    <td className="col-desig">
-                      <strong>{art.libelle}</strong>
-                      {art.code ? <small className="devis-article-meta">{art.code}</small> : null}
-                      {(art.matiere || art.couleur) ? <small className="devis-article-meta">{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
-                      {art.choixPrix && art.choixPrix !== 'FOURNITURE_POSE' && (
-                        <span className="devis-choix-badge" style={{
-                          display: 'inline-block',
-                          fontSize: 10.5,
-                          fontWeight: 700,
-                          padding: '1px 6px',
-                          borderRadius: 3,
-                          marginTop: 3,
-                          backgroundColor: art.choixPrix === 'FOURNITURE' ? '#EBF5FF' : '#FEF3C7',
-                          color: art.choixPrix === 'FOURNITURE' ? '#1E40AF' : '#92400E',
-                          border: art.choixPrix === 'FOURNITURE' ? '1px solid #BFDBFE' : '1px solid #FDE68A'
-                        }}>
-                          {art.choixPrix === 'FOURNITURE' ? 'Fourniture seule' : 'Pose seule'}
-                        </span>
-                      )}
+              categoriesTriees.flatMap((categorie, categorieIndex) => {
+                const articles = articlesParCategorie.get(categorie) || [];
+                return [
+                  <tr key={`categorie-${categorie}`}>
+                    <td colSpan="6" className="devis-categorie-header">
+                      <strong>{numeroRomain(categorieIndex + 1)} - {categorie}</strong>
                     </td>
-                    <td className="col-type">
-                      <span>{codeType}</span>
-                    </td>
-                    <td className="col-unite">{art.unite || 'U'}</td>
-                    <td className="col-qte">{art.quantite}</td>
-                    <td className="col-pu">{Number(art.prix).toLocaleString('fr-DZ')} DA</td>
-                    <td className="col-total">{Number(art.montantLigne || (art.quantite * art.prix)).toLocaleString('fr-DZ')} DA</td>
-                  </tr>
-                );
+                  </tr>,
+                  ...articles.map((art) => {
+                    const codeType = normaliserTypeLigne(art.type || art.type_ligne, art.choixPrix || art.choix_prix, art.modePrix || art.mode_prix, art);
+                    return (
+                      <tr key={art.id_ligne || art.code}>
+                      <td className="col-desig">
+                        <strong>{libelleArticleSansCategorie(art.libelle)}</strong>
+                        {art.code ? <small className="devis-article-meta">{art.code}</small> : null}
+                        {(art.matiere || art.couleur) ? <small className="devis-article-meta">{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
+                        {art.choixPrix && art.choixPrix !== 'FOURNITURE_POSE' && (
+                          <span className="devis-choix-badge" style={{
+                            display: 'inline-block',
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: 3,
+                            marginTop: 3,
+                            backgroundColor: art.choixPrix === 'FOURNITURE' ? '#EBF5FF' : '#FEF3C7',
+                            color: art.choixPrix === 'FOURNITURE' ? '#1E40AF' : '#92400E',
+                            border: art.choixPrix === 'FOURNITURE' ? '1px solid #BFDBFE' : '1px solid #FDE68A'
+                          }}>
+                            {art.choixPrix === 'FOURNITURE' ? 'Fourniture seule' : 'Pose seule'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="col-type">
+                        <span>{codeType}</span>
+                      </td>
+                      <td className="col-unite">{art.unite || 'U'}</td>
+                      <td className="col-qte">{art.quantite}</td>
+                      <td className="col-pu">{formaterMontant(art.prix)}</td>
+                      <td className="col-total">{formaterMontant(art.montantLigne || (art.quantite * art.prix))}</td>
+                    </tr>
+                  );
+                })
+                ];
               })
             ) : (
               <tr>
@@ -189,30 +283,120 @@ export default function AffichageDevis() {
                 </td>
                 <td className="col-unite">U</td>
                 <td className="col-qte">1</td>
-                <td className="col-pu">{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>
-                <td className="col-total">{Number(devis.montant).toLocaleString('fr-DZ')} DA</td>
+                <td className="col-pu">{formaterMontant(devis.montant)}</td>
+                <td className="col-total">{formaterMontant(devis.montant)}</td>
               </tr>
             )}
           </tbody>
         </table>
 
         <section className="devis-totaux">
-          <div><span>Total HT</span><strong>{Number(totalHtArticles).toLocaleString('fr-DZ')} DA</strong></div>
+          <div><span>Total HT</span><strong>{formaterMontant(totalHtArticles)} DA</strong></div>
           {totalTvaArticles > 0 ? (
-            <div><span>TVA (calculée)</span><strong>{Number(Math.round(totalTvaArticles * 100) / 100).toLocaleString('fr-DZ')} DA</strong></div>
+            <div><span>TVA (calculée)</span><strong>{formaterMontant(totalTvaArticles)} DA</strong></div>
           ) : (
             <div><span>TVA applicable</span><strong>Selon la catégorie de prestation</strong></div>
           )}
-          <div className="devis-total-ttc"><span>Total du devis (TTC)</span><strong>{Number(devis.montant).toLocaleString('fr-DZ')} DA</strong></div>
+          <div className="devis-total-ttc"><span>Total du devis (TTC)</span><strong>{formaterMontant(devis.montant)} DA</strong></div>
         </section>
         <p className="devis-validite">Le présent devis est valable pour une durée de 01 mois.</p>
         <footer className="devis-signature">LE CHEF D’AGENCE COMMERCIALE</footer>
       </article>
 
       <style>{`@media print {
-        .no-print { display: none !important; }
-        .page-affichage-devis { padding: 0; background: #fff; }
-        .devis-document { box-shadow: none; border: 1px solid #000; margin: 0; max-width: none; }
+        @page { margin: 0.5cm; size: A4 portrait; }
+        html, body, #root, .app-shell, .app-content, main {
+          display: block !important;
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+        }
+        .no-print {
+          display: block !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .sidebar {
+          position: static !important;
+          display: flex !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          height: auto !important;
+          border-right: none !important;
+          border-bottom: 1px solid #dfe4ea !important;
+          box-shadow: none !important;
+          padding: 12px 16px !important;
+        }
+        .app-topbar {
+          position: static !important;
+          height: auto !important;
+          padding: 14px 16px !important;
+          border-bottom: 1px solid #dfe4ea !important;
+          background: #fff !important;
+        }
+        .page {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #fff !important;
+          max-width: none !important;
+        }
+        .page-affichage-devis {
+          padding: 0 !important;
+          margin: 0 !important;
+          background: #fff !important;
+        }
+        .card,
+        .devis-document {
+          box-shadow: none !important;
+          border: 1px solid #000 !important;
+          margin: 0 !important;
+          max-width: none !important;
+          background: #fff !important;
+        }
+      }
+      @media print {
+        :root[data-theme='dark'] body,
+        :root[data-theme='dark'] .app-shell,
+        :root[data-theme='dark'] .app-content,
+        :root[data-theme='dark'] main,
+        :root[data-theme='dark'] .page,
+        :root[data-theme='dark'] .page-affichage-devis,
+        :root[data-theme='dark'] .app-topbar {
+          background: #141b2a !important;
+          color: #e8edf5 !important;
+        }
+        :root[data-theme='dark'] .sidebar {
+          background: #1a2235 !important;
+          color: #e8edf5 !important;
+          border-color: #2a3550 !important;
+        }
+        :root[data-theme='dark'] .devis-document {
+          background: #141b2a !important;
+          color: #e8edf5 !important;
+          border-color: #e8edf5 !important;
+        }
+        :root[data-theme='dark'] .devis-document-entete,
+        :root[data-theme='dark'] .devis-document-title,
+        :root[data-theme='dark'] .devis-client-box,
+        :root[data-theme='dark'] .devis-client-box > div + div,
+        :root[data-theme='dark'] .devis-articles-table th,
+        :root[data-theme='dark'] .devis-articles-table td,
+        :root[data-theme='dark'] .devis-totaux,
+        :root[data-theme='dark'] .devis-totaux div {
+          border-color: #e8edf5 !important;
+        }
+        :root[data-theme='dark'] .devis-articles-table th,
+        :root[data-theme='dark'] .devis-articles-table .devis-categorie-header,
+        :root[data-theme='dark'] .devis-total-ttc {
+          background: #202a40 !important;
+          color: #e8edf5 !important;
+        }
+        :root[data-theme='dark'] .devis-article-meta,
+        :root[data-theme='dark'] .devis-document small {
+          color: #aebbd0 !important;
+        }
       }
       .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: 1px solid var(--color-border, #a9a9a9); }
       .devis-document-entete { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; gap: 16px; padding-bottom: 15px; border-bottom: 1px solid #111; }
@@ -228,8 +412,14 @@ export default function AffichageDevis() {
       .devis-document-title span { font-size: 17px; font-weight: 800; text-decoration: underline; }
       .devis-document-title small { font-size: 12px; font-weight: 700; }
       .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #111; margin-bottom: 15px; }
+      .devis-client-box-droite { width: 42%; margin-left: auto; grid-template-columns: 1fr; border-radius: 6px; overflow: hidden; }
+      .devis-client-box-droite > div { min-height: 0; padding: 4px 10px; }
+      .devis-client-box-droite > div + div { padding-top: 0; }
+      .devis-client-box-droite strong { font-size: 12px; }
+      .devis-client-box-droite small { font-size: 10px; }
       .devis-client-box > div { display: flex; flex-direction: column; gap: 5px; min-height: 78px; padding: 11px 13px; }
       .devis-client-box > div + div { border-left: 1px solid #111; }
+      .devis-client-box-droite > div + div { border-left: 0; border-top: 0; }
       .devis-client-box span { font-size: 10px; font-weight: 800; text-decoration: underline; }
       .devis-client-box strong { font-size: 13px; }
       .devis-client-box small { font-size: 11px; }
@@ -238,6 +428,7 @@ export default function AffichageDevis() {
       .devis-articles-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
       .devis-articles-table th, .devis-articles-table td { border: 1px solid #111; padding: 7px 6px; vertical-align: middle; }
       .devis-articles-table th { background: #e9e9e9; font-weight: 800; text-align: center; }
+      .devis-articles-table .devis-categorie-header { background: #f3f4f6; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; text-align: left; }
       .devis-articles-table .col-desig { text-align: left; }
       .devis-articles-table .col-type { width: 48px; text-align: center; }
       .devis-articles-table .col-diam { width: 70px; text-align: center; }
@@ -256,9 +447,132 @@ export default function AffichageDevis() {
       :root[data-theme='dark'] .devis-document-entete, :root[data-theme='dark'] .devis-document-title { border-color: var(--color-border, #2A3550); }
       :root[data-theme='dark'] .devis-client-box, :root[data-theme='dark'] .devis-client-box > div + div, :root[data-theme='dark'] .devis-articles-table th, :root[data-theme='dark'] .devis-articles-table td, :root[data-theme='dark'] .devis-totaux, :root[data-theme='dark'] .devis-totaux div { border-color: var(--color-border, #2A3550); }
       :root[data-theme='dark'] .devis-articles-table th, :root[data-theme='dark'] .devis-total-ttc { background: var(--color-surface-sunken, #141B2A); }
+      :root[data-theme='dark'] .devis-articles-table td.devis-categorie-header { background: var(--color-surface-sunken, #141B2A) !important; color: var(--color-text, #E8EDF5) !important; }
+      :root[data-theme='dark'] .devis-articles-table td.devis-categorie-header strong { color: var(--color-text, #E8EDF5) !important; }
+      @media print {
+        :root[data-theme='dark'] .devis-document,
+        :root[data-theme='dark'] td.devis-categorie-header {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        :root[data-theme='dark'] td.devis-categorie-header {
+          background: #202a40 !important;
+          color: #e8edf5 !important;
+          border-color: #e8edf5 !important;
+        }
+        :root[data-theme='dark'] td.devis-categorie-header strong {
+          color: #e8edf5 !important;
+        }
+      }
       :root[data-theme='dark'] .devis-choix-badge { background-color: var(--color-primary-selection, rgba(59, 170, 232, 0.14)) !important; color: var(--color-primary, #3BAAE8) !important; border-color: var(--color-border-primary, rgba(59, 170, 232, 0.25)) !important; }
       :root[data-theme='dark'] .devis-document small, :root[data-theme='dark'] .devis-article-meta { color: var(--color-text-muted, #8B99B3); }
-      @media (max-width: 640px) { .devis-document { padding: 18px 12px; } .devis-document-entete { grid-template-columns: 1fr 58px; } .devis-logo { width: 55px; height: 55px; } .devis-agence { grid-column: 1 / -1; text-align: left; } .devis-client-box { grid-template-columns: 1fr; } .devis-client-box > div + div { border-left: 0; border-top: 1px solid #111; } .devis-totaux { width: 100%; } .devis-articles-table { font-size: 10px; } }
+      @media print {
+        .sidebar,
+        .app-topbar,
+        .no-print,
+        .cmd-palette-overlay {
+          display: none !important;
+        }
+        .app-shell,
+        .app-content,
+        .app-content main,
+        .page,
+        .page-affichage-devis {
+          display: block !important;
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .devis-document {
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+        }
+      }
+      @media print {
+        html,
+        body,
+        #root,
+        .app-shell,
+        .app-content,
+        main,
+        .page,
+        .page-affichage-devis,
+        .devis-document {
+          background: #fff !important;
+          color: #111 !important;
+        }
+        .devis-document,
+        .devis-document-entete,
+        .devis-document-title,
+        .devis-client-box,
+        .devis-client-box > div + div,
+        .devis-articles-table th,
+        .devis-articles-table td,
+        .devis-totaux,
+        .devis-totaux div {
+          border-color: #111 !important;
+        }
+        .devis-articles-table th,
+        .devis-total-ttc {
+          background: #e9e9e9 !important;
+          color: #111 !important;
+        }
+        .devis-articles-table td.devis-categorie-header,
+        .devis-articles-table td.devis-categorie-header strong {
+          background: #f3f4f6 !important;
+          color: #111 !important;
+        }
+        .devis-document small,
+        .devis-article-meta {
+          color: #666 !important;
+        }
+        .devis-document,
+        .devis-articles-table td.devis-categorie-header {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+      @media print {
+        :root[data-theme='dark'] body,
+        :root[data-theme='dark'] #root,
+        :root[data-theme='dark'] .app-shell,
+        :root[data-theme='dark'] .app-content,
+        :root[data-theme='dark'] main,
+        :root[data-theme='dark'] .page,
+        :root[data-theme='dark'] .page-affichage-devis,
+        :root[data-theme='dark'] .devis-document {
+          background: #fff !important;
+          color: #111 !important;
+        }
+        :root[data-theme='dark'] .devis-document,
+        :root[data-theme='dark'] .devis-document-entete,
+        :root[data-theme='dark'] .devis-document-title,
+        :root[data-theme='dark'] .devis-client-box,
+        :root[data-theme='dark'] .devis-client-box > div + div,
+        :root[data-theme='dark'] .devis-articles-table th,
+        :root[data-theme='dark'] .devis-articles-table td,
+        :root[data-theme='dark'] .devis-totaux,
+        :root[data-theme='dark'] .devis-totaux div {
+          border-color: #111 !important;
+        }
+        :root[data-theme='dark'] .devis-articles-table th,
+        :root[data-theme='dark'] .devis-total-ttc {
+          background: #e9e9e9 !important;
+          color: #111 !important;
+        }
+        :root[data-theme='dark'] .devis-articles-table td.devis-categorie-header,
+        :root[data-theme='dark'] .devis-articles-table td.devis-categorie-header strong {
+          background: #f3f4f6 !important;
+          color: #111 !important;
+        }
+        :root[data-theme='dark'] .devis-document small,
+        :root[data-theme='dark'] .devis-article-meta {
+          color: #666 !important;
+        }
+      }
+      @media (max-width: 640px) { .devis-document { padding: 18px 12px; } .devis-document-entete { grid-template-columns: 1fr 58px; } .devis-logo { width: 55px; height: 55px; } .devis-agence { grid-column: 1 / -1; text-align: left; } .devis-client-box, .devis-client-box-droite { width: 100%; grid-template-columns: 1fr; } .devis-client-box > div + div { border-left: 0; border-top: 1px solid #111; } .devis-totaux { width: 100%; } .devis-articles-table { font-size: 10px; } }
       `}</style>
     </div>
   );
