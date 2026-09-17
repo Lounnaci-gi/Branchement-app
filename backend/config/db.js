@@ -262,7 +262,6 @@ async function verifierEtMigrerBase(pool) {
     const migrationWorkflowSQL = `
       -- Les dossiers historiques sortent de l'étape d'étude sans supprimer leurs données techniques.
       IF OBJECT_ID('dbo.Demandes', 'U') IS NOT NULL
-         AND OBJECT_ID('dbo.HistoriqueStatuts', 'U') IS NOT NULL
       BEGIN
         DECLARE @migrations TABLE (
           id_demande INT,
@@ -283,10 +282,13 @@ async function verifierEtMigrerBase(pool) {
         FROM Demandes AS d
         WHERE d.statut_actuel IN ('ETUDE_EN_COURS', 'ETUDE_TERMINEE');
 
-        INSERT INTO HistoriqueStatuts (id_demande, code_statut, id_agent, commentaire)
-        SELECT id_demande, nouveau_statut, id_agent,
-          CONCAT(N'Migration du statut historique ', ancien_statut, N' vers ', nouveau_statut)
-        FROM @migrations;
+        IF OBJECT_ID('dbo.HistoriqueStatuts', 'U') IS NOT NULL
+        BEGIN
+          INSERT INTO HistoriqueStatuts (id_demande, code_statut, id_agent, commentaire)
+          SELECT id_demande, nouveau_statut, id_agent,
+            CONCAT(N'Migration du statut historique ', ancien_statut, N' vers ', nouveau_statut)
+          FROM @migrations;
+        END;
       END;
     `;
     await pool.request().query(migrationWorkflowSQL);

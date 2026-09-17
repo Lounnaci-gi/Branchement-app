@@ -696,6 +696,58 @@
   padding: 20px;
 }
 
+.obat-page-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.obat-payment-table-wrap {
+  overflow-x: auto;
+}
+
+.obat-payment-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.obat-payment-table th,
+.obat-payment-table td {
+  padding: 11px 12px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.obat-payment-table th {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.obat-payment-table tbody tr:hover {
+  background: var(--color-surface-sunken);
+}
+
+.obat-payment-amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .obat-payment-table {
+    min-width: 820px;
+  }
+}
+
 /* --- Stat cards Obat (KPIs globaux) --- */
 .obat-kpi-grid {
   display: grid;

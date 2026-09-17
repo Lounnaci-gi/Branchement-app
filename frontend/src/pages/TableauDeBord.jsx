@@ -92,9 +92,7 @@ export default function TableauDeBord() {
     );
   }
 
-  const total = donnees.parStatut
-    .filter((s) => !['REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES', 'SCELLEE'].includes(s.code_statut))
-    .reduce((s, x) => s + x.total, 0);
+  const total = Number(donnees.demandesActives || 0);
 
   const demandesAchevees = donnees.parStatut
     .filter((s) => ['TRAVAUX_EN_COURS', 'TRAVAUX_TERMINES', 'SCELLEE'].includes(s.code_statut))
@@ -206,6 +204,27 @@ export default function TableauDeBord() {
             <div className="obat-kpi-label">Devis impayés</div>
             <div style={{ fontSize: 11.5, color: 'var(--color-accent)', marginTop: 2, fontWeight: 700 }}>
               {Number(donnees.enAttentePaiement.montant_total || 0).toLocaleString('fr-DZ')} DA
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="obat-kpi-card"
+          onClick={() => navigate('/devis-payes')}
+          onKeyDown={(e) => activerClavier(e, () => navigate('/devis-payes'))}
+          role="button"
+          tabIndex={0}
+          title="Total des devis payés"
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="obat-kpi-icon green" />
+          <div>
+            <div className="obat-kpi-value" style={{ color: 'var(--color-success)' }}>
+              <CompteurAnime cible={donnees.devisPayes.total} />
+            </div>
+            <div className="obat-kpi-label">Devis payés</div>
+            <div style={{ fontSize: 11.5, color: 'var(--color-success)', marginTop: 2, fontWeight: 700 }}>
+              {Number(donnees.devisPayes.montant_total || 0).toLocaleString('fr-DZ')} DA
             </div>
           </div>
         </div>

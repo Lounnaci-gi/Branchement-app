@@ -59,6 +59,9 @@ export default function Sidebar({ agent, onOpenSearch }) {
         <NavLink to="/demandes/nouvelle" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
           <span>Nouvelle demande</span>
         </NavLink>
+        <NavLink to="/devis-payes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
+          <span>Devis payés</span>
+        </NavLink>
         {agentCourant?.role === 'admin' && (
           <>
             <div className="sidebar-nav-label sidebar-nav-label-admin">Référentiels</div>

@@ -86,6 +86,13 @@ function prixArticle(article) {
   return Number(article.prix || 0);
 }
 
+function formaterMontant(valeur) {
+  return Number(valeur || 0).toLocaleString('fr-DZ', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
 function tvaArticle(article) {
   return prixArticle(article) * (Number(article.tauxTva ?? 19) / 100);
 }
@@ -141,6 +148,7 @@ export default function PanneauDevis({
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
   const [devisSelectionne, setDevisSelectionne] = useState(null);
   const [ouvert, setOuvert] = useState(false);
+  const [paiementUniquement, setPaiementUniquement] = useState(false);
   const [form, setForm] = useState({
     montant: ''
   });
@@ -323,7 +331,7 @@ export default function PanneauDevis({
           })
         : []
     );
-    setEnregistrerPaiement(devisActuel.statut_paiement === 'PAYE');
+    setEnregistrerPaiement(paiementUniquement || devisActuel.statut_paiement === 'PAYE');
     setPaiement({
       mode_paiement: devisActuel.mode_paiement === 'Virement' ? 'Versement_bancaire' : (devisActuel.mode_paiement || 'Especes'),
       date_paiement: devisActuel.date_paiement?.slice(0, 10) || new Date().toISOString().slice(0, 10),
@@ -332,7 +340,7 @@ export default function PanneauDevis({
       numero_versement: devisActuel.numero_versement || '',
       banque: devisActuel.banque?.toUpperCase() || ''
     });
-  }, [devisActuel, ouvert]);
+  }, [devisActuel, ouvert, paiementUniquement]);
 
   useEffect(() => {
     if (tousLesArticles.length === 0 || lignesDevis.length === 0) return;
@@ -368,6 +376,7 @@ export default function PanneauDevis({
   useEffect(() => {
     if (!ouvrirFormulaire || demandeVerrouillee) return;
     setDevisSelectionne(null);
+    setPaiementUniquement(false);
     setForm({ montant: '' });
     setLignesDevis([]);
     setEnregistrerPaiement(false);
@@ -389,6 +398,7 @@ export default function PanneauDevis({
       return;
     }
     setDevisSelectionne(null);
+    setPaiementUniquement(false);
     setForm({ montant: '' });
     setLignesDevis([]);
     setEnregistrerPaiement(false);
@@ -401,6 +411,18 @@ export default function PanneauDevis({
       return;
     }
     setDevisSelectionne(item.id_devis);
+    setPaiementUniquement(false);
+    setOuvert(true);
+  }
+
+  function ouvrirReglement(item) {
+    if (demandeVerrouillee) {
+      notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
+    setDevisSelectionne(item.id_devis);
+    setPaiementUniquement(true);
+    setEnregistrerPaiement(true);
     setOuvert(true);
   }
 
@@ -411,6 +433,7 @@ export default function PanneauDevis({
     }
     setOuvert(false);
     setDevisSelectionne(null);
+    setPaiementUniquement(false);
   }
 
   async function enregistrer(e) {
@@ -438,6 +461,19 @@ export default function PanneauDevis({
     }
     setEnvoi(true);
     try {
+      if (paiementUniquement && devisActuel) {
+        await client.patch(`/demandes/${idDemande}/devis/paiement`, {
+          ...paiement,
+          id_devis: devisActuel.id_devis
+        });
+        setOuvert(false);
+        setDevisSelectionne(null);
+        setPaiementUniquement(false);
+        onEnregistre();
+        await notifierSucces('Paiement enregistré avec succès.');
+        return;
+      }
+
       const articlesPayload = lignesDevis.map((l) => {
         const pu = prixArticle(l);
         const qte = Number(l.quantite) || 1;
@@ -504,7 +540,7 @@ export default function PanneauDevis({
               <div>
                 <span>{devisListe.length} {devisListe.length > 1 ? 'devis enregistrés' : 'devis enregistré'}</span>
                 <span>•</span>
-                <span>Total : <span className="panneau-devis-total-valeur">{montantTotalCumule.toLocaleString('fr-DZ')} DA</span></span>
+                <span>Total : <span className="panneau-devis-total-valeur">{formaterMontant(montantTotalCumule)} DA</span></span>
               </div>
             )}
           </div>
@@ -516,9 +552,9 @@ export default function PanneauDevis({
               type="button"
               className="btn btn-primary"
               onClick={() => navigate(`/demandes/${idDemande}/devis/nouveau`)}
-              title="Ouvrir l'éditeur de devis structuré inspiré d'Obat"
+              title="Ouvrir l'éditeur de devis structuré"
             >
-              Éditeur Devis Obat
+              Éditeur de devis
             </button>
           )}
           {afficherActionsCreation && !demandeVerrouillee && devisListe.length > 0 && !ouvert && (
@@ -567,7 +603,7 @@ export default function PanneauDevis({
 
                 <div className="devis-card-montant">
                   <span className="devis-numero-libelle">Montant</span>
-                  <span className="devis-montant-chiffre">{Number(item.montant).toLocaleString('fr-DZ')} DA</span>
+                  <span className="devis-montant-chiffre">{formaterMontant(item.montant)} DA</span>
                   {Array.isArray(item.articles) && item.articles.length > 0 && (
                     <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                       {item.articles.length} article{item.articles.length > 1 ? 's' : ''}
@@ -617,10 +653,10 @@ export default function PanneauDevis({
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => ouvrirModification(item)}
+                        onClick={() => ouvrirReglement(item)}
                         title="Modifier ou régler ce devis impayé"
                       >
-                        Régler / Rapide
+                        Paiement
                       </button>
                     </>
                   )}
@@ -660,7 +696,9 @@ export default function PanneauDevis({
         <form onSubmit={enregistrer} className="form-devis-container">
           <div className="form-devis-entete">
             <h4>
-              {devisActuel
+              {paiementUniquement
+                ? `Régler le devis (${devisActuel?.numero_devis || ''})`
+                : devisActuel
                 ? `Modifier le devis (${devisActuel.numero_devis})`
                 : devisListe.length > 0
                   ? 'Ajout d’un devis complémentaire'
@@ -676,7 +714,7 @@ export default function PanneauDevis({
             </button>
           </div>
 
-          {afficherResumeDemande && <div style={{ marginBottom: 18, padding: '12px 14px', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-surface-sunken)' }}>
+          {!paiementUniquement && afficherResumeDemande && <div style={{ marginBottom: 18, padding: '12px 14px', border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-surface-sunken)' }}>
             <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Abonné</div>
             <div style={{ fontWeight: 700 }}>{demande?.est_personne_morale ? demande.raison_sociale : `${demande?.demandeur_nom || ''} ${demande?.demandeur_prenom || ''}`.trim() || '—'}</div>
             <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lieu des travaux</div>
@@ -684,7 +722,7 @@ export default function PanneauDevis({
             <div style={{ color: 'var(--color-text-muted)' }}>{demande?.nom_commune || 'Commune non renseignée'} · {demande?.type_autre || demande?.type_branchement || 'Nature non renseignée'}</div>
           </div>}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+          {!paiementUniquement && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             <div className="champ" style={{ margin: 0 }}>
               <label>N° DE DEVIS</label>
               <div
@@ -722,15 +760,15 @@ export default function PanneauDevis({
                   color: (totalTTC > 0 || Number(form.montant) > 0) ? 'var(--color-primary)' : 'var(--color-text-muted)'
                 }}
               >
-                <span>{(totalTTC > 0 ? totalTTC : (Number(form.montant) || 0)).toLocaleString('fr-DZ')} DA</span>
+                <span>{formaterMontant(totalTTC > 0 ? totalTTC : form.montant)} DA</span>
                 <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--color-text-muted)' }}>
                   {totalTTC > 0 ? 'Addition de tous les articles' : (lignesDevis.length === 0 ? 'Ajoutez des articles ci-dessous' : '')}
                 </span>
               </div>
             </div>
-          </div>
+          </div>}
 
-          <div className="champ" style={{ marginTop: 18, gridColumn: '1 / -1' }}>
+          {!paiementUniquement && <div className="champ" style={{ marginTop: 18, gridColumn: '1 / -1' }}>
             <label>ARTICLES / PIÈCES</label>
 
             {/* Barre de recherche + autocomplétion */}
@@ -774,13 +812,13 @@ export default function PanneauDevis({
                           {article.couleur ? ` · ${article.couleur}` : ''}
                           {aTarifsFournitureEtPose(article) ? (
                             <span style={{ display: 'block', color: 'var(--color-primary)' }}>
-                              F {Number(article.prixFourniture).toLocaleString('fr-DZ')} + P {Number(article.prixPose).toLocaleString('fr-DZ')} DA
+                              F {formaterMontant(article.prixFourniture)} + P {formaterMontant(article.prixPose)} DA
                             </span>
                           ) : null}
                         </small>
                       </div>
                       <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: 'var(--color-primary)' }}>
-                        {prixArticle(article).toLocaleString('fr-DZ')} DA
+                        {formaterMontant(prixArticle(article))} DA
                       </span>
                     </button>
                   ))}
@@ -837,7 +875,7 @@ export default function PanneauDevis({
                         <small style={{ color: 'var(--color-text-muted)' }}>
                           {ligne.code} · {LIBELLES_UNITES[ligne.unite] || ligne.unite}
                           {ligne.modePrix === 'FOURNITURE_POSE' && !aTarifsFournitureEtPose(ligne)
-                            ? ` · F ${Number(ligne.prixFourniture || 0).toLocaleString('fr-DZ')} + P ${Number(ligne.prixPose || 0).toLocaleString('fr-DZ')} DA`
+                            ? ` · F ${formaterMontant(ligne.prixFourniture)} + P ${formaterMontant(ligne.prixPose)} DA`
                             : null}
                         </small>
                       </div>
@@ -904,10 +942,10 @@ export default function PanneauDevis({
                         >+</button>
                       </div>
                       <span style={{ textAlign: 'right', color: 'var(--color-text-muted)', fontSize: 12.5 }}>
-                        {pu.toLocaleString('fr-DZ')} DA
+                        {formaterMontant(pu)} DA
                       </span>
                       <strong style={{ textAlign: 'right' }}>
-                        {montantLigne.toLocaleString('fr-DZ')} DA
+                        {formaterMontant(montantLigne)} DA
                       </strong>
                       <button
                         type="button"
@@ -925,16 +963,16 @@ export default function PanneauDevis({
                 {/* Récapitulatif */}
                 <div style={{ padding: '10px 12px', background: 'var(--color-surface-sunken)', display: 'grid', gap: 4 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-muted)' }}>
-                    <span>Total HT</span><span>{totalArticles.toLocaleString('fr-DZ')} DA</span>
+                    <span>Total HT</span><span>{formaterMontant(totalArticles)} DA</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-muted)' }}>
-                    <span>TVA Prestation</span><span>{totalTvaPrestation.toLocaleString('fr-DZ')} DA</span>
+                    <span>TVA Prestation</span><span>{formaterMontant(totalTvaPrestation)} DA</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-text-muted)' }}>
-                    <span>TVA Travaux</span><span>{totalTvaTravaux.toLocaleString('fr-DZ')} DA</span>
+                    <span>TVA Travaux</span><span>{formaterMontant(totalTvaTravaux)} DA</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 14, marginTop: 4, paddingTop: 6, borderTop: '1px solid var(--color-border)' }}>
-                    <span>Total TTC</span><span style={{ color: 'var(--color-primary)' }}>{totalTTC.toLocaleString('fr-DZ')} DA</span>
+                    <span>Total TTC</span><span style={{ color: 'var(--color-primary)' }}>{formaterMontant(totalTTC)} DA</span>
                   </div>
                 </div>
               </div>
@@ -947,10 +985,11 @@ export default function PanneauDevis({
                 Aucun article ajouté — recherchez un article ci-dessus pour commencer.
               </div>
             )}
-          </div>
+          </div>}
 
           {/* Section carte interactive pour l'encaissement / paiement */}
-          <div className={`paiement-toggle-card ${enregistrerPaiement ? 'actif' : ''}`}>
+          <div className={`paiement-toggle-card ${enregistrerPaiement ? 'actif' : ''} ${paiementUniquement ? 'paiement-only' : ''}`}>
+            {!paiementUniquement && (
             <label
               htmlFor="enregistrer-paiement"
               className="paiement-toggle-header"
@@ -978,10 +1017,20 @@ export default function PanneauDevis({
                 <span className="custom-switch-slider"></span>
               </div>
             </label>
+            )}
 
             {/* Détails du paiement si le switch est activé */}
             {enregistrerPaiement && (
               <div className="paiement-details-content">
+                {paiementUniquement && (
+                  <div className="paiement-details-heading">
+                    <div>
+                      <span className="paiement-details-kicker">RÈGLEMENT DU DEVIS</span>
+                      <strong>{devisActuel?.numero_devis || 'Devis sélectionné'}</strong>
+                    </div>
+                    <strong>{formaterMontant(devisActuel?.montant)} DA</strong>
+                  </div>
+                )}
                 <div className="champ">
                   <label id="mode-paiement-label">MODE DE RÈGLEMENT *</label>
                   <div role="radiogroup" aria-labelledby="mode-paiement-label">
@@ -1105,6 +1154,8 @@ export default function PanneauDevis({
             <button type="submit" className="btn btn-primary" disabled={envoi}>
               {envoi
                 ? 'Enregistrement...'
+                : paiementUniquement
+                  ? 'Enregistrer le règlement'
                 : devisActuel
                   ? (enregistrerPaiement && devisActuel.statut_paiement !== 'PAYE' ? 'Enregistrer & Valider le paiement' : 'Mettre à jour le devis')
                   : (enregistrerPaiement ? 'Enregistrer le devis & son paiement' : 'Enregistrer le devis')}

@@ -1272,6 +1272,9 @@ export default function EditeurDevisObat({
   const communeClient = demande?.nom_commune || 'Commune de rattachement';
   const telClient = demande?.demandeur_telephone || 'Non renseigné';
   const numDemandeRef = demande?.numero_demande || 'DEM-2026';
+  const sectionsAffichees = modeOnglet === 'preview'
+    ? sections.filter((section) => section.lignes.length > 0)
+    : sections;
 
   return (
     <div className="obat-devis-wrapper">
@@ -1832,7 +1835,7 @@ export default function EditeurDevisObat({
                 </tr>
               </thead>
             </table>
-            {sections.map((section, sIdx) => {
+            {sectionsAffichees.map((section, sIdx) => {
               const totalSectionHT = section.lignes.reduce(
                 (acc, l) => acc + (Number(l.quantite) || 0) * (Number(l.prix) || 0),
                 0

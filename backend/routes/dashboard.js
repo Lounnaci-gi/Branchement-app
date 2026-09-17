@@ -18,9 +18,22 @@ router.get('/', async (req, res) => {
     if (req.agent.role !== 'admin') demandeRequest.input('id_agence', sql.Int, req.agent.id_agence);
 
     const parStatut = await demandeRequest.query(`
-      SELECT s.code_statut, s.libelle, s.ordre, COUNT(d.id_demande) AS total
+      WITH DemandesNormalisees AS (
+        SELECT
+          d.id_demande,
+          d.id_agence,
+          CASE d.statut_actuel
+            WHEN 'ETUDE_EN_COURS' THEN 'DEPOSEE'
+            WHEN 'ETUDE_TERMINEE' THEN 'DEVIS_EMIS'
+            ELSE d.statut_actuel
+          END AS code_statut
+        FROM Demandes d
+      )
+      SELECT s.code_statut, s.libelle, s.ordre, COUNT(dn.id_demande) AS total
       FROM Statuts s
-      LEFT JOIN Demandes d ON d.statut_actuel = s.code_statut${agenceFilter}
+      LEFT JOIN DemandesNormalisees dn ON (
+        s.code_statut = 'DEPOSEE' OR dn.code_statut = s.code_statut
+      )${agenceFilter.replaceAll('d.', 'dn.')}
       WHERE s.code_statut NOT IN ('ETUDE_EN_COURS', 'ETUDE_TERMINEE')
       GROUP BY s.code_statut, s.libelle, s.ordre
       ORDER BY s.ordre
@@ -33,12 +46,44 @@ router.get('/', async (req, res) => {
       WHERE MONTH(date_depot) = MONTH(GETDATE()) AND YEAR(date_depot) = YEAR(GETDATE())${req.agent.role === 'admin' ? '' : ' AND id_agence = @id_agence'}
     `);
 
+    const demandesActivesRequest = pool.request();
+    if (req.agent.role !== 'admin') demandesActivesRequest.input('id_agence', sql.Int, req.agent.id_agence);
+    const demandesActives = await demandesActivesRequest.query(`
+      SELECT COUNT(*) AS total FROM Demandes
+      WHERE statut_actuel NOT IN ('REJETEE', 'ANNULEE', 'TRAVAUX_TERMINES', 'SCELLEE')${req.agent.role === 'admin' ? '' : ' AND id_agence = @id_agence'}
+    `);
+
     const paiementRequest = pool.request();
     if (req.agent.role !== 'admin') paiementRequest.input('id_agence', sql.Int, req.agent.id_agence);
     const enAttentePaiement = await paiementRequest.query(`
       SELECT COUNT(*) AS total, ISNULL(SUM(montant), 0) AS montant_total
       FROM Devis dv JOIN Demandes d ON d.id_demande = dv.id_demande
       WHERE dv.statut_paiement = 'IMPAYE'${req.agent.role === 'admin' ? '' : ' AND d.id_agence = @id_agence'}
+    `);
+
+    const devisPayes = await paiementRequest.query(`
+      SELECT COUNT(*) AS total, ISNULL(SUM(montant), 0) AS montant_total
+      FROM Devis dv JOIN Demandes d ON d.id_demande = dv.id_demande
+      WHERE dv.statut_paiement = 'PAYE'${req.agent.role === 'admin' ? '' : ' AND d.id_agence = @id_agence'}
+    `);
+
+    const detailsDevisPayes = await paiementRequest.query(`
+      SELECT
+        dv.id_devis,
+        dv.id_demande,
+        d.numero_demande,
+        dv.numero_devis,
+        dv.montant,
+        dv.date_paiement,
+        dv.mode_paiement,
+        dv.numero_recu,
+        dv.numero_cheque,
+        dv.numero_versement,
+        dv.banque
+      FROM Devis dv
+      JOIN Demandes d ON d.id_demande = dv.id_demande
+      WHERE dv.statut_paiement = 'PAYE'${req.agent.role === 'admin' ? '' : ' AND d.id_agence = @id_agence'}
+      ORDER BY dv.date_paiement DESC, dv.id_devis DESC
     `);
 
     const delaiRequest = pool.request();
@@ -51,8 +96,13 @@ router.get('/', async (req, res) => {
 
     res.json({
       parStatut: parStatut.recordset || [],
+      demandesActives: demandesActives.recordset?.[0]?.total ?? 0,
       demandesCeMois: ceMois.recordset?.[0]?.total ?? 0,
       enAttentePaiement: enAttentePaiement.recordset?.[0] ?? { total: 0, montant_total: 0 },
+      devisPayes: {
+        ...(devisPayes.recordset?.[0] ?? { total: 0, montant_total: 0 }),
+        details: detailsDevisPayes.recordset || []
+      },
       delaiMoyenJours: delaiMoyenJours.recordset?.[0]?.delai_moyen || 0
     });
   } catch (err) {

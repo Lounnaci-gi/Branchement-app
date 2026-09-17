@@ -398,7 +398,7 @@ export default function AffichageDevis() {
           color: #aebbd0 !important;
         }
       }
-      .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: 1px solid var(--color-border, #a9a9a9); }
+      .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: 1px solid var(--color-border, #a9a9a9); border-radius: 8px; }
       .devis-document-entete { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; gap: 16px; padding-bottom: 15px; border-bottom: 1px solid #111; }
       .devis-institution, .devis-agence { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
       .devis-institution strong { font-size: 12px; }
@@ -411,7 +411,7 @@ export default function AffichageDevis() {
       .devis-document-title div { display: flex; flex-direction: column; gap: 5px; }
       .devis-document-title span { font-size: 17px; font-weight: 800; text-decoration: underline; }
       .devis-document-title small { font-size: 12px; font-weight: 700; }
-      .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #111; margin-bottom: 15px; }
+      .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #111; margin-bottom: 15px; border-radius: 6px; overflow: hidden; }
       .devis-client-box-droite { width: 42%; margin-left: auto; grid-template-columns: 1fr; border-radius: 6px; overflow: hidden; }
       .devis-client-box-droite > div { min-height: 0; padding: 4px 10px; }
       .devis-client-box-droite > div + div { padding-top: 0; }
@@ -425,7 +425,7 @@ export default function AffichageDevis() {
       .devis-client-box small { font-size: 11px; }
       .devis-objet { margin: 14px 0 17px; font-size: 13px; }
       .devis-objet b { text-decoration: underline; }
-      .devis-articles-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+      .devis-articles-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; border-radius: 6px; overflow: hidden; }
       .devis-articles-table th, .devis-articles-table td { border: 1px solid #111; padding: 7px 6px; vertical-align: middle; }
       .devis-articles-table th { background: #1991eb; color: #fff; border-color: #147ad4; font-weight: 800; text-align: center; }
       .devis-articles-table .devis-categorie-header { background: #eff6ff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; text-align: left; }
@@ -436,7 +436,7 @@ export default function AffichageDevis() {
       .devis-articles-table .col-qte { width: 48px; text-align: center; }
       .devis-articles-table .col-pu { width: 100px; text-align: right; }
       .devis-articles-table .col-total { width: 110px; text-align: right; }
-      .devis-totaux { width: 55%; margin-left: auto; border-left: 1px solid #111; border-right: 1px solid #111; border-bottom: 1px solid #111; font-size: 12px; }
+      .devis-totaux { width: 55%; margin-left: auto; border-left: 1px solid #111; border-right: 1px solid #111; border-bottom: 1px solid #111; font-size: 12px; border-radius: 0 0 6px 6px; overflow: hidden; }
       .devis-totaux div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-top: 1px solid #111; }
       .devis-totaux strong { text-align: right; }
       .devis-total-ttc { font-size: 14px; font-weight: 800; background: #e9e9e9; }
