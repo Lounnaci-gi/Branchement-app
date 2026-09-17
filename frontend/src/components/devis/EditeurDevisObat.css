@@ -1204,6 +1204,41 @@
   font-weight: 800;
 }
 
+.obat-amount-words {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px 12px;
+  border: 1px solid #DCEBF2;
+  border-top: 0;
+  background: #F8FAFC;
+  color: #4B5563;
+  font-size: 11px;
+}
+
+.obat-amount-words span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.obat-amount-words strong {
+  color: #1F2937;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+:root[data-theme='dark'] .obat-amount-words {
+  border-color: #2A3550;
+  background: #1A2235;
+  color: #AEBBD0;
+}
+
+:root[data-theme='dark'] .obat-amount-words strong {
+  color: #E8EDF5;
+}
+
 /* Notes de bas de page */
 .obat-footer-notes {
   margin-top: 32px;

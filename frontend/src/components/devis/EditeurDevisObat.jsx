@@ -18,6 +18,55 @@ function formaterNombre(val) {
   return n.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const NOMBRES_EN_LETTRES = [
+  'zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf',
+  'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize'
+];
+
+function nombreEnLettresSousMille(nombre) {
+  if (nombre < 17) return NOMBRES_EN_LETTRES[nombre];
+  if (nombre < 20) return `dix-${NOMBRES_EN_LETTRES[nombre - 10]}`;
+  if (nombre < 100) {
+    const dizaine = Math.floor(nombre / 10);
+    const unite = nombre % 10;
+    if (dizaine === 7) return nombre === 71 ? 'soixante et onze' : `soixante-${nombreEnLettresSousMille(nombre - 60)}`;
+    if (dizaine === 8) return nombre === 80 ? 'quatre-vingts' : `quatre-vingt-${nombreEnLettresSousMille(unite)}`;
+    if (dizaine === 9) return `quatre-vingt-${nombreEnLettresSousMille(nombre - 80)}`;
+    const dizaines = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
+    if (unite === 0) return dizaines[dizaine];
+    return unite === 1 ? `${dizaines[dizaine]} et un` : `${dizaines[dizaine]}-${NOMBRES_EN_LETTRES[unite]}`;
+  }
+
+  const centaines = Math.floor(nombre / 100);
+  const reste = nombre % 100;
+  const prefixe = centaines === 1 ? 'cent' : `${NOMBRES_EN_LETTRES[centaines]} cent`;
+  if (reste === 0) return centaines === 1 ? prefixe : `${prefixe}s`;
+  return `${prefixe} ${nombreEnLettresSousMille(reste)}`;
+}
+
+function nombreEnLettres(nombre) {
+  const valeur = Math.max(0, Math.round((Number(nombre) || 0) * 100) / 100);
+  const entier = Math.floor(valeur);
+  const centimes = Math.round((valeur - entier) * 100);
+  const millions = Math.floor(entier / 1000000);
+  const resteMillions = entier % 1000000;
+  const parties = [];
+
+  if (millions > 0) parties.push(`${nombreEnLettresSousMille(millions)} million${millions > 1 ? 's' : ''}`);
+  if (resteMillions > 0) {
+    const milliersRestants = Math.floor(resteMillions / 1000);
+    const resteFinal = resteMillions % 1000;
+    if (milliersRestants > 0) parties.push(milliersRestants === 1 ? 'mille' : `${nombreEnLettresSousMille(milliersRestants)} mille`);
+    if (resteFinal > 0) parties.push(nombreEnLettresSousMille(resteFinal));
+  }
+  if (parties.length === 0) parties.push('zéro');
+
+  const texteEntier = `${parties.join(' ')} dinar${entier > 1 ? 's' : ''} algérien${entier > 1 ? 's' : ''}`;
+  return centimes > 0
+    ? `${texteEntier} et ${nombreEnLettresSousMille(centimes)} centime${centimes > 1 ? 's' : ''}`
+    : texteEntier;
+}
+
 function normaliserQuantite(valeur) {
   const quantite = Number(valeur);
   if (!Number.isFinite(quantite) || quantite < 0) return 0;
@@ -2511,6 +2560,11 @@ export default function EditeurDevisObat({
                 <div className="obat-net-payer-banner">
                   <div className="net-label">NET À PAYER</div>
                   <div className="net-valeur">{formaterNombre(netAPayerTTC)} DA TTC</div>
+                </div>
+
+                <div className="obat-amount-words">
+                  <span>Montant en lettres</span>
+                  <strong>{nombreEnLettres(netAPayerTTC)}</strong>
                 </div>
               </div>
 

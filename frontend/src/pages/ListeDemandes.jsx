@@ -211,7 +211,7 @@ export default function ListeDemandes() {
             disabled={demandesTriees.length === 0 || demandesTriees.some((d) => d.est_verrouillee)}
             title="Créer un devis depuis la première demande visible"
           >
-                    Créer un devis
+                    Devis
           </button>
           <Link to="/demandes/nouvelle" className="obat-btn obat-btn-pri">
                     Nouvelle demande

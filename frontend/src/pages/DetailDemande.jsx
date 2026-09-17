@@ -290,7 +290,7 @@ export default function DetailDemande() {
               onClick={ouvrirCreateurDevis}
               title="Créer un devis pour cette demande"
             >
-                Devis Obat
+                Devis
             </button>
           )}
           <button
