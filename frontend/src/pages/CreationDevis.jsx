@@ -83,10 +83,16 @@ export default function CreationDevis() {
   const devisAEditer = idDevisAEditer
     ? devis.find((d) => String(d.id_devis) === String(idDevisAEditer))
     : null;
+  const devisPaye = devisAEditer?.statut_paiement === 'PAYE';
 
   async function enregistrerDevis(payload, estFinalisation = false) {
     if (demandeVerrouillee) {
       notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
+
+    if (devisPaye) {
+      notifierErreur('Un devis déjà payé ne peut pas être modifié.');
       return;
     }
 

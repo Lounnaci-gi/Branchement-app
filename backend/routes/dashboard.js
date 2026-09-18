@@ -72,6 +72,7 @@ router.get('/', async (req, res) => {
         dv.id_devis,
         dv.id_demande,
         d.numero_demande,
+        CASE WHEN dem.est_personne_morale = 1 THEN dem.raison_sociale ELSE dem.nom + ' ' + dem.prenom END AS demandeur,
         dv.numero_devis,
         dv.montant,
         dv.date_paiement,
@@ -82,6 +83,7 @@ router.get('/', async (req, res) => {
         dv.banque
       FROM Devis dv
       JOIN Demandes d ON d.id_demande = dv.id_demande
+      JOIN Demandeurs dem ON dem.id_demandeur = d.id_demandeur
       WHERE dv.statut_paiement = 'PAYE'${req.agent.role === 'admin' ? '' : ' AND d.id_agence = @id_agence'}
       ORDER BY dv.date_paiement DESC, dv.id_devis DESC
     `);

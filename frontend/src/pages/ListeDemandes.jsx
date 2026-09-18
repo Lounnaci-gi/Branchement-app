@@ -146,7 +146,7 @@ export default function ListeDemandes() {
   function exporterCSV() {
     if (demandesTriees.length === 0) return;
     const entetes = [
-      'N° Demande', 'Demandeur', 'Téléphone principal', 'Adresse de résidence du demandeur',
+      'N° Demande', 'Nom & prénom / raison sociale', 'Téléphone principal', 'Adresse de résidence du demandeur',
       'Commune de résidence', 'Adresse exacte du futur branchement', 'Commune du branchement',
       'Type', 'Observations & Notes complémentaires', 'Statut', 'Date de dépôt'
     ];
@@ -319,7 +319,7 @@ export default function ListeDemandes() {
                 aria-sort={triColonne === 'demandeur' ? (triOrdre === 'asc' ? 'ascending' : 'descending') : 'none'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>Demandeur</span>
+                  <span>Nom &amp; prénom / raison sociale</span>
                   {triColonne === 'demandeur' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                 </div>
               </th>

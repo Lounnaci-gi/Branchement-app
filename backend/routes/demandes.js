@@ -1020,6 +1020,12 @@ router.put('/:id/devis', async (req, res) => {
   try {
     const id_demande = req.params.id;
     const { montant, id_devis, articles } = req.body;
+    const articlesValides = Array.isArray(articles)
+      ? articles.filter((article) => String(article?.code || article?.code_article || '').trim() && String(article?.libelle || '').trim())
+      : [];
+    if (articlesValides.length === 0) {
+      return res.status(400).json({ erreur: 'Veuillez ajouter au moins un article au devis.' });
+    }
     if (montant === undefined || montant === null || String(montant).trim() === '' || isNaN(Number(montant)) || Number(montant) < 0 || Number(montant) > 999999999.99) {
       return res.status(400).json({ erreur: 'Le montant du devis est obligatoire et doit être un nombre positif valide (max 999 999 999.99).' });
     }

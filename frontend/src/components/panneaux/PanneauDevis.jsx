@@ -443,8 +443,8 @@ export default function PanneauDevis({
       return;
     }
     const montantTotalArticles = totalTTC > 0 ? (Math.round(totalTTC * 100) / 100) : (Number(form.montant) || 0);
-    if (lignesDevis.length === 0 && montantTotalArticles <= 0) {
-      await notifierErreur('Veuillez ajouter au moins un article pour calculer le montant du devis.');
+    if (lignesDevis.length === 0) {
+      await notifierErreur('Veuillez ajouter au moins un article au devis.');
       return;
     }
     if (montantTotalArticles <= 0) {
