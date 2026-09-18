@@ -1262,7 +1262,7 @@ router.patch('/:id/devis/paiement', async (req, res) => {
 router.put('/:id/travaux', async (req, res) => {
   try {
     const id_demande = req.params.id;
-    const { date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations } = req.body;
+    const { date_debut, date_fin, equipe_execution, numero_abonne, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations } = req.body;
     const pool = await getPool();
 
     const acces = await verifierAccesDemande(pool, id_demande, req.agent, { exigerModifiable: true });
@@ -1272,6 +1272,9 @@ router.put('/:id/travaux', async (req, res) => {
 
     if (equipe_execution && !texteValide(equipe_execution, { maxLength: 100 })) {
       return res.status(400).json({ erreur: 'L’équipe d’exécution contient des caractères non valides.' });
+    }
+    if (numero_abonne && !texteValide(numero_abonne, { maxLength: 6 })) {
+      return res.status(400).json({ erreur: 'Le numéro d’abonné contient des caractères non valides ou dépasse 6 caractères.' });
     }
     if (numero_compteur && !texteValide(numero_compteur, { maxLength: 50 })) {
       return res.status(400).json({ erreur: 'Le numéro de compteur contient des caractères non valides.' });
@@ -1329,13 +1332,14 @@ router.put('/:id/travaux', async (req, res) => {
         .input('date_debut', sql.DateTime2, date_debut || null)
         .input('date_fin', sql.DateTime2, date_fin || null)
         .input('equipe_execution', sql.NVarChar(100), equipe_execution?.trim() || null)
+        .input('numero_abonne', sql.NVarChar(6), numero_abonne?.trim() || null)
         .input('numero_compteur', sql.NVarChar(50), numero_compteur?.trim() || null)
         .input('marque_compteur', sql.NVarChar(50), marqueCompteurFinal || null)
         .input('type_compteur', sql.NVarChar(50), type_compteur?.trim() || null)
         .input('diametre_compteur', sql.NVarChar(20), diametre_compteur?.trim() || null)
         .input('observations', sql.NVarChar, observations || null)
         .query(`UPDATE Travaux SET date_debut=@date_debut, date_fin=@date_fin, equipe_execution=@equipe_execution,
-                numero_compteur=@numero_compteur, marque_compteur=@marque_compteur, type_compteur=@type_compteur,
+          numero_abonne=@numero_abonne, numero_compteur=@numero_compteur, marque_compteur=@marque_compteur, type_compteur=@type_compteur,
                 diametre_compteur=@diametre_compteur, observations=@observations WHERE id_demande=@id_demande`);
     } else {
       const numero_ordre_execution = await genererNumeroOrdreExecution(pool);
@@ -1345,13 +1349,14 @@ router.put('/:id/travaux', async (req, res) => {
         .input('date_debut', sql.DateTime2, date_debut || null)
         .input('date_fin', sql.DateTime2, date_fin || null)
         .input('equipe_execution', sql.NVarChar(100), equipe_execution?.trim() || null)
+        .input('numero_abonne', sql.NVarChar(6), numero_abonne?.trim() || null)
         .input('numero_compteur', sql.NVarChar(50), numero_compteur?.trim() || null)
         .input('marque_compteur', sql.NVarChar(50), marqueCompteurFinal || null)
         .input('type_compteur', sql.NVarChar(50), type_compteur?.trim() || null)
         .input('diametre_compteur', sql.NVarChar(20), diametre_compteur?.trim() || null)
         .input('observations', sql.NVarChar, observations || null)
-        .query(`INSERT INTO Travaux (id_demande, numero_ordre_execution, date_debut, date_fin, equipe_execution, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations)
-          VALUES (@id_demande, @numero_ordre_execution, @date_debut, @date_fin, @equipe_execution, @numero_compteur, @marque_compteur, @type_compteur, @diametre_compteur, @observations)`);
+        .query(`INSERT INTO Travaux (id_demande, numero_ordre_execution, date_debut, date_fin, equipe_execution, numero_abonne, numero_compteur, marque_compteur, type_compteur, diametre_compteur, observations)
+          VALUES (@id_demande, @numero_ordre_execution, @date_debut, @date_fin, @equipe_execution, @numero_abonne, @numero_compteur, @marque_compteur, @type_compteur, @diametre_compteur, @observations)`);
     }
 
     await synchroniserStatut(

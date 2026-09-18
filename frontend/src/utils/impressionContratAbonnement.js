@@ -23,6 +23,13 @@ function libelleAgence(nomAgence) {
 
 function categorieTypeBranchement(demande) {
   const type = String(demande.type_branchement || demande.libelle_type || '').toLowerCase();
+  const natureTravaux = String(demande.type_autre || '').toLowerCase();
+  const estBranchementEau = natureTravaux.includes('branchement') && natureTravaux.includes('eau');
+  const estBranchementIndividuel = type.includes('domest') || type.includes('individ') || type.includes('menage');
+  if (estBranchementEau && estBranchementIndividuel) return { categorie: 'Cat I', type: 'Ordinaire' };
+  if (type.includes('administr')) return { categorie: 'Cat II', type: 'Ordinaire' };
+  if (type.includes('commercial')) return { categorie: 'Cat III', type: 'Ordinaire' };
+  if (type.includes('industri')) return { categorie: 'Cat IV', type: 'Ordinaire' };
   if (type.includes('domest')) return { categorie: 'Domestique', type: 'Ordinaire' };
   if (type.includes('commercial') || type.includes('artisan')) return { categorie: 'Commercial', type: 'Ordinaire' };
   if (type.includes('industri') || type.includes('touris')) return { categorie: 'Industriel', type: 'Spécial' };
@@ -51,7 +58,8 @@ export function genererHtmlContratAbonnement(donnees) {
   const adresseResidence = demande.demandeur_adresse || demande.adresse || '';
   const adresseComplete = [adresseResidence, communeResidence].filter(Boolean).join(' - ');
 
-  const { categorie, type } = categorieTypeBranchement(demande);
+  const { categorie } = categorieTypeBranchement(demande);
+  const type = '10';
   const diametreBranchement = etude.diametre_conduite || '';
   const diametreCompteur = travaux.diametre_compteur || '';
   const dateInstallation = travaux.date_fin || travaux.date_debut || '';
@@ -177,16 +185,12 @@ export function genererHtmlContratAbonnement(donnees) {
       padding-top: 1mm;
     }
     .numero-contrat {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 2mm;
       margin-bottom: 3mm;
       font-weight: 600;
     }
-    .numero-contrat .boite {
-      min-width: 42mm;
-      min-height: 8mm;
+    .numero-contrat .numero-valeur {
+      flex: 1;
+      min-height: 7mm;
     }
     .ligne {
       display: flex;
@@ -294,11 +298,11 @@ export function genererHtmlContratAbonnement(donnees) {
         </div>
         <div class="champ-service">
           <label>N° d’Abonné</label>
-          <div class="boite">&nbsp;</div>
+          <div class="boite">${echapperHtml(travaux.numero_abonne || '')}</div>
         </div>
         <div class="champ-service">
           <label>Diamètre de branchement</label>
-          <div class="boite">${echapperHtml(diametreBranchement)}</div>
+          <div class="boite">${echapperHtml(diametreCompteur)}</div>
         </div>
         <div class="champ-service">
           <label>Date d’installation</label>
@@ -318,14 +322,14 @@ export function genererHtmlContratAbonnement(donnees) {
         </div>
         <div class="champ-service">
           <label>Index de départ</label>
-          <div class="boite">&nbsp;</div>
+          <div class="boite">${echapperHtml(travaux.index_depart || '0000')}</div>
         </div>
       </aside>
 
       <section class="partie-abonne">
-        <div class="numero-contrat">
-          <span>N°</span>
-          <div class="boite">${echapperHtml(numeroContrat)}</div>
+        <div class="ligne numero-contrat">
+          <span class="label">N°</span>
+          <span class="boite numero-valeur">${echapperHtml(numeroContrat)}</span>
         </div>
 
         <div class="ligne"><span class="label">Je soussigné :</span><span class="valeur">${echapperHtml(nomComplet)}</span></div>

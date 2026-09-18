@@ -8,8 +8,28 @@ import InputDate from '../InputDate';
 const DIAMETRES_STANDARD = ['15mm', '20mm', '25mm', '32mm', '40mm', '50mm', '63mm', '80mm', '100mm', '110mm', '125mm', '150mm', '200mm'];
 const MARQUES_STANDARD = ['Sensus', 'Itron', 'Maddalena', 'Schlumberger', 'Elster', 'Landis+Gyr', 'Zenner', 'Aquameter', 'Kaifa', 'Other'];
 
+function dateLocaleAujourdhui() {
+  const date = new Date();
+  const mois = String(date.getMonth() + 1).padStart(2, '0');
+  const jour = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${mois}-${jour}`;
+}
+
+function normaliserDiametre(diametre) {
+  if (!diametre) return '';
+  const valeur = String(diametre).trim().replace(/\s+/g, '');
+  if (/^\d+(?:[.,]\d+)?$/.test(valeur)) return `${valeur}mm`;
+  return DIAMETRES_STANDARD.find((standard) => standard.toLowerCase() === valeur.toLowerCase()) || valeur;
+}
+
 export default function PanneauTravaux({ idDemande, demande, travaux, devis, etude, miseEnService, demandeVerrouillee = false, onEnregistre }) {
   const devisListe = Array.isArray(devis) ? devis : (devis ? [devis] : []);
+  const articleCompteurDuDevis = devisListe
+    .flatMap((item) => Array.isArray(item.articles) ? item.articles : [])
+    .find((article) => /compteur/i.test(`${article.code || ''} ${article.libelle || ''}`));
+  const diametreDepuisLibelle = articleCompteurDuDevis?.libelle?.match(/\bDN\s*(\d+(?:[.,]\d+)?)\s*MM?\b/i)?.[1];
+  const diametreCompteurDuDevis = articleCompteurDuDevis?.diametre || diametreDepuisLibelle;
+  const diametreCompteurParDefaut = normaliserDiametre(diametreCompteurDuDevis);
   const devisPaye = devisListe.length > 0 && devisListe.every((item) => item.statut_paiement === 'PAYE');
   const [marquesDisponibles, setMarquesDisponibles] = useState([...MARQUES_STANDARD]);
 
@@ -26,24 +46,26 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
   const [form, setForm] = useState({
     date_debut: travaux?.date_debut?.slice(0, 10) || '',
     date_fin: travaux?.date_fin?.slice(0, 10) || '',
-    equipe_execution: travaux?.equipe_execution || '',
+    equipe_execution: travaux?.equipe_execution || 'ADE',
+    numero_abonne: travaux?.numero_abonne || '',
     numero_compteur: travaux?.numero_compteur || '',
     marque_compteur: travaux?.marque_compteur || 'Sensus',
     type_compteur: travaux?.type_compteur || '',
-    diametre_compteur: travaux?.diametre_compteur || '',
+    diametre_compteur: travaux?.diametre_compteur || diametreCompteurParDefaut,
     observations: travaux?.observations || ''
   });
   const [envoi, setEnvoi] = useState(false);
 
-  function initialiserFormulaire(source = travaux) {
+  function initialiserFormulaire(source = travaux, preremplirDates = false) {
     setForm({
-      date_debut: source?.date_debut?.slice(0, 10) || '',
-      date_fin: source?.date_fin?.slice(0, 10) || '',
-      equipe_execution: source?.equipe_execution || '',
+      date_debut: source?.date_debut?.slice(0, 10) || (preremplirDates ? dateLocaleAujourdhui() : ''),
+      date_fin: source?.date_fin?.slice(0, 10) || (preremplirDates ? dateLocaleAujourdhui() : ''),
+      equipe_execution: source?.equipe_execution || 'ADE',
+      numero_abonne: source?.numero_abonne || '',
       numero_compteur: source?.numero_compteur || '',
       marque_compteur: source?.marque_compteur || 'Sensus',
       type_compteur: source?.type_compteur || '',
-      diametre_compteur: source?.diametre_compteur || '',
+      diametre_compteur: source?.diametre_compteur || diametreCompteurParDefaut,
       observations: source?.observations || ''
     });
   }
@@ -71,7 +93,7 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
       notifierErreur('Cette demande est scellée : les modifications sont interdites.');
       return;
     }
-    initialiserFormulaire();
+    initialiserFormulaire(travaux, true);
     setOuvert(true);
   }
 
@@ -247,6 +269,15 @@ export default function PanneauTravaux({ idDemande, demande, travaux, devis, etu
             <div className="champ">
               <label>Équipe d'exécution</label>
               <input value={form.equipe_execution} onChange={(e) => setForm({ ...form, equipe_execution: e.target.value })} />
+            </div>
+            <div className="champ">
+              <label>N° d’Abonné</label>
+              <input
+                value={form.numero_abonne}
+                maxLength={6}
+                onChange={(e) => setForm({ ...form, numero_abonne: e.target.value.slice(0, 6) })}
+                placeholder="6 caractères maximum"
+              />
             </div>
             <div className="champ">
               <label>N° compteur posé</label>

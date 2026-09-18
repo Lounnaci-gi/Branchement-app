@@ -292,6 +292,7 @@ CREATE TABLE Travaux (
     date_debut              DATETIME2 NULL,
     date_fin                DATETIME2 NULL,
     equipe_execution        NVARCHAR(100) NULL,
+    numero_abonne           NVARCHAR(6) NULL,
     numero_compteur         NVARCHAR(50) NULL,
     marque_compteur         NVARCHAR(50) NULL,
     type_compteur           NVARCHAR(50) NULL,
