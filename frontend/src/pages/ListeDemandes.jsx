@@ -142,6 +142,9 @@ export default function ListeDemandes() {
     return !demande.est_verrouillee && (demande.statut_actuel === 'ANNULEE' || demande.statut_paiement !== 'PAYE');
   }
 
+  const optionsStatuts = [...ETAPES_PIPELINE, ...Object.entries(STATUTS_TERMINAUX).map(([code, valeur]) => ({ code, libelle: valeur.libelle }))]
+    .filter((option, index, tableau) => tableau.findIndex((autre) => autre.code === option.code) === index);
+
   // Export CSV
   function exporterCSV() {
     if (demandesTriees.length === 0) return;
@@ -258,13 +261,11 @@ export default function ListeDemandes() {
               setStatutFiltre(e.target.value);
               setSearchParams(e.target.value ? { statut: e.target.value } : {});
             }}
+            aria-label="Filtrer par statut"
           >
-            <option value="">Tous les statuts détaillés</option>
-            {ETAPES_PIPELINE.map((e) => (
-              <option key={e.code} value={e.code}>{e.libelle}</option>
-            ))}
-            {Object.entries(STATUTS_TERMINAUX).map(([code, v]) => (
-              <option key={code} value={code}>{v.libelle}</option>
+            <option value="">Tous les statuts</option>
+            {optionsStatuts.map((option) => (
+              <option key={option.code} value={option.code}>{option.libelle}</option>
             ))}
           </select>
         </div>
