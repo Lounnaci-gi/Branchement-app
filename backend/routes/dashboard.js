@@ -88,6 +88,23 @@ router.get('/', async (req, res) => {
       ORDER BY dv.date_paiement DESC, dv.id_devis DESC
     `);
 
+    const detailsDevisNonPayes = await paiementRequest.query(`
+      SELECT
+        dv.id_devis,
+        dv.id_demande,
+        d.numero_demande,
+        CASE WHEN dem.est_personne_morale = 1 THEN dem.raison_sociale ELSE dem.nom + ' ' + dem.prenom END AS demandeur,
+        dv.numero_devis,
+        dv.montant,
+        dv.date_emission,
+        dv.statut_paiement
+      FROM Devis dv
+      JOIN Demandes d ON d.id_demande = dv.id_demande
+      JOIN Demandeurs dem ON dem.id_demandeur = d.id_demandeur
+      WHERE dv.statut_paiement = 'IMPAYE'${req.agent.role === 'admin' ? '' : ' AND d.id_agence = @id_agence'}
+      ORDER BY dv.date_emission DESC, dv.id_devis DESC
+    `);
+
     const delaiRequest = pool.request();
     if (req.agent.role !== 'admin') delaiRequest.input('id_agence', sql.Int, req.agent.id_agence);
     const delaiMoyenJours = await delaiRequest.query(`
@@ -104,6 +121,10 @@ router.get('/', async (req, res) => {
       devisPayes: {
         ...(devisPayes.recordset?.[0] ?? { total: 0, montant_total: 0 }),
         details: detailsDevisPayes.recordset || []
+      },
+      devisNonPayes: {
+        ...(enAttentePaiement.recordset?.[0] ?? { total: 0, montant_total: 0 }),
+        details: detailsDevisNonPayes.recordset || []
       },
       delaiMoyenJours: delaiMoyenJours.recordset?.[0]?.delai_moyen || 0
     });

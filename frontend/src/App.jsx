@@ -13,6 +13,7 @@ import GestionArticles from './pages/GestionArticles';
 import Profil from './pages/Profil';
 import Parametres from './pages/Parametres';
 import DevisPayes from './pages/DevisPayes';
+import DevisNonPayes from './pages/DevisNonPayes';
 
 import CommandPalette from './components/CommandPalette';
 
@@ -83,6 +84,7 @@ export default function App() {
       <Route path="/profil" element={<EspaceProtege><Profil /></EspaceProtege>} />
       <Route path="/parametres" element={<EspaceProtege><Parametres /></EspaceProtege>} />
       <Route path="/devis-payes" element={<EspaceProtege><DevisPayes /></EspaceProtege>} />
+      <Route path="/devis-non-payes" element={<EspaceProtege><DevisNonPayes /></EspaceProtege>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

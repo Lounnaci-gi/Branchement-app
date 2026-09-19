@@ -45,6 +45,13 @@ function formaterNombre(val) {
   return n.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function pagesVisibles(pageActuelle, totalPages) {
+  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  if (pageActuelle <= 2) return [1, 2, '...', totalPages];
+  if (pageActuelle >= totalPages - 1) return [1, '...', totalPages - 1, totalPages];
+  return [1, '...', pageActuelle, '...', totalPages];
+}
+
 function typeArticleDepuisTarifs(article) {
   if (article.modePrix === 'PRESTATION') return 'PR';
   const fourniture = Number(article.prixFourniture || 0);
@@ -551,10 +558,11 @@ export default function GestionArticles() {
                     </div>
 
                     {totalPagesGroupe > 1 && (
-                      <div className="obat-pagination" style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div className="obat-pagination">
                         <button
                           type="button"
-                          className="obat-btn-secondary"
+                          className="obat-pagination-nav"
+                          aria-label="Page précédente"
                           onClick={() => setPagesParCategorie((pagesAnciens) => ({
                             ...pagesAnciens,
                             [groupe.code]: Math.max(1, (Number(pagesAnciens[groupe.code] || 1) - 1))
@@ -564,28 +572,39 @@ export default function GestionArticles() {
                           Précédent
                         </button>
 
-                        {Array.from({ length: totalPagesGroupe }, (_, index) => index + 1).map((numeroPage) => (
-                          <button
-                            key={`${groupe.code}-${numeroPage}`}
-                            type="button"
-                            className={numeroPage === pageGroupe ? 'obat-btn-primary' : 'obat-btn-secondary'}
-                            onClick={() => setPagesParCategorie((pagesAnciens) => ({
-                              ...pagesAnciens,
-                              [groupe.code]: numeroPage
-                            }))}
-                            style={{ minWidth: 42, padding: '6px 10px', fontWeight: 700 }}
-                          >
-                            {numeroPage}
-                          </button>
+                        {pagesVisibles(pageGroupe, totalPagesGroupe).map((numeroPage, index) => (
+                          numeroPage === '...' ? (
+                            <span
+                              key={`${groupe.code}-ellipsis-${index}`}
+                              className="obat-pagination-ellipsis"
+                            >
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={`${groupe.code}-${numeroPage}`}
+                              type="button"
+                              className={`obat-pagination-page${numeroPage === pageGroupe ? ' is-active' : ''}`}
+                              aria-current={numeroPage === pageGroupe ? 'page' : undefined}
+                              aria-label={`Aller à la page ${numeroPage}`}
+                              onClick={() => setPagesParCategorie((pagesAnciens) => ({
+                                ...pagesAnciens,
+                                [groupe.code]: numeroPage
+                              }))}
+                            >
+                              {numeroPage}
+                            </button>
+                          )
                         ))}
 
-                        <span style={{ fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 600, marginLeft: 6 }}>
-                          {pageGroupe}/{totalPagesGroupe}
+                        <span className="obat-pagination-status" aria-live="polite">
+                          Page {pageGroupe} sur {totalPagesGroupe}
                         </span>
 
                         <button
                           type="button"
-                          className="obat-btn-secondary"
+                          className="obat-pagination-nav"
+                          aria-label="Page suivante"
                           onClick={() => setPagesParCategorie((pagesAnciens) => ({
                             ...pagesAnciens,
                             [groupe.code]: Math.min(totalPagesGroupe, (Number(pagesAnciens[groupe.code] || 1) + 1))

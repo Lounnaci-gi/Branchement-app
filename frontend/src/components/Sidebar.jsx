@@ -1,10 +1,11 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 import './Sidebar.css';
 
 export default function Sidebar({ agent, onOpenSearch }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [agentCourant, setAgentCourant] = useState(agent);
 
   useEffect(() => {
@@ -24,6 +25,8 @@ export default function Sidebar({ agent, onOpenSearch }) {
     localStorage.removeItem('agent');
     navigate('/connexion');
   }
+
+  const afficheDevisNonPayes = location.pathname === '/devis-non-payes';
 
   return (
     <aside className="sidebar">
@@ -53,7 +56,7 @@ export default function Sidebar({ agent, onOpenSearch }) {
         <NavLink to="/" end className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
           <span>Tableau de bord</span>
         </NavLink>
-        <NavLink to="/demandes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
+        <NavLink to="/demandes" className={({ isActive }) => `sidebar-lien ${isActive && !afficheDevisNonPayes ? 'actif' : ''}`}>
           <span>Demandes</span>
         </NavLink>
         <NavLink to="/demandes/nouvelle" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
@@ -61,6 +64,9 @@ export default function Sidebar({ agent, onOpenSearch }) {
         </NavLink>
         <NavLink to="/devis-payes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
           <span>Devis payés</span>
+        </NavLink>
+        <NavLink to="/devis-non-payes" className={() => `sidebar-lien ${afficheDevisNonPayes ? 'actif' : ''}`}>
+          <span>Devis non payés</span>
         </NavLink>
         {agentCourant?.role === 'admin' && (
           <>

@@ -181,6 +181,20 @@ function extraireTitreSection(libelle) {
     : { titre: '', libelle: valeur };
 }
 
+function obtenirLibelleLigne(ligne) {
+  const valeur = ligne?.libelle ?? ligne?.designation ?? ligne?.description ?? '';
+  return extraireTitreSection(valeur).libelle.trim();
+}
+
+function normaliserMotRecherche(valeur) {
+  return String(valeur || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 // Modèles d'ouvrages types AEP (Spécifiques ADE pour eau potable)
 const PACKS_OUVRAGES_AEP = [
   {
@@ -339,7 +353,7 @@ export default function EditeurDevisObat({
             return {
               id_ligne: art.id_ligne || Math.random().toString(),
               code: art.code || art.code_article || '',
-              libelle: designation.libelle,
+              libelle: obtenirLibelleLigne(art),
               type: typeLigne,
               quantite: Number(art.quantite) || 1,
               unite: art.unite || 'U',
@@ -463,11 +477,19 @@ export default function EditeurDevisObat({
     const minuteur = setTimeout(() => {
       const resultat = {};
       Object.entries(recherchesLignes).forEach(([idLigne, recherche]) => {
-        const texte = String(recherche || '').trim().toLowerCase();
-        if (texte.length < 2) return;
+        const motsRecherches = normaliserMotRecherche(recherche).split(/\s+/).filter((mot) => mot.length >= 2);
+        if (motsRecherches.length === 0) return;
         resultat[idLigne] = tousLesArticles
-          .filter((article) => [article.libelle, article.code, article.matiere, article.couleur]
-            .some((valeur) => String(valeur || '').toLowerCase().includes(texte)))
+          .filter((article) => {
+            const texteArticle = normaliserMotRecherche([
+              article.libelle,
+              article.code,
+              article.matiere,
+              article.couleur,
+              article.categorie
+            ].filter(Boolean).join(' '));
+            return motsRecherches.every((mot) => texteArticle.includes(mot));
+          })
           .slice(0, 8);
       });
       setSuggestionsLignes(resultat);
@@ -1074,9 +1096,9 @@ export default function EditeurDevisObat({
     }
 
     // Vérification que tous les articles ont une désignation
-    const ligneSansLibelle = toutesLesLignes.find((l) => !l.libelle || !l.libelle.trim());
+    const ligneSansLibelle = toutesLesLignes.find((l) => !obtenirLibelleLigne(l));
     if (ligneSansLibelle) {
-      notifierErreur("Veuillez renseigner la désignation de tous les articles du devis avant d'enregistrer.");
+      notifierErreur(`Veuillez renseigner la désignation de l'article ${ligneSansLibelle.code ? `« ${ligneSansLibelle.code} »` : ''} avant d'enregistrer.`);
       return;
     }
 
@@ -1251,7 +1273,7 @@ export default function EditeurDevisObat({
         const prix = normaliserPrix(l.prix);
         articlesPayload.push({
           code: l.code,
-          libelle: `[${sec.titre}] ${l.libelle}`,
+          libelle: `[${sec.titre}] ${obtenirLibelleLigne(l)}`,
           unite: l.unite,
           diametre: l.diametre || null,
           quantite,
