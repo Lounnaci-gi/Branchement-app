@@ -107,7 +107,7 @@ export default function TableauDeBord() {
       <header className="obat-page-header">
         <div>
           <span>ADE • SUIVI TECHNIQUE</span>
-          <h1 className="obat-page-title">Tableau de bord de gestion</h1>
+          <h1 className="obat-page-title">Tableau de bord</h1>
           <p className="obat-page-subtitle">
             Indicateurs d'activité, suivi des chantiers et pilotage du réseau de branchements en temps réel.
           </p>

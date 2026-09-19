@@ -5,23 +5,25 @@
                    + seed-referentiel.sql (partiel) + securite.sql
 
    Différences par rapport au schema.sql précédent :
-     1) Ajout de la table CategoriesArticles (hiérarchie
-        Catégorie → Famille → Article), directement dans le DDL
-        (plus besoin de script de migration séparé).
-     2) FamillesArticles porte désormais nativement la colonne
-        id_categorie (NULL autorisé) + sa FK vers CategoriesArticles.
+     1) Ajout de la table CategoriesArticles directement dans le DDL.
+     2) Les articles sont rattachés directement à leur catégorie.
      3) AUCUN seed de données pour CategoriesArticles,
-        FamillesArticles, ArticlesDevis, TarifsArticlesDevis :
-        ces tables sont créées vides. Seules les données de
-        référence organisationnelles (Centres/Agences/Communes)
-        et les TypesBranchement sont conservées.
+        ArticlesDevis ni TarifsArticlesDevis : ces tables sont
+        créées vides. Seules les données de référence
+        organisationnelles (Centres/Agences/Communes) et les
+        TypesBranchement sont conservées.
      4) LignesDevis.choix_prix est maintenant contraint aux
         valeurs PRESTATION / FOURNITURE / POSE / FOURNITURE_POSE.
      5) Ajout de la fonction fn_PrixArticle : calcule le prix
         effectif d'une ligne selon choix_prix, a partir du tarif
         ouvert de l'article (permet de facturer fourniture seule,
         pose seule, ou les deux, pour les articles FOURNITURE_POSE).
-   Date : 2026-09-11
+   Date : 2026-09-19
+
+   VERIFICATION : les seuls INSERT de seed presents sont
+   Statuts, TypesBranchement, Centres, Agences, Communes.
+   Aucune insertion dans CategoriesArticles,
+   ArticlesDevis ni TarifsArticlesDevis.
    ============================================================ */
 
 /* ============================================================
@@ -234,8 +236,8 @@ CREATE TABLE LignesDevis (
 
 /* ------------------------------------------------------------
    10. REFERENTIEL DES ARTICLES DE DEVIS
-       Hiérarchie : CategoriesArticles → FamillesArticles → ArticlesDevis
-       (tables créées vides — pas de seed ici)
+       Hiérarchie : CategoriesArticles → ArticlesDevis
+       Les familles ont été retirées du modèle de données.
    ------------------------------------------------------------ */
 CREATE TABLE CategoriesArticles (
     id_categorie    INT IDENTITY(1,1) PRIMARY KEY,
@@ -244,17 +246,9 @@ CREATE TABLE CategoriesArticles (
     actif           BIT NOT NULL DEFAULT 1
 );
 
-CREATE TABLE FamillesArticles (
-    id_famille      INT IDENTITY(1,1) PRIMARY KEY,
-    code_famille    NVARCHAR(50) NOT NULL UNIQUE,
-    libelle         NVARCHAR(100) NOT NULL,
-    id_categorie    INT NULL CONSTRAINT FK_FamillesArticles_Categorie REFERENCES CategoriesArticles(id_categorie),
-    actif           BIT NOT NULL DEFAULT 1
-);
-
 CREATE TABLE ArticlesDevis (
     id_article      INT IDENTITY(1,1) PRIMARY KEY,
-    id_famille      INT NOT NULL REFERENCES FamillesArticles(id_famille),
+    id_categorie    INT NOT NULL CONSTRAINT FK_ArticlesDevis_Categorie REFERENCES CategoriesArticles(id_categorie),
     code_article    NVARCHAR(50) NOT NULL UNIQUE,
     libelle         NVARCHAR(150) NOT NULL,
     matiere         NVARCHAR(50) NULL,
@@ -487,8 +481,8 @@ GO
 /* ============================================================
    ETAPE 1 — DONNEES DE REFERENCE ORGANISATIONNELLES
    (Centres / Agences / Communes uniquement — PAS de
-   CategoriesArticles, FamillesArticles, ArticlesDevis
-   ni TarifsArticlesDevis : ces tables restent vides)
+   CategoriesArticles, ArticlesDevis ni TarifsArticlesDevis :
+   ces tables restent vides)
    ============================================================ */
 IF NOT EXISTS (SELECT 1 FROM Centres WHERE nom_centre = N'Centre Berrouaghia')
 BEGIN
@@ -556,7 +550,6 @@ GRANT SELECT, INSERT, UPDATE ON OBJECT::dbo.Agents TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.LignesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueModificationsDemandes TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.FamillesArticles TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
 
@@ -576,5 +569,5 @@ GRANT EXECUTE ON OBJECT::dbo.fn_PrixArticle TO db_aep_app_role;
 ALTER ROLE db_aep_app_role ADD MEMBER ade_app_user;
 GO
 
-PRINT N'Reconstruction de BranchementAEP terminée (sans catégories/familles/articles).';
+PRINT N'Reconstruction de BranchementAEP terminée (sans catégories/articles).';
 GO

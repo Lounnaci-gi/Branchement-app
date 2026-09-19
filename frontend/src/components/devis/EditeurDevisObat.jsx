@@ -10,8 +10,17 @@ const LIBELLES_UNITES = {
   M3: 'M3 (Mètre cube)',
   KG: 'KG (Kilogramme)',
   H: 'H (Heure)',
-  FF: 'FF (Forfait)'
+  FF: 'FF (Forfait)',
+  ENS: 'ENS (Ensemble)'
 };
+
+function idCategorieGroupe(groupe) {
+  return groupe?.id_categorie ?? groupe?.id_famille ?? '';
+}
+
+function idCategorieLigne(ligne) {
+  return ligne?.id_categorie ?? ligne?.id_famille ?? '';
+}
 
 function formaterNombre(val) {
   const n = Number(val) || 0;
@@ -514,7 +523,7 @@ export default function EditeurDevisObat({
         prixPose: 0,
         choixPrix: 'FOURNITURE_POSE',
         categorie: 'Sans catégorie',
-        id_famille: '',
+        id_categorie: '',
         sousElements: [],
         estLigneLibre: true
       };
@@ -773,7 +782,7 @@ export default function EditeurDevisObat({
     }
 
     setLignesLibresAPersister([ligne]);
-    setFamillesChoisies({ [ligne.id_ligne]: ligne.id_famille || '' });
+    setFamillesChoisies({ [ligne.id_ligne]: idCategorieLigne(ligne) });
     setCallbackApresEnregistrement(null);
     setModalFamilleOuvert(true);
   }
@@ -1092,9 +1101,8 @@ export default function EditeurDevisObat({
     // Détection des lignes libres à enregistrer dans le référentiel
     const libres = toutesLesLignes.filter((l) => l.estLigneLibre && l.libelle?.trim());
     if (libres.length > 0) {
-      // Initialiser les familles choisies (reprendre id_famille si déjà sélectionné sur la ligne)
       const init = {};
-      libres.forEach((l) => { init[l.id_ligne] = l.id_famille || ''; });
+      libres.forEach((l) => { init[l.id_ligne] = idCategorieLigne(l); });
       setLignesLibresAPersister(libres);
       setFamillesChoisies(init);
       setCallbackApresEnregistrement(() => (sectionsUpdated) => {
@@ -1125,10 +1133,9 @@ export default function EditeurDevisObat({
 
   // Enregistre les articles libres dans le référentiel puis appelle le callback
   async function enregistrerArticlesLibresPuisSauvegarder() {
-    // Vérifier que toutes les familles sont choisies
     const nonChoisies = lignesLibresAPersister.filter((l) => !famillesChoisies[l.id_ligne]);
     if (nonChoisies.length > 0) {
-      notifierErreur(`Veuillez choisir une famille pour : ${nonChoisies.map((l) => l.libelle).join(', ')}`);
+      notifierErreur(`Veuillez choisir une catégorie pour : ${nonChoisies.map((l) => l.libelle).join(', ')}`);
       return;
     }
 
@@ -1137,7 +1144,7 @@ export default function EditeurDevisObat({
 
     try {
       for (const ligne of lignesLibresAPersister) {
-        const idFamille = Number(famillesChoisies[ligne.id_ligne]);
+        const idCategorie = Number(famillesChoisies[ligne.id_ligne]);
         const type = (ligne.type || 'FP/').trim();
         let mode_prix = 'FOURNITURE_POSE';
         let type_tva = 'TRAVAUX';
@@ -1175,7 +1182,7 @@ export default function EditeurDevisObat({
         }
 
         const payload = {
-          id_famille: idFamille,
+          id_categorie: idCategorie,
           libelle: ligne.libelle.trim(),
           matiere: ligne.matiere || '',
           couleur: '',
@@ -1194,7 +1201,7 @@ export default function EditeurDevisObat({
           // Ajouter également au catalogue local
           setFamillesLocales((prev) =>
             prev.map((f) =>
-              f.id_famille === idFamille
+              Number(idCategorieGroupe(f)) === idCategorie
                 ? { ...f, articles: [...(f.articles || []), res.data] }
                 : f
             )
@@ -1209,7 +1216,7 @@ export default function EditeurDevisObat({
           ...sec,
           lignes: sec.lignes.map((l) =>
             codesNouveaux[l.id_ligne]
-              ? { ...l, code: codesNouveaux[l.id_ligne], estLigneLibre: false, id_famille: famillesChoisies[l.id_ligne] }
+              ? { ...l, code: codesNouveaux[l.id_ligne], estLigneLibre: false, id_categorie: famillesChoisies[l.id_ligne] }
               : l
           )
         }));
@@ -1544,7 +1551,7 @@ export default function EditeurDevisObat({
                   </button>
                   {articleFamilles.map((f) => (
                     <button
-                      key={f.code || f.id_famille}
+                      key={f.code || idCategorieGroupe(f)}
                       type="button"
                       className={`obat-famille-tag ${filtreFamille === (f.libelle || f.code) ? 'active' : ''}`}
                       onClick={() => setFiltreFamille(f.libelle || f.code)}
@@ -2660,9 +2667,9 @@ export default function EditeurDevisObat({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ marginBottom: 6 }}>Choisir la famille de l'article</h3>
+            <h3 style={{ marginBottom: 6 }}>Choisir la catégorie de l'article</h3>
             <p style={{ fontSize: 13, color: '#64748B', marginBottom: 16 }}>
-              Sélectionnez la famille d'appartenance avant de valider l'enregistrement de cet article dans le référentiel.
+              Sélectionnez la catégorie d'appartenance avant d'enregistrer cet article dans le référentiel.
             </p>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
@@ -2671,7 +2678,7 @@ export default function EditeurDevisObat({
                   <th style={{ padding: '8px 10px', textAlign: 'left' }}>Désignation</th>
                   <th style={{ padding: '8px 10px', textAlign: 'center' }}>Unité</th>
                   <th style={{ padding: '8px 10px', textAlign: 'right' }}>Prix U. HT</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', minWidth: 180 }}>Famille *</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', minWidth: 180 }}>Catégorie *</th>
                 </tr>
               </thead>
               <tbody>
@@ -2695,9 +2702,9 @@ export default function EditeurDevisObat({
                           background: '#FFF'
                         }}
                       >
-                        <option value="">— Choisir une famille —</option>
+                        <option value="">— Choisir une catégorie —</option>
                         {famillesLocales.map((f) => (
-                          <option key={f.id_famille} value={f.id_famille}>
+                          <option key={idCategorieGroupe(f)} value={idCategorieGroupe(f)}>
                             {f.libelle || f.code}
                           </option>
                         ))}

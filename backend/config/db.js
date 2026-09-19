@@ -70,20 +70,21 @@ async function verifierEtMigrerBase(pool) {
     await pool.request().query(migrationTravauxSQL);
 
     const migrationArticlesSQL = `
-      IF OBJECT_ID('dbo.FamillesArticles', 'U') IS NULL
+      IF OBJECT_ID('dbo.CategoriesArticles', 'U') IS NULL
       BEGIN
-        CREATE TABLE FamillesArticles (
-          id_famille INT IDENTITY(1,1) PRIMARY KEY,
-          code_famille NVARCHAR(50) NOT NULL UNIQUE,
+        CREATE TABLE CategoriesArticles (
+          id_categorie INT IDENTITY(1,1) PRIMARY KEY,
+          code_categorie NVARCHAR(50) NOT NULL UNIQUE,
           libelle NVARCHAR(100) NOT NULL,
           actif BIT NOT NULL DEFAULT 1
         );
       END;
+
       IF OBJECT_ID('dbo.ArticlesDevis', 'U') IS NULL
       BEGIN
         CREATE TABLE ArticlesDevis (
           id_article INT IDENTITY(1,1) PRIMARY KEY,
-          id_famille INT NOT NULL REFERENCES FamillesArticles(id_famille),
+          id_categorie INT NOT NULL REFERENCES CategoriesArticles(id_categorie),
           code_article NVARCHAR(50) NOT NULL UNIQUE,
           libelle NVARCHAR(150) NOT NULL,
           matiere NVARCHAR(50) NULL,
@@ -98,6 +99,47 @@ async function verifierEtMigrerBase(pool) {
           actif BIT NOT NULL DEFAULT 1
         );
       END;
+
+      IF OBJECT_ID('dbo.FamillesArticles', 'U') IS NOT NULL
+      BEGIN
+        INSERT INTO CategoriesArticles (code_categorie, libelle, actif)
+        SELECT f.code_famille, f.libelle, ISNULL(f.actif, 1)
+        FROM FamillesArticles f
+        WHERE NOT EXISTS (
+          SELECT 1 FROM CategoriesArticles c WHERE c.code_categorie = f.code_famille
+        );
+      END;
+
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'id_categorie')
+      BEGIN
+        ALTER TABLE ArticlesDevis ADD id_categorie INT NULL;
+      END;
+
+      IF OBJECT_ID('dbo.FamillesArticles', 'U') IS NOT NULL
+         AND EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'id_famille')
+      BEGIN
+        UPDATE ad
+        SET id_categorie = c.id_categorie
+        FROM ArticlesDevis ad
+        INNER JOIN FamillesArticles f ON f.id_famille = ad.id_famille
+        INNER JOIN CategoriesArticles c ON c.code_categorie = f.code_famille
+        WHERE ad.id_categorie IS NULL;
+      END;
+
+      DECLARE @dropFamilleFk NVARCHAR(MAX) = N'';
+      SELECT @dropFamilleFk += N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(fk.parent_object_id))
+        + N'.' + QUOTENAME(OBJECT_NAME(fk.parent_object_id))
+        + N' DROP CONSTRAINT ' + QUOTENAME(fk.name) + N';'
+      FROM sys.foreign_keys fk
+      WHERE fk.referenced_object_id = OBJECT_ID('dbo.FamillesArticles');
+      IF @dropFamilleFk <> N'' EXEC sp_executesql @dropFamilleFk;
+
+      IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'id_famille')
+        ALTER TABLE ArticlesDevis DROP COLUMN id_famille;
+
+      IF OBJECT_ID('dbo.FamillesArticles', 'U') IS NOT NULL
+        DROP TABLE FamillesArticles;
+
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'matiere')
         ALTER TABLE ArticlesDevis ADD matiere NVARCHAR(50) NULL;
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'couleur')
@@ -114,29 +156,13 @@ async function verifierEtMigrerBase(pool) {
         ALTER TABLE ArticlesDevis ADD taux_tva DECIMAL(5,2) NOT NULL CONSTRAINT DF_ArticlesDevis_TauxTva DEFAULT 19;
       IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_ArticlesDevis_ModePrix')
         ALTER TABLE ArticlesDevis ADD CONSTRAINT CK_ArticlesDevis_ModePrix CHECK (mode_prix IN (N'PRESTATION', N'FOURNITURE_POSE'));
-      IF NOT EXISTS (SELECT 1 FROM FamillesArticles)
-      BEGIN
-        INSERT INTO FamillesArticles (code_famille, libelle) VALUES
-          (N'RACCORDEMENTS', N'Raccordements'),
-          (N'MATERIEL', N'Matériel de pose'),
-          (N'TRAVAUX', N'Travaux / main d’œuvre');
 
-        INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-        SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
-        FROM (VALUES
-          (N'RACCORDEMENTS', N'RAC-110', N'Raccord 110 mm', N'U', N'FOURNITURE_POSE', CAST(25000 AS DECIMAL(12,2)), CAST(25000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'RACCORDEMENTS', N'RAC-160', N'Raccord 160 mm', N'U', N'FOURNITURE_POSE', CAST(32000 AS DECIMAL(12,2)), CAST(32000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'RACCORDEMENTS', N'VAN-050', N'Vanne 50 mm', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'RACCORDEMENTS', N'VAN-100', N'Vanne 100 mm', N'U', N'FOURNITURE_POSE', CAST(26000 AS DECIMAL(12,2)), CAST(26000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'MATERIEL', N'MAT-C', N'Coffret de branchement', N'U', N'FOURNITURE_POSE', CAST(14500 AS DECIMAL(12,2)), CAST(14500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'MATERIEL', N'MAT-P', N'Pieds / supports', N'U', N'FOURNITURE_POSE', CAST(7000 AS DECIMAL(12,2)), CAST(7000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'MATERIEL', N'MAT-S', N'Système de sécurité', N'U', N'FOURNITURE_POSE', CAST(12000 AS DECIMAL(12,2)), CAST(12000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-          (N'TRAVAUX', N'TR-FO', N'Fouille / terrassement', N'ML', N'FOURNITURE_POSE', CAST(5500 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(5500 AS DECIMAL(12,2))),
-          (N'TRAVAUX', N'TR-RE', N'Réseau et branchement', N'ML', N'FOURNITURE_POSE', CAST(4200 AS DECIMAL(12,2)), CAST(2500 AS DECIMAL(12,2)), CAST(1700 AS DECIMAL(12,2))),
-          (N'TRAVAUX', N'TR-PO', N'Pose / raccordement', N'U', N'FOURNITURE_POSE', CAST(18000 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)), CAST(18000 AS DECIMAL(12,2)))
-        ) a(code_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-        INNER JOIN FamillesArticles f ON f.code_famille = a.code_famille;
+      IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('ArticlesDevis') AND name = 'id_categorie')
+         AND NOT EXISTS (SELECT 1 FROM ArticlesDevis WHERE id_categorie IS NULL)
+      BEGIN
+        ALTER TABLE ArticlesDevis ALTER COLUMN id_categorie INT NOT NULL;
       END;
+
       UPDATE ArticlesDevis
       SET unite = CASE UPPER(unite)
         WHEN N'U' THEN N'U'
@@ -147,13 +173,6 @@ async function verifierEtMigrerBase(pool) {
         WHEN N'KG' THEN N'KG'
         ELSE unite
       END;
-      UPDATE ArticlesDevis
-      SET mode_prix = N'FOURNITURE_POSE', prix_fourniture = 2500, prix_pose = 1700
-      WHERE code_article = N'TR-RE';
-      UPDATE ArticlesDevis SET type_tva = N'TRAVAUX' WHERE code_article = N'TR-RE';
-      UPDATE ArticlesDevis
-      SET mode_prix = N'FOURNITURE_POSE', prix_fourniture = 1800, prix_pose = 1000
-      WHERE code_article = N'MAT-DA';
       IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_ArticlesDevis_Unite')
         ALTER TABLE ArticlesDevis ADD CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG', N'H', N'FF', N'ENS'));
       IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_ArticlesDevis_Unite')
@@ -161,15 +180,7 @@ async function verifierEtMigrerBase(pool) {
         ALTER TABLE ArticlesDevis DROP CONSTRAINT CK_ArticlesDevis_Unite;
         ALTER TABLE ArticlesDevis ADD CONSTRAINT CK_ArticlesDevis_Unite CHECK (unite IN (N'U', N'ML', N'M²', N'M3', N'KG', N'H', N'FF', N'ENS'));
       END;
-      INSERT INTO ArticlesDevis (id_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-      SELECT f.id_famille, a.code_article, a.libelle, a.unite, a.mode_prix, a.prix_unitaire, a.prix_fourniture, a.prix_pose
-      FROM (VALUES
-        (N'MATERIEL', N'MAT-DA', N'Dalle de protection', N'M²', N'FOURNITURE_POSE', CAST(2800 AS DECIMAL(12,2)), CAST(1800 AS DECIMAL(12,2)), CAST(1000 AS DECIMAL(12,2))),
-        (N'MATERIEL', N'MAT-SB', N'Sable de remblai', N'M3', N'FOURNITURE_POSE', CAST(3200 AS DECIMAL(12,2)), CAST(3200 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2))),
-        (N'MATERIEL', N'MAT-CI', N'Ciment', N'KG', N'FOURNITURE_POSE', CAST(95 AS DECIMAL(12,2)), CAST(95 AS DECIMAL(12,2)), CAST(0 AS DECIMAL(12,2)))
-      ) a(code_famille, code_article, libelle, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose)
-      INNER JOIN FamillesArticles f ON f.code_famille = a.code_famille
-      WHERE NOT EXISTS (SELECT 1 FROM ArticlesDevis d WHERE d.code_article = a.code_article);
+
       IF OBJECT_ID('dbo.TarifsArticlesDevis', 'U') IS NULL
       BEGIN
         CREATE TABLE TarifsArticlesDevis (
@@ -226,8 +237,6 @@ async function verifierEtMigrerBase(pool) {
       BEGIN
         IF OBJECT_ID(N'dbo.CategoriesArticles', N'U') IS NOT NULL
           GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
-        IF OBJECT_ID(N'dbo.FamillesArticles', N'U') IS NOT NULL
-          GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.FamillesArticles TO db_aep_app_role;
         IF OBJECT_ID(N'dbo.ArticlesDevis', N'U') IS NOT NULL
           GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
         IF OBJECT_ID(N'dbo.TarifsArticlesDevis', N'U') IS NOT NULL

@@ -69,7 +69,7 @@ export default function Sidebar({ agent, onOpenSearch }) {
               <span>Communes</span>
             </NavLink>
             <NavLink to="/referentiels/articles" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-              <span>Articles de devis</span>
+              <span>Articles</span>
             </NavLink>
             <NavLink to="/parametres" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
               <span>Paramètres</span>

@@ -60,28 +60,26 @@ router.get('/articles', async (req, res) => {
   try {
     const pool = await getPool();
     const result = await pool.request().query(`
-                  SELECT f.id_famille, f.code_famille AS code, f.libelle AS libelle_famille,
-                    f.id_categorie,
-                    cat.libelle AS libelle_categorie,
-                    a.id_article, a.code_article AS code_article, a.libelle, a.matiere, a.couleur, a.unite,
-                    COALESCE(t.mode_prix, a.mode_prix) AS mode_prix,
-                    COALESCE(t.prix_unitaire, a.prix_unitaire) AS prix,
-                    COALESCE(t.prix_fourniture, a.prix_fourniture) AS prix_fourniture,
-                    COALESCE(t.prix_pose, a.prix_pose) AS prix_pose,
-                    COALESCE(t.type_tva, a.type_tva) AS type_tva,
-                    COALESCE(tv.taux, 19) AS taux_tva
-      FROM FamillesArticles f
-      LEFT JOIN CategoriesArticles cat ON cat.id_categorie = f.id_categorie
-      INNER JOIN ArticlesDevis a ON a.id_famille = f.id_famille
-                  OUTER APPLY (
-               SELECT TOP 1 tarif.mode_prix, tarif.prix_unitaire, tarif.prix_fourniture,
-                 tarif.prix_pose, tarif.type_tva
-               FROM TarifsArticlesDevis tarif
-               WHERE tarif.id_article = a.id_article
-                 AND tarif.date_debut <= CONVERT(date, GETDATE())
-                 AND (tarif.date_fin IS NULL OR tarif.date_fin >= CONVERT(date, GETDATE()))
-               ORDER BY tarif.date_debut DESC, tarif.id_tarif DESC
-                  ) t
+      SELECT c.id_categorie, c.code_categorie AS code, c.libelle AS libelle_categorie,
+             a.id_article, a.id_categorie AS article_id_categorie, a.code_article AS code_article,
+             a.libelle, a.matiere, a.couleur, a.unite,
+             COALESCE(t.mode_prix, a.mode_prix) AS mode_prix,
+             COALESCE(t.prix_unitaire, a.prix_unitaire) AS prix,
+             COALESCE(t.prix_fourniture, a.prix_fourniture) AS prix_fourniture,
+             COALESCE(t.prix_pose, a.prix_pose) AS prix_pose,
+             COALESCE(t.type_tva, a.type_tva) AS type_tva,
+             COALESCE(tv.taux, 19) AS taux_tva
+      FROM CategoriesArticles c
+      INNER JOIN ArticlesDevis a ON a.id_categorie = c.id_categorie
+      OUTER APPLY (
+        SELECT TOP 1 tarif.mode_prix, tarif.prix_unitaire, tarif.prix_fourniture,
+                     tarif.prix_pose, tarif.type_tva
+        FROM TarifsArticlesDevis tarif
+        WHERE tarif.id_article = a.id_article
+          AND tarif.date_debut <= CONVERT(date, GETDATE())
+          AND (tarif.date_fin IS NULL OR tarif.date_fin >= CONVERT(date, GETDATE()))
+        ORDER BY tarif.date_debut DESC, tarif.id_tarif DESC
+      ) t
       OUTER APPLY (
         SELECT TOP 1 h.taux
         FROM HistoriqueTva h
@@ -89,25 +87,25 @@ router.get('/articles', async (req, res) => {
           AND h.date_effet <= CONVERT(date, GETDATE())
         ORDER BY h.date_effet DESC
       ) tv
-      WHERE f.actif = 1 AND a.actif = 1
-      ORDER BY f.libelle, a.libelle
+      WHERE c.actif = 1 AND a.actif = 1
+      ORDER BY c.libelle, a.libelle
     `);
-    const familles = result.recordset.reduce((acc, article) => {
-      let famille = acc.find((item) => item.code === article.code);
-      if (!famille) {
-        famille = {
-          id_famille: article.id_famille,
-          code: article.code,
-          libelle: article.libelle_famille,
+
+    const categories = result.recordset.reduce((acc, article) => {
+      let categorie = acc.find((item) => item.code === article.code);
+      if (!categorie) {
+        categorie = {
           id_categorie: article.id_categorie,
+          code: article.code,
+          libelle: article.libelle_categorie,
           libelle_categorie: article.libelle_categorie,
           articles: []
         };
-        acc.push(famille);
+        acc.push(categorie);
       }
-      famille.articles.push({
+      categorie.articles.push({
         id_article: article.id_article,
-        id_famille: article.id_famille,
+        id_categorie: article.article_id_categorie,
         code: article.code_article,
         libelle: article.libelle,
         matiere: article.matiere,
@@ -122,7 +120,7 @@ router.get('/articles', async (req, res) => {
       });
       return acc;
     }, []);
-    res.json(familles);
+    res.json(categories);
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: 'Erreur lors du chargement du référentiel des articles.' });
@@ -222,176 +220,61 @@ router.delete('/articles/categories/:id_categorie', autoriserRoles('admin'), asy
 
   try {
     const pool = await getPool();
-    const result = await pool.request()
-      .input('id_categorie', sql.Int, categorieId)
-      .query(`UPDATE CategoriesArticles
-              SET actif = 0
-              OUTPUT INSERTED.id_categorie
-              WHERE id_categorie = @id_categorie
-                AND actif = 1
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM FamillesArticles
-                  WHERE id_categorie = @id_categorie
-                )`);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-    if (result.recordset[0]) {
-      return res.json({ message: 'Catégorie supprimée.' });
-    }
+    try {
+      const categorieExistante = await new sql.Request(transaction)
+        .input('id_categorie', sql.Int, categorieId)
+        .query(`SELECT id_categorie, actif
+                FROM CategoriesArticles
+                WHERE id_categorie = @id_categorie`);
 
-    const categorie = await pool.request()
-      .input('id_categorie', sql.Int, categorieId)
-      .query(`SELECT actif,
-                     EXISTS_FAMILLE = CASE WHEN EXISTS (
-                       SELECT 1 FROM FamillesArticles WHERE id_categorie = @id_categorie
-                     ) THEN 1 ELSE 0 END
-              FROM CategoriesArticles
-              WHERE id_categorie = @id_categorie`);
+      if (!categorieExistante.recordset[0]) {
+        await transaction.rollback();
+        return res.status(404).json({ erreur: 'Catégorie introuvable.' });
+      }
 
-    if (!categorie.recordset[0]) {
-      return res.status(404).json({ erreur: 'Catégorie introuvable.' });
+      if (categorieExistante.recordset[0].actif !== 1) {
+        await transaction.rollback();
+        return res.status(409).json({ erreur: 'Cette catégorie est déjà supprimée.' });
+      }
+
+      await new sql.Request(transaction)
+        .input('id_categorie', sql.Int, categorieId)
+        .query(`UPDATE ArticlesDevis
+                SET actif = 0
+                WHERE id_categorie = @id_categorie
+                  AND actif = 1`);
+
+      const result = await new sql.Request(transaction)
+        .input('id_categorie', sql.Int, categorieId)
+        .query(`UPDATE CategoriesArticles
+                SET actif = 0
+                OUTPUT INSERTED.id_categorie
+                WHERE id_categorie = @id_categorie
+                  AND actif = 1`);
+
+      await transaction.commit();
+
+      if (result.recordset[0]) {
+        return res.json({ message: 'Catégorie supprimée. Les articles associés ont été désactivés.' });
+      }
+
+      return res.status(409).json({ erreur: 'Cette catégorie est déjà supprimée.' });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
     }
-    if (categorie.recordset[0].EXISTS_FAMILLE) {
-      return res.status(409).json({ erreur: 'Impossible de supprimer une catégorie qui contient des familles.' });
-    }
-    return res.status(409).json({ erreur: 'Cette catégorie est déjà supprimée.' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ erreur: 'Erreur lors de la suppression de la catégorie.' });
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FAMILLES D'ARTICLES
-// ─────────────────────────────────────────────────────────────────────────────
-
-router.get('/articles/familles', autoriserRoles('admin', 'chef_agence', 'agent_technique'), async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT f.id_famille, f.code_famille, f.libelle,
-             f.id_categorie, cat.libelle AS libelle_categorie
-      FROM FamillesArticles f
-      LEFT JOIN CategoriesArticles cat ON cat.id_categorie = f.id_categorie
-      WHERE f.actif = 1
-      ORDER BY cat.libelle, f.libelle
-    `);
-    res.json(result.recordset);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ erreur: 'Erreur lors du chargement des familles d\'articles.' });
-  }
-});
-
-router.post('/articles/familles', autoriserRoles('admin'), async (req, res) => {
-  const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
-  const idCategorie = req.body.id_categorie ? Number(req.body.id_categorie) : null;
-
-  if (!texteValide(libelle, { maxLength: 100, obligatoire: true })) {
-    return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
-  }
-  if (idCategorie !== null && (!Number.isInteger(idCategorie) || idCategorie <= 0)) {
-    return res.status(400).json({ erreur: 'La catégorie sélectionnée est invalide.' });
-  }
-
-  try {
-    const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-    try {
-      const creation = await new sql.Request(transaction)
-        .input('libelle', sql.NVarChar(100), libelle)
-        .input('id_categorie', sql.Int, idCategorie)
-        .query(`INSERT INTO FamillesArticles (code_famille, libelle, id_categorie)
-                OUTPUT INSERTED.id_famille
-                VALUES (CONCAT(N'__FAM_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @id_categorie)`);
-      const familleId = creation.recordset[0].id_famille;
-      const result = await new sql.Request(transaction)
-        .input('id_famille', sql.Int, familleId)
-        .query(`UPDATE FamillesArticles
-                SET code_famille = CONCAT(N'FAM-', id_famille)
-                OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle, INSERTED.id_categorie
-                WHERE id_famille = @id_famille`);
-      await transaction.commit();
-      const fam = result.recordset[0];
-      let libelle_categorie = null;
-      if (fam.id_categorie) {
-        const cat = await pool.request()
-          .input('id_categorie', sql.Int, fam.id_categorie)
-          .query('SELECT libelle FROM CategoriesArticles WHERE id_categorie = @id_categorie');
-        libelle_categorie = cat.recordset[0]?.libelle || null;
-      }
-      res.status(201).json({ ...fam, libelle_categorie });
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-  } catch (err) {
-    if (err.number === 2601 || err.number === 2627) {
-      return res.status(409).json({ erreur: 'Le code automatique de cette famille existe déjà.' });
-    }
-    console.error(err);
-    res.status(500).json({ erreur: 'Erreur lors de la création de la famille d\'articles.' });
-  }
-});
-
-router.put('/articles/familles/:id_famille', autoriserRoles('admin'), async (req, res) => {
-  const familleId = Number(req.params.id_famille);
-  const libelle = typeof req.body.libelle === 'string' ? req.body.libelle.trim() : '';
-  const idCategorie = req.body.id_categorie !== undefined
-    ? (req.body.id_categorie === null || req.body.id_categorie === '' ? null : Number(req.body.id_categorie))
-    : undefined;
-
-  if (!Number.isInteger(familleId) || familleId <= 0 || !texteValide(libelle, { maxLength: 100, obligatoire: true })) {
-    return res.status(400).json({ erreur: 'Le libellé de la famille est invalide.' });
-  }
-  if (idCategorie !== undefined && idCategorie !== null && (!Number.isInteger(idCategorie) || idCategorie <= 0)) {
-    return res.status(400).json({ erreur: 'La catégorie sélectionnée est invalide.' });
-  }
-
-  try {
-    const pool = await getPool();
-    let query;
-    let request = pool.request()
-      .input('id_famille', sql.Int, familleId)
-      .input('libelle', sql.NVarChar(100), libelle);
-
-    if (idCategorie !== undefined) {
-      request = request.input('id_categorie', sql.Int, idCategorie);
-      query = `UPDATE FamillesArticles
-               SET libelle = @libelle, id_categorie = @id_categorie
-               OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle, INSERTED.id_categorie
-               WHERE id_famille = @id_famille AND actif = 1`;
-    } else {
-      query = `UPDATE FamillesArticles
-               SET libelle = @libelle
-               OUTPUT INSERTED.id_famille, INSERTED.code_famille, INSERTED.libelle, INSERTED.id_categorie
-               WHERE id_famille = @id_famille AND actif = 1`;
-    }
-
-    const result = await request.query(query);
-    if (!result.recordset[0]) return res.status(404).json({ erreur: 'Famille d\'articles introuvable.' });
-
-    const fam = result.recordset[0];
-    let libelle_categorie = null;
-    if (fam.id_categorie) {
-      const cat = await pool.request()
-        .input('id_categorie', sql.Int, fam.id_categorie)
-        .query('SELECT libelle FROM CategoriesArticles WHERE id_categorie = @id_categorie');
-      libelle_categorie = cat.recordset[0]?.libelle || null;
-    }
-    res.json({ ...fam, libelle_categorie });
-  } catch (err) {
-    if (err.number === 2601 || err.number === 2627) {
-      return res.status(409).json({ erreur: 'Ce code de famille existe déjà.' });
-    }
-    console.error(err);
-    res.status(500).json({ erreur: 'Erreur lors de la modification de la famille d\'articles.' });
-  }
-});
-
 router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique'), async (req, res) => {
   const {
+    id_categorie,
     id_famille,
     libelle,
     matiere,
@@ -405,7 +288,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
     taux_tva
   } = req.body;
 
-  const familleId = Number(id_famille);
+  const categorieId = Number(id_categorie || id_famille);
   const matiereArticle = typeof matiere === 'string' ? matiere.trim() : '';
   const couleurArticle = typeof couleur === 'string' ? couleur.trim() : '';
   const prix = Number(prix_unitaire);
@@ -414,7 +297,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
   const taux = Number(taux_tva);
 
   if (
-    !Number.isInteger(familleId) || familleId <= 0 ||
+    !Number.isInteger(categorieId) || categorieId <= 0 ||
     !texteValide(libelle, { maxLength: 150, obligatoire: true }) ||
     !texteValide(matiereArticle, { maxLength: 50 }) ||
     !texteValide(couleurArticle, { maxLength: 50 }) ||
@@ -441,16 +324,20 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
 
   try {
     const pool = await getPool();
-    const famille = await pool.request()
-      .input('id_famille', sql.Int, familleId)
-      .query('SELECT id_famille, code_famille, libelle FROM FamillesArticles WHERE id_famille = @id_famille AND actif = 1');
-    if (!famille.recordset[0]) return res.status(404).json({ erreur: 'Famille d’article introuvable.' });
-
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
     try {
+      const categorie = await new sql.Request(transaction)
+        .input('id_categorie', sql.Int, categorieId)
+        .query('SELECT TOP 1 id_categorie, libelle FROM CategoriesArticles WHERE id_categorie = @id_categorie AND actif = 1');
+
+      if (!categorie.recordset[0]) {
+        await transaction.rollback();
+        return res.status(404).json({ erreur: 'Catégorie d’article introuvable.' });
+      }
+
       const creation = await new sql.Request(transaction)
-        .input('id_famille', sql.Int, familleId)
+        .input('id_categorie', sql.Int, categorieId)
         .input('libelle', sql.NVarChar(150), libelle.trim())
         .input('matiere', sql.NVarChar(50), matiereArticle || null)
         .input('couleur', sql.NVarChar(50), couleurArticle || null)
@@ -462,9 +349,9 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
         .input('type_tva', sql.NVarChar(20), typeTvaEffectif)
         .input('taux_tva', sql.Decimal(5, 2), taux)
         .query(`INSERT INTO ArticlesDevis
-          (id_famille, code_article, libelle, matiere, couleur, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva)
+          (id_categorie, code_article, libelle, matiere, couleur, unite, mode_prix, prix_unitaire, prix_fourniture, prix_pose, type_tva, taux_tva)
           OUTPUT INSERTED.id_article
-          VALUES (@id_famille, CONCAT(N'__ART_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @matiere, @couleur, @unite, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva)`);
+          VALUES (@id_categorie, CONCAT(N'__ART_TEMP_', CONVERT(NVARCHAR(36), NEWID())), @libelle, @matiere, @couleur, @unite, @mode_prix, @prix_unitaire, @prix_fourniture, @prix_pose, @type_tva, @taux_tva)`);
 
       const article = await new sql.Request(transaction)
         .input('id_article', sql.Int, creation.recordset[0].id_article)
@@ -486,7 +373,6 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
       await transaction.commit();
 
       const artCree = article.recordset[0];
-      const famInfo = famille.recordset[0];
       res.status(201).json({
         id_article: artCree.id_article,
         code_article: artCree.code_article,
@@ -507,8 +393,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
         typeTva: artCree.type_tva,
         taux_tva: Number(artCree.taux_tva),
         tauxTva: Number(artCree.taux_tva),
-        id_famille: familleId,
-        famille: famInfo.libelle || famInfo.code_famille
+        id_categorie: categorieId
       });
     } catch (err) {
       await transaction.rollback();
@@ -526,7 +411,7 @@ router.post('/articles', autoriserRoles('admin', 'chef_agence', 'agent_technique
 router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
   const codeArticle = String(req.params.code || '').trim();
   const {
-    id_famille,
+    id_categorie,
     libelle,
     unite,
     matiere,
@@ -563,20 +448,27 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
     const pool = await getPool();
     const existant = await pool.request()
       .input('code_article', sql.NVarChar(50), codeArticle)
-      .query('SELECT id_article, id_famille, mode_prix, type_tva, taux_tva FROM ArticlesDevis WHERE code_article = @code_article AND actif = 1');
+      .query('SELECT id_article, id_categorie, mode_prix, type_tva, taux_tva FROM ArticlesDevis WHERE code_article = @code_article AND actif = 1');
 
     if (!existant.recordset[0]) {
       return res.status(404).json({ erreur: 'Article introuvable.' });
     }
 
     const idArticle = existant.recordset[0].id_article;
-    const familleIdDemande = Number(id_famille);
-    const familleId = Number.isInteger(familleIdDemande) && familleIdDemande > 0
-      ? familleIdDemande
-      : Number(existant.recordset[0].id_famille);
+    const categorieIdDemande = Number(id_categorie);
+    let categorieId = Number.isInteger(categorieIdDemande) && categorieIdDemande > 0
+      ? categorieIdDemande
+      : Number(existant.recordset[0].id_categorie);
 
-    if (!Number.isInteger(familleId) || familleId <= 0) {
-      return res.status(400).json({ erreur: 'La famille de l’article est invalide.' });
+    if (!Number.isInteger(categorieId) || categorieId <= 0) {
+      return res.status(400).json({ erreur: 'La catégorie de l’article est invalide.' });
+    }
+
+    const categorie = await pool.request()
+      .input('id_categorie', sql.Int, categorieId)
+      .query('SELECT TOP 1 id_categorie, libelle FROM CategoriesArticles WHERE id_categorie = @id_categorie AND actif = 1');
+    if (!categorie.recordset[0]) {
+      return res.status(404).json({ erreur: 'Catégorie d’article introuvable.' });
     }
 
     const typeArticle = String(type_article || '').trim().toUpperCase();
@@ -588,10 +480,6 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
       ? type_tva
       : (modeEffectif === 'PRESTATION' ? 'PRESTATION' : 'TRAVAUX');
     const tauxTvaEffectif = Number.isFinite(Number(taux_tva)) ? Number(taux_tva) : Number(existant.recordset[0].taux_tva || 19);
-
-    const prix = Number(prix_unitaire);
-    let fourniture = prix_fourniture === null || prix_fourniture === '' ? null : Number(prix_fourniture);
-    let pose = prix_pose === null || prix_pose === '' ? null : Number(prix_pose);
 
     const normalise = normaliserTypeArticleTarif({
       type_article: typeArticle,
@@ -612,7 +500,7 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
     try {
       await new sql.Request(transaction)
         .input('id_article', sql.Int, idArticle)
-        .input('id_famille', sql.Int, familleId)
+        .input('id_categorie', sql.Int, categorieId)
         .input('libelle', sql.NVarChar(150), libelleValide)
         .input('matiere', sql.NVarChar(50), matiereArticle || null)
         .input('couleur', sql.NVarChar(50), couleurArticle || null)
@@ -625,7 +513,7 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
         .input('taux_tva', sql.Decimal(5, 2), tauxTvaEffectif)
         .query(`
           UPDATE ArticlesDevis
-          SET id_famille = @id_famille,
+          SET id_categorie = @id_categorie,
               libelle = @libelle,
               matiere = @matiere,
               couleur = @couleur,
@@ -673,6 +561,33 @@ router.put('/articles/:code', autoriserRoles('admin'), async (req, res) => {
   } catch (err) {
     console.error('Erreur mise à jour article:', err);
     res.status(500).json({ erreur: 'Erreur lors de la mise à jour de l’article.' });
+  }
+});
+
+router.delete('/articles/:code', autoriserRoles('admin'), async (req, res) => {
+  const codeArticle = String(req.params.code || '').trim();
+
+  if (!codeArticle) {
+    return res.status(400).json({ erreur: 'Code article manquant.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('code_article', sql.NVarChar(50), codeArticle)
+      .query(`UPDATE ArticlesDevis
+              SET actif = 0
+              OUTPUT INSERTED.id_article, INSERTED.code_article
+              WHERE code_article = @code_article AND actif = 1`);
+
+    if (!result.recordset[0]) {
+      return res.status(404).json({ erreur: 'Article introuvable.' });
+    }
+
+    res.json({ message: 'Article supprimé.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Erreur lors de la suppression de l’article.' });
   }
 });
 
