@@ -227,7 +227,7 @@ const PACKS_OUVRAGES_AEP = [
 export default function EditeurDevisObat({
   demande,
   devisInitial = null,
-  articleFamilles = [],
+  articleCategories = [],
   tvaPrestation = 19,
   numeroDevisPreview = '',
   chargement = false,
@@ -241,7 +241,7 @@ export default function EditeurDevisObat({
   // Tiroir latéral "Bibliothèques" (Obat 4:25)
   const [drawerBiblioOuvert, setDrawerBiblioOuvert] = useState(false);
   const [ongletBiblio, setOngletBiblio] = useState('articles'); // 'articles' ou 'packs'
-  const [filtreFamille, setFiltreFamille] = useState('TOUS');
+  const [filtreCategorie, setFiltreCategorie] = useState('TOUS');
   const [rechercheBiblio, setRechercheBiblio] = useState('');
   const [recherchesLignes, setRecherchesLignes] = useState({});
   const [suggestionsLignes, setSuggestionsLignes] = useState({});
@@ -264,12 +264,12 @@ export default function EditeurDevisObat({
   // Modal de configuration d'un ouvrage (Obat 3:12)
   const [ouvrageEnConfig, setOuvrageEnConfig] = useState(null);
 
-  // Modal de sélection de famille pour les articles libres (avant sauvegarde)
-  const [modalFamilleOuvert, setModalFamilleOuvert] = useState(false);
+  // Modal de sélection de catégorie pour les articles libres (avant sauvegarde)
+  const [modalCategorieOuvert, setModalCategorieOuvert] = useState(false);
   // { id_ligne, libelle, unite, prix, type, tauxTva } pour chaque ligne libre
   const [lignesLibresAPersister, setLignesLibresAPersister] = useState([]);
-  // { [id_ligne]: id_famille }
-  const [famillesChoisies, setFamillesChoisies] = useState({});
+  // { [id_ligne]: id_categorie }
+  const [categoriesChoisies, setCategoriesChoisies] = useState({});
   // callback à appeler une fois les articles enregistrés
   const [callbackApresEnregistrement, setCallbackApresEnregistrement] = useState(null);
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
@@ -319,10 +319,10 @@ export default function EditeurDevisObat({
   const [sections, setSections] = useState(() => {
     // Si devis existant avec articles, regrouper ou créer une section initiale
     if (devisInitial?.articles && Array.isArray(devisInitial.articles) && devisInitial.articles.length > 0) {
-      const references = articleFamilles.flatMap((famille) =>
-        (famille.articles || []).map((article) => ({
+      const references = articleCategories.flatMap((groupe) =>
+        (groupe.articles || []).map((article) => ({
           ...article,
-          categorie: famille.libelle_categorie || 'Sans catégorie'
+          categorie: groupe.libelle_categorie || groupe.libelle || 'Sans catégorie'
         }))
       );
       const lignesParCategorie = new Map();
@@ -443,19 +443,19 @@ export default function EditeurDevisObat({
     }
   }, [numeroDevisPreview, devisInitial]);
 
-  // Familles locales synchronisées avec les props et mises à jour en direct lors d'ajouts
-  const [famillesLocales, setFamillesLocales] = useState(articleFamilles);
+  // Catégories locales synchronisées avec les props et mises à jour en direct lors d'ajouts
+  const [categoriesLocales, setCategoriesLocales] = useState(articleCategories);
 
   useEffect(() => {
-    setFamillesLocales(articleFamilles);
-  }, [articleFamilles]);
+    setCategoriesLocales(articleCategories);
+  }, [articleCategories]);
 
   // Tous les articles aplatis du référentiel
-  const tousLesArticles = famillesLocales.flatMap((f) =>
+  const tousLesArticles = categoriesLocales.flatMap((f) =>
     (f.articles || []).map((art) => ({
       ...art,
-      famille: f.libelle || f.code,
-      categorie: f.libelle_categorie || 'Sans catégorie'
+      categorieRef: f.libelle || f.code,
+      categorie: f.libelle_categorie || f.libelle || 'Sans catégorie'
     }))
   );
 
@@ -540,12 +540,12 @@ export default function EditeurDevisObat({
 
   // Filtrage du tiroir bibliothèques
   const articlesFiltres = tousLesArticles.filter((art) => {
-    const matchFamille = filtreFamille === 'TOUS' || art.famille === filtreFamille;
+    const matchCategorie = filtreCategorie === 'TOUS' || art.categorieRef === filtreCategorie;
     const q = rechercheBiblio.toLowerCase().trim();
     const matchTexte = !q || [art.libelle, art.code, art.matiere, art.couleur].some((v) =>
       v?.toLowerCase().includes(q)
     );
-    return matchFamille && matchTexte;
+    return matchCategorie && matchTexte;
   });
 
   // Ensemble des codes d'articles déjà présents dans l'ensemble du devis
@@ -582,7 +582,7 @@ export default function EditeurDevisObat({
         })
       }))
     );
-  }, [articleFamilles]);
+  }, [articleCategories]);
 
   // -------------------------------------------------------------
   // ACTIONS SUR LES SECTIONS ET LIGNES
@@ -782,9 +782,9 @@ export default function EditeurDevisObat({
     }
 
     setLignesLibresAPersister([ligne]);
-    setFamillesChoisies({ [ligne.id_ligne]: idCategorieLigne(ligne) });
+    setCategoriesChoisies({ [ligne.id_ligne]: idCategorieLigne(ligne) });
     setCallbackApresEnregistrement(null);
-    setModalFamilleOuvert(true);
+    setModalCategorieOuvert(true);
   }
 
   function modifierChampLigne(idSection, idLigne, champ, valeur) {
@@ -1104,7 +1104,7 @@ export default function EditeurDevisObat({
       const init = {};
       libres.forEach((l) => { init[l.id_ligne] = idCategorieLigne(l); });
       setLignesLibresAPersister(libres);
-      setFamillesChoisies(init);
+      setCategoriesChoisies(init);
       setCallbackApresEnregistrement(() => (sectionsUpdated) => {
         // POINT CLÉ DE LA VIDÉO OBAT (Timestamp 1:24 / 84s) :
         const manqueMentions = !debutTravaux?.trim() || !dureeEstimee?.trim();
@@ -1115,7 +1115,7 @@ export default function EditeurDevisObat({
         }
         executerSauvegarde(estFinalisation, sectionsUpdated);
       });
-      setModalFamilleOuvert(true);
+      setModalCategorieOuvert(true);
       return;
     }
 
@@ -1133,7 +1133,7 @@ export default function EditeurDevisObat({
 
   // Enregistre les articles libres dans le référentiel puis appelle le callback
   async function enregistrerArticlesLibresPuisSauvegarder() {
-    const nonChoisies = lignesLibresAPersister.filter((l) => !famillesChoisies[l.id_ligne]);
+    const nonChoisies = lignesLibresAPersister.filter((l) => !categoriesChoisies[l.id_ligne]);
     if (nonChoisies.length > 0) {
       notifierErreur(`Veuillez choisir une catégorie pour : ${nonChoisies.map((l) => l.libelle).join(', ')}`);
       return;
@@ -1144,7 +1144,7 @@ export default function EditeurDevisObat({
 
     try {
       for (const ligne of lignesLibresAPersister) {
-        const idCategorie = Number(famillesChoisies[ligne.id_ligne]);
+        const idCategorie = Number(categoriesChoisies[ligne.id_ligne]);
         const type = (ligne.type || 'FP/').trim();
         let mode_prix = 'FOURNITURE_POSE';
         let type_tva = 'TRAVAUX';
@@ -1199,7 +1199,7 @@ export default function EditeurDevisObat({
         if (res.data?.code_article) {
           codesNouveaux[ligne.id_ligne] = res.data.code_article;
           // Ajouter également au catalogue local
-          setFamillesLocales((prev) =>
+          setCategoriesLocales((prev) =>
             prev.map((f) =>
               Number(idCategorieGroupe(f)) === idCategorie
                 ? { ...f, articles: [...(f.articles || []), res.data] }
@@ -1216,14 +1216,14 @@ export default function EditeurDevisObat({
           ...sec,
           lignes: sec.lignes.map((l) =>
             codesNouveaux[l.id_ligne]
-              ? { ...l, code: codesNouveaux[l.id_ligne], estLigneLibre: false, id_categorie: famillesChoisies[l.id_ligne] }
+              ? { ...l, code: codesNouveaux[l.id_ligne], estLigneLibre: false, id_categorie: categoriesChoisies[l.id_ligne] }
               : l
           )
         }));
         setSections(sectionsAjour);
       }
 
-      setModalFamilleOuvert(false);
+      setModalCategorieOuvert(false);
       notifierSucces(`${lignesLibresAPersister.length} article(s) enregistré(s) dans le référentiel.`);
 
       // Poursuivre immédiatement la sauvegarde du devis avec les codes officiels
@@ -1544,17 +1544,17 @@ export default function EditeurDevisObat({
                 <div className="obat-familles-tags">
                   <button
                     type="button"
-                    className={`obat-famille-tag ${filtreFamille === 'TOUS' ? 'active' : ''}`}
-                    onClick={() => setFiltreFamille('TOUS')}
+                    className={`obat-famille-tag ${filtreCategorie === 'TOUS' ? 'active' : ''}`}
+                    onClick={() => setFiltreCategorie('TOUS')}
                   >
                     Tous
                   </button>
-                  {articleFamilles.map((f) => (
+                  {articleCategories.map((f) => (
                     <button
                       key={f.code || idCategorieGroupe(f)}
                       type="button"
-                      className={`obat-famille-tag ${filtreFamille === (f.libelle || f.code) ? 'active' : ''}`}
-                      onClick={() => setFiltreFamille(f.libelle || f.code)}
+                      className={`obat-famille-tag ${filtreCategorie === (f.libelle || f.code) ? 'active' : ''}`}
+                      onClick={() => setFiltreCategorie(f.libelle || f.code)}
                     >
                       {f.libelle || f.code}
                     </button>
@@ -2656,7 +2656,7 @@ export default function EditeurDevisObat({
       )}
 
       {/* 7b. MODAL DE SÉLECTION DE FAMILLE POUR LES ARTICLES LIBRES */}
-      {modalFamilleOuvert && (
+      {modalCategorieOuvert && (
         <div className="obat-modal-overlay">
           <form
             className="obat-modal-card obat-family-modal"
@@ -2691,19 +2691,19 @@ export default function EditeurDevisObat({
                     </td>
                     <td style={{ padding: '6px 10px' }}>
                       <select
-                        value={famillesChoisies[ligne.id_ligne] || ''}
-                        onChange={(e) => setFamillesChoisies((prev) => ({ ...prev, [ligne.id_ligne]: e.target.value }))}
+                        value={categoriesChoisies[ligne.id_ligne] || ''}
+                        onChange={(e) => setCategoriesChoisies((prev) => ({ ...prev, [ligne.id_ligne]: e.target.value }))}
                         style={{
                           width: '100%',
                           padding: '5px 8px',
-                          border: famillesChoisies[ligne.id_ligne] ? '1px solid #CBD5E1' : '2px solid #F97316',
+                          border: categoriesChoisies[ligne.id_ligne] ? '1px solid #CBD5E1' : '2px solid #F97316',
                           borderRadius: 4,
                           fontSize: 12,
                           background: '#FFF'
                         }}
                       >
                         <option value="">— Choisir une catégorie —</option>
-                        {famillesLocales.map((f) => (
+                        {categoriesLocales.map((f) => (
                           <option key={idCategorieGroupe(f)} value={idCategorieGroupe(f)}>
                             {f.libelle || f.code}
                           </option>
@@ -2719,7 +2719,7 @@ export default function EditeurDevisObat({
               <button
                 type="button"
                 className="obat-btn-annuler"
-                onClick={() => setModalFamilleOuvert(false)}
+                onClick={() => setModalCategorieOuvert(false)}
                 disabled={enregistrementEnCours}
               >
                 Annuler
@@ -2727,7 +2727,7 @@ export default function EditeurDevisObat({
               <button
                 type="submit"
                 className="obat-btn-action-primary"
-                disabled={enregistrementEnCours || lignesLibresAPersister.some((l) => !famillesChoisies[l.id_ligne])}
+                disabled={enregistrementEnCours || lignesLibresAPersister.some((l) => !categoriesChoisies[l.id_ligne])}
                 style={{ minWidth: 180 }}
               >
                 {enregistrementEnCours

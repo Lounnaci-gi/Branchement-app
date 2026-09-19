@@ -165,13 +165,13 @@ export default function PanneauDevis({
 
   const [enregistrerPaiement, setEnregistrerPaiement] = useState(false);
   const [numeroDevisPreview, setNumeroDevisPreview] = useState('');
-  const [articleFamilles, setArticleFamilles] = useState([]);
+  const [articleCategories, setArticleCategories] = useState([]);
   const [lignesDevis, setLignesDevis] = useState([]);
   const [rechercheArticle, setRechercheArticle] = useState('');
   const [suggestionsFiltrees, setSuggestionsFiltrees] = useState([]);
   const [suggestionVisible, setSuggestionVisible] = useState(false);
 
-  const tousLesArticles = articleFamilles.flatMap((f) => f.articles);
+  const tousLesArticles = articleCategories.flatMap((f) => f.articles);
 
   const devisActuel = devisListe.find((item) => item.id_devis === devisSelectionne) || null;
   const montantTotalCumule = devisListe.reduce((acc, curr) => acc + (Number(curr.montant) || 0), 0);
@@ -271,8 +271,8 @@ export default function PanneauDevis({
   useEffect(() => {
     client.get('/referentiels/banques').then((res) => setBanques(res.data)).catch(() => setBanques([]));
     client.get('/referentiels/articles')
-      .then((res) => setArticleFamilles(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setArticleFamilles([]));
+      .then((res) => setArticleCategories(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setArticleCategories([]));
   }, []);
 
   useEffect(() => {
@@ -364,7 +364,7 @@ export default function PanneauDevis({
         };
       })
     );
-  }, [articleFamilles]);
+  }, [articleCategories]);
 
   useEffect(() => {
     if (!ouvert || devisActuel?.statut_paiement === 'PAYE') return;

@@ -11,7 +11,7 @@ export default function CreationDevis() {
   const navigate = useNavigate();
 
   const [fiche, setFiche] = useState(null);
-  const [articleFamilles, setArticleFamilles] = useState([]);
+  const [articleCategories, setArticleCategories] = useState([]);
   const [tvaPrestation, setTvaPrestation] = useState(19);
   const [numeroDevisPreview, setNumeroDevisPreview] = useState('');
   const [chargement, setChargement] = useState(true);
@@ -36,7 +36,7 @@ export default function CreationDevis() {
           setFiche(resFiche.data);
         }
         if (Array.isArray(resArticles?.data)) {
-          setArticleFamilles(resArticles.data);
+          setArticleCategories(resArticles.data);
         }
         const tauxPrestation = Number(resTva?.data?.tvaPrestation);
         if (Number.isFinite(tauxPrestation)) {
@@ -150,7 +150,7 @@ export default function CreationDevis() {
       <EditeurDevisObat
         demande={demande}
         devisInitial={devisAEditer}
-        articleFamilles={articleFamilles}
+        articleCategories={articleCategories}
         tvaPrestation={tvaPrestation}
         numeroDevisPreview={numeroDevisPreview}
         chargement={sauvegardeEnCours}
