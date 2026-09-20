@@ -182,7 +182,7 @@ export default function AffichageDevis() {
         </div>
       </div>
 
-      <article className="card devis-document">
+      <article className="devis-document">
         <header className="devis-document-entete">
           <div className="devis-institution">
             <div className="devis-republique">الجمهورية الجزائرية الديمقراطية الشعبية</div>
@@ -340,20 +340,51 @@ export default function AffichageDevis() {
           margin: 0 !important;
           padding: 0 !important;
           background: #fff !important;
+          border: none !important;
+          outline: none !important;
+          box-shadow: none !important;
           max-width: none !important;
         }
         .page-affichage-devis {
           padding: 0 !important;
           margin: 0 !important;
           background: #fff !important;
+          border: none !important;
+          outline: none !important;
+          box-sizing: border-box !important;
+          box-shadow: none !important;
         }
         .card,
         .devis-document {
           box-shadow: none !important;
-          border: 1px solid #000 !important;
+          border: none !important;
+          outline: none !important;
           margin: 0 !important;
           max-width: none !important;
           background: #fff !important;
+        }
+        .devis-document-entete,
+        .devis-document-title,
+        .devis-client-box,
+        .devis-client-box > div,
+        .devis-client-box > div + div,
+        .devis-client-box-droite > div,
+        .devis-client-box-droite > div + div,
+        .devis-articles-table,
+        .devis-articles-table th,
+        .devis-articles-table td,
+        .devis-totaux,
+        .devis-totaux div,
+        .devis-total-ttc,
+        .devis-article-ligne,
+        .devis-document * {
+          border: none !important;
+          border-left: none !important;
+          border-right: none !important;
+          border-top: none !important;
+          border-bottom: none !important;
+          border-color: transparent !important;
+          box-shadow: none !important;
         }
       }
       @media print {
@@ -398,36 +429,36 @@ export default function AffichageDevis() {
           color: #aebbd0 !important;
         }
       }
-      .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: 1px solid var(--color-border, #a9a9a9); border-radius: 8px; }
-      .devis-document-entete { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; gap: 16px; padding-bottom: 15px; border-bottom: 1px solid #111; }
+      .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: none !important; border-radius: 0; box-shadow: none !important; }
+      .devis-document-entete { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; gap: 16px; padding-bottom: 15px; border-bottom: none; }
       .devis-institution, .devis-agence { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
       .devis-institution strong { font-size: 12px; }
       .devis-institution b { font-size: 13px; margin-top: 5px; }
       .devis-republique { font-weight: 700; font-size: 12px; }
       .devis-logo { width: 70px; height: 70px; object-fit: contain; justify-self: center; }
       .devis-agence { text-align: right; font-size: 12px; }
-      .devis-agence b { margin-top: 8px; border-top: 1px solid #111; padding-top: 7px; }
-      .devis-document-title { display: flex; justify-content: space-between; align-items: end; margin: 18px 0 14px; border-bottom: 2px solid #111; padding-bottom: 7px; }
+      .devis-agence b { margin-top: 8px; border-top: none; padding-top: 7px; }
+      .devis-document-title { display: flex; justify-content: space-between; align-items: end; margin: 18px 0 14px; border-bottom: none; padding-bottom: 7px; }
       .devis-document-title div { display: flex; flex-direction: column; gap: 5px; }
       .devis-document-title span { font-size: 17px; font-weight: 800; text-decoration: underline; }
       .devis-document-title small { font-size: 12px; font-weight: 700; }
-      .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #111; margin-bottom: 15px; border-radius: 6px; overflow: hidden; }
-      .devis-client-box-droite { width: 42%; margin-left: auto; grid-template-columns: 1fr; border-radius: 6px; overflow: hidden; }
+      .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: none; margin-bottom: 15px; border-radius: 0; overflow: hidden; }
+      .devis-client-box-droite { width: 42%; margin-left: auto; grid-template-columns: 1fr; border-radius: 0; overflow: hidden; }
       .devis-client-box-droite > div { min-height: 0; padding: 4px 10px; }
       .devis-client-box-droite > div + div { padding-top: 0; }
       .devis-client-box-droite strong { font-size: 12px; }
       .devis-client-box-droite small { font-size: 10px; }
       .devis-client-box > div { display: flex; flex-direction: column; gap: 5px; min-height: 78px; padding: 11px 13px; }
-      .devis-client-box > div + div { border-left: 1px solid #111; }
+      .devis-client-box > div + div { border-left: none; }
       .devis-client-box-droite > div + div { border-left: 0; border-top: 0; }
       .devis-client-box span { font-size: 10px; font-weight: 800; text-decoration: underline; }
       .devis-client-box strong { font-size: 13px; }
       .devis-client-box small { font-size: 11px; }
       .devis-objet { margin: 14px 0 17px; font-size: 13px; }
       .devis-objet b { text-decoration: underline; }
-      .devis-articles-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; border-radius: 6px; overflow: hidden; }
-      .devis-articles-table th, .devis-articles-table td { border: 1px solid #111; padding: 7px 6px; vertical-align: middle; }
-      .devis-articles-table th { background: #1991eb; color: #fff; border-color: #147ad4; font-weight: 800; text-align: center; }
+      .devis-articles-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; border-radius: 0; overflow: hidden; }
+      .devis-articles-table th, .devis-articles-table td { border: none; padding: 7px 6px; vertical-align: middle; }
+      .devis-articles-table th { background: #1991eb; color: #fff; border-color: transparent; font-weight: 800; text-align: center; }
       .devis-articles-table .devis-categorie-header { background: #eff6ff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; text-align: left; }
       .devis-articles-table .col-desig { text-align: left; }
       .devis-articles-table .col-type { width: 48px; text-align: center; }
@@ -436,8 +467,8 @@ export default function AffichageDevis() {
       .devis-articles-table .col-qte { width: 48px; text-align: center; }
       .devis-articles-table .col-pu { width: 100px; text-align: right; }
       .devis-articles-table .col-total { width: 110px; text-align: right; }
-      .devis-totaux { width: 55%; margin-left: auto; border-left: 1px solid #111; border-right: 1px solid #111; border-bottom: 1px solid #111; font-size: 12px; border-radius: 0 0 6px 6px; overflow: hidden; }
-      .devis-totaux div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-top: 1px solid #111; }
+      .devis-totaux { width: 55%; margin-left: auto; border-left: none; border-right: none; border-bottom: none; font-size: 12px; border-radius: 0; overflow: hidden; }
+      .devis-totaux div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-top: none; }
       .devis-totaux strong { text-align: right; }
       .devis-total-ttc { font-size: 14px; font-weight: 800; background: #e9e9e9; }
       .devis-validite { margin: 18px 0 45px; font-size: 11px; }
@@ -574,14 +605,14 @@ export default function AffichageDevis() {
       }
       @media print {
         .devis-document {
-          border: 1px solid #cbd5e1 !important;
-          border-radius: 8px !important;
-          box-shadow: 0 0 0 1px #e2e8f0 !important;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
           padding: 24px 28px 30px !important;
         }
         .devis-document-entete {
           grid-template-columns: 1fr 82px 1fr;
-          border-bottom: 2px solid #1991eb !important;
+          border-bottom: none !important;
           padding-bottom: 14px;
         }
         .devis-republique,

@@ -58,13 +58,13 @@ export function genererHtmlDevis(demande, dateEmission = null) {
 <title>Demande d'établissement de devis quantitatif et estimatif</title>
 <style>
   * { box-sizing: border-box; }
-  @page { size: A4 portrait; margin: 10mm 12mm; }
+  @page { size: A4 portrait; margin: 0; }
   body {
     font-family: 'Poppins', Arial, sans-serif;
     font-size: 13px;
     color: #000;
     max-width: 900px;
-    margin: 30px auto;
+    margin: 0 auto;
     padding: 20px 30px;
   }
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
