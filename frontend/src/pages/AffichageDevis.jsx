@@ -284,7 +284,7 @@ export default function AffichageDevis() {
         <table className="devis-articles-table">
           <thead>
             <tr>
-              <th className="col-desig">Désignation des travaux / fournitures</th>
+              <th className="col-desig">Désignation des travaux</th>
               <th className="col-type">Type</th>
               <th className="col-unite">Unité</th>
               <th className="col-qte">Qtité</th>
@@ -310,21 +310,6 @@ export default function AffichageDevis() {
                         <strong>{libelleArticleSansCategorie(art.libelle)}</strong>
                         {art.code ? <small className="devis-article-meta">{art.code}</small> : null}
                         {(art.matiere || art.couleur) ? <small className="devis-article-meta">{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
-                        {art.choixPrix && art.choixPrix !== 'FOURNITURE_POSE' && (
-                          <span className="devis-choix-badge" style={{
-                            display: 'inline-block',
-                            fontSize: 10.5,
-                            fontWeight: 700,
-                            padding: '1px 6px',
-                            borderRadius: 3,
-                            marginTop: 3,
-                            backgroundColor: art.choixPrix === 'FOURNITURE' ? '#EBF5FF' : '#FEF3C7',
-                            color: art.choixPrix === 'FOURNITURE' ? '#1E40AF' : '#92400E',
-                            border: art.choixPrix === 'FOURNITURE' ? '1px solid #BFDBFE' : '1px solid #FDE68A'
-                          }}>
-                            {art.choixPrix === 'FOURNITURE' ? 'Fourniture seule' : 'Pose seule'}
-                          </span>
-                        )}
                       </td>
                       <td className="col-type">
                         <span>{codeType}</span>
@@ -356,7 +341,7 @@ export default function AffichageDevis() {
         <section className="devis-totaux">
           <div><span>Total HT</span><strong>{formaterMontant(totalHtArticles)} DA</strong></div>
           {totalTvaArticles > 0 ? (
-            <div><span>TVA (calculée)</span><strong>{formaterMontant(totalTvaArticles)} DA</strong></div>
+            <div><span>TVA</span><strong>{formaterMontant(totalTvaArticles)} DA</strong></div>
           ) : (
             <div><span>TVA applicable</span><strong>Selon la catégorie de prestation</strong></div>
           )}
@@ -426,7 +411,7 @@ export default function AffichageDevis() {
           font-size: 9px !important;
           gap: 2px !important;
         }
-        .devis-logo { width: 60px !important; height: 60px !important; }
+        .devis-logo { width: 90px !important; height: 90px !important; }
         .devis-document-title {
           margin: 10px 0 8px !important;
           padding-bottom: 4px !important;
@@ -465,7 +450,7 @@ export default function AffichageDevis() {
           font-size: 11px !important;
         }
         .devis-total-ttc-lettres {
-          margin: 0 0 6px !important;
+          margin: 6px 0 6px !important;
           font-size: 10px !important;
           color: #111827 !important;
         }
@@ -528,7 +513,7 @@ export default function AffichageDevis() {
       .devis-institution strong { font-size: 12px; }
       .devis-institution b { font-size: 13px; margin-top: 5px; }
       .devis-republique { font-weight: 700; font-size: 12px; }
-      .devis-logo { width: 70px; height: 70px; object-fit: contain; justify-self: center; }
+      .devis-logo { width: 105px; height: 105px; object-fit: contain; justify-self: center; }
       .devis-agence { text-align: right; font-size: 12px; }
       .devis-agence b { margin-top: 8px; border-top: none; padding-top: 7px; }
       .devis-document-title { display: flex; justify-content: space-between; align-items: end; margin: 18px 0 14px; border-bottom: none; padding-bottom: 7px; }
@@ -565,7 +550,7 @@ export default function AffichageDevis() {
       .devis-totaux strong { text-align: right; }
       .devis-total-ttc { font-size: 14px; font-weight: 800; background: #e9e9e9; }
       .devis-total-ttc-lettres {
-        margin: 0 0 8px;
+        margin: 10px 0 8px;
         padding: 0;
         font-size: 12px;
         color: #111827;
@@ -601,7 +586,6 @@ export default function AffichageDevis() {
           color: #e8edf5 !important;
         }
       }
-      :root[data-theme='dark'] .devis-choix-badge { background-color: var(--color-primary-selection, rgba(59, 170, 232, 0.14)) !important; color: var(--color-primary, #3BAAE8) !important; border-color: var(--color-border-primary, rgba(59, 170, 232, 0.25)) !important; }
       :root[data-theme='dark'] .devis-document small, :root[data-theme='dark'] .devis-article-meta { color: var(--color-text-muted, #8B99B3); }
       :root[data-theme='dark'] .devis-total-ttc-lettres,
       :root[data-theme='dark'] .devis-total-ttc-lettres strong {
@@ -767,7 +751,7 @@ export default function AffichageDevis() {
           border-color: #147ad4 !important;
         }
       }
-      @media (max-width: 640px) { .devis-document { padding: 18px 12px; } .devis-document-entete { grid-template-columns: 1fr 58px; } .devis-logo { width: 55px; height: 55px; } .devis-agence { grid-column: 1 / -1; text-align: left; } .devis-client-box, .devis-client-box-droite { width: 100%; grid-template-columns: 1fr; } .devis-client-box > div + div { border-left: 0; border-top: 1px solid #111; } .devis-totaux { width: 100%; } .devis-articles-table { font-size: 10px; } }
+      @media (max-width: 640px) { .devis-document { padding: 18px 12px; } .devis-document-entete { grid-template-columns: 1fr 88px; } .devis-logo { width: 83px; height: 83px; } .devis-agence { grid-column: 1 / -1; text-align: left; } .devis-client-box, .devis-client-box-droite { width: 100%; grid-template-columns: 1fr; } .devis-client-box > div + div { border-left: 0; border-top: 1px solid #111; } .devis-totaux { width: 100%; } .devis-articles-table { font-size: 10px; } }
       `}</style>
     </div>
   );
