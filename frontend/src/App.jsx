@@ -83,7 +83,8 @@ export default function App() {
       <Route path="/referentiels/articles" element={<EspaceProtege><GestionArticles /></EspaceProtege>} />
       <Route path="/profil" element={<EspaceProtege><Profil /></EspaceProtege>} />
       <Route path="/parametres" element={<EspaceProtege><Parametres /></EspaceProtege>} />
-      <Route path="/devis-payes" element={<EspaceProtege><DevisPayes /></EspaceProtege>} />
+      <Route path="/devis" element={<EspaceProtege><DevisPayes mode="tous" /></EspaceProtege>} />
+      <Route path="/devis-payes" element={<EspaceProtege><DevisPayes mode="payes" /></EspaceProtege>} />
       <Route path="/devis-non-payes" element={<EspaceProtege><DevisNonPayes /></EspaceProtege>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

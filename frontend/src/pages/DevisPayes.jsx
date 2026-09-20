@@ -10,7 +10,7 @@ function afficherReference(devis) {
   return '—';
 }
 
-export default function DevisPayes() {
+export default function DevisPayes({ mode = 'tous' }) {
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [filtre, setFiltre] = useState('');
@@ -19,8 +19,8 @@ export default function DevisPayes() {
 
   useEffect(() => {
     client.get('/dashboard')
-      .then((res) => setDonnees(res.data.devisPayes || { total: 0, montant_total: 0, details: [] }))
-      .catch(() => notifierErreur('Impossible de charger les devis payés.'))
+      .then((res) => setDonnees(res.data || {}))
+      .catch(() => notifierErreur('Impossible de charger les devis.'))
       .finally(() => setChargement(false));
   }, []);
 
@@ -28,7 +28,20 @@ export default function DevisPayes() {
     return <div className="page" aria-busy="true"><div className="squelette squelette-titre" /></div>;
   }
 
-  const details = (donnees?.details || []).map((devis, index) => ({ ...devis, _ordre: index + 1 }));
+  const devisPayes = Array.isArray(donnees?.devisPayes?.details) ? donnees.devisPayes.details : [];
+  const devisNonPayes = Array.isArray(donnees?.devisNonPayes?.details) ? donnees.devisNonPayes.details : [];
+
+  const detailsParMode = {
+    tous: [
+      ...devisPayes.map((devis) => ({ ...devis, statut: 'PAYE', date_reference: devis.date_paiement || devis.date_emission || null })),
+      ...devisNonPayes.map((devis) => ({ ...devis, statut: 'IMPAYE', date_reference: devis.date_emission || null }))
+    ],
+    payes: devisPayes.map((devis) => ({ ...devis, statut: 'PAYE', date_reference: devis.date_paiement || devis.date_emission || null })),
+    nonpayes: devisNonPayes.map((devis) => ({ ...devis, statut: 'IMPAYE', date_reference: devis.date_emission || null }))
+  };
+
+  const details = (detailsParMode[mode] || detailsParMode.tous).map((devis, index) => ({ ...devis, _ordre: index + 1 }));
+
   const termeFiltre = filtre.trim().toLowerCase();
 
   const detailsFiltres = details.filter((devis) => {
@@ -38,6 +51,7 @@ export default function DevisPayes() {
       devis.numero_demande,
       devis.numero_devis,
       devis.mode_paiement,
+      devis.statut,
       devis.numero_recu,
       devis.numero_cheque,
       devis.numero_versement,
@@ -84,9 +98,13 @@ export default function DevisPayes() {
         aVal = a.mode_paiement || '';
         bVal = b.mode_paiement || '';
         break;
+      case 'statut':
+        aVal = a.statut || '';
+        bVal = b.statut || '';
+        break;
       case 'datePaiement':
-        aVal = a.date_paiement ? new Date(a.date_paiement).getTime() : 0;
-        bVal = b.date_paiement ? new Date(b.date_paiement).getTime() : 0;
+        aVal = a.date_reference ? new Date(a.date_reference).getTime() : 0;
+        bVal = b.date_reference ? new Date(b.date_reference).getTime() : 0;
         break;
       case 'reference':
         aVal = afficherReference(a);
@@ -97,8 +115,8 @@ export default function DevisPayes() {
         bVal = b.banque || '';
         break;
       default:
-        aVal = a.date_paiement ? new Date(a.date_paiement).getTime() : 0;
-        bVal = b.date_paiement ? new Date(b.date_paiement).getTime() : 0;
+        aVal = a.date_reference ? new Date(a.date_reference).getTime() : 0;
+        bVal = b.date_reference ? new Date(b.date_reference).getTime() : 0;
     }
 
     if (typeof aVal === 'string') {
@@ -113,33 +131,41 @@ export default function DevisPayes() {
 
   const montantTotalFiltre = detailsTries.reduce((total, devis) => total + Number(devis.montant || 0), 0);
 
+  const libelleMode = {
+    tous: { titre: 'Devis', sousTitre: 'Consultation des devis payés et non payés.' },
+    payes: { titre: 'Devis payés', sousTitre: 'Consultation des devis réglés.' },
+    nonpayes: { titre: 'Devis non payés', sousTitre: 'Suivi des devis en attente de règlement.' }
+  };
+
+  const page = libelleMode[mode] || libelleMode.tous;
+
   return (
     <div className="page">
-      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: 'Devis payés' }]} />
+      <Breadcrumbs items={[{ label: 'Tableau de bord', path: '/' }, { label: page.titre }]} />
 
       <header className="obat-page-header">
         <div>
           <span>ADE • DOSSIER TECHNIQUE</span>
-          <h1 className="obat-page-title">Devis payés</h1>
-          <p className="obat-page-subtitle">Consultation des paiements enregistrés et de leurs références.</p>
+          <h1 className="obat-page-title">{page.titre}</h1>
+          <p className="obat-page-subtitle">{page.sousTitre}</p>
         </div>
       </header>
 
       <section className="obat-section-card">
         <div className="obat-section-card-header" style={{ display: 'grid', gridTemplateColumns: 'auto auto 1fr auto', alignItems: 'center', gap: 12, width: '100%' }}>
-          <div className="obat-section-card-title">Informations des paiements</div>
+          <div className="obat-section-card-title">Informations des devis</div>
           <span style={{ fontSize: 12, color: 'var(--color-text-muted)', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
-            {Number(donnees?.total || 0)} devis · {Number(donnees?.montant_total || 0).toLocaleString('fr-DZ')} DA
+            {details.length} devis · {details.reduce((total, devis) => total + Number(devis.montant || 0), 0).toLocaleString('fr-DZ')} DA
           </span>
           <div />
           <label style={{ width: 'min(100%, 360px)', margin: 0, justifySelf: 'end' }}>
-            <span className="sr-only">Filtrer les devis payés</span>
+            <span className="sr-only">Filtrer les devis</span>
             <input
               type="search"
               value={filtre}
               onChange={(event) => setFiltre(event.target.value)}
-              placeholder="Filtrer par demande, devis, mode..."
-              aria-label="Filtrer les devis payés"
+              placeholder="Filtrer par demande, devis, statut..."
+              aria-label="Filtrer les devis"
               style={{ width: '100%' }}
             />
           </label>
@@ -172,6 +198,12 @@ export default function DevisPayes() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span>Devis</span>
                         {triColonne === 'devis' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
+                      </div>
+                    </th>
+                    <th className="col-triable" onClick={() => changerTri('statut')} style={{ cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>Statut</span>
+                        {triColonne === 'statut' && <span>{triOrdre === 'asc' ? '↑' : '↓'}</span>}
                       </div>
                     </th>
                     <th className="col-triable" onClick={() => changerTri('montant')} style={{ cursor: 'pointer' }}>

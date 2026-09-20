@@ -142,6 +142,10 @@ export default function ListeDemandes() {
     return !demande.est_verrouillee && (demande.statut_actuel === 'ANNULEE' || demande.statut_paiement !== 'PAYE');
   }
 
+  function peutCreerUnDevis(demande) {
+    return !demande?.est_verrouillee && ['DEVIS_EMIS', 'DEVIS_PAYE'].includes(demande?.statut_actuel);
+  }
+
   const optionsStatuts = [...ETAPES_PIPELINE, ...Object.entries(STATUTS_TERMINAUX).map(([code, valeur]) => ({ code, libelle: valeur.libelle }))]
     .filter((option, index, tableau) => tableau.findIndex((autre) => autre.code === option.code) === index);
 
@@ -204,15 +208,15 @@ export default function ListeDemandes() {
             type="button"
             className="obat-btn obat-btn-sec"
             onClick={() => {
-              const dossier = demandesTriees[0];
+              const dossier = demandesTriees.find((d) => peutCreerUnDevis(d));
               if (!dossier) {
-                notifierErreur('Aucune demande n’est actuellement sélectionnée pour créer un devis.');
+                notifierErreur('Aucun devis n’est émis pour une demande visible.');
                 return;
               }
               navigate(`/demandes/${dossier.id_demande}/devis/nouveau`);
             }}
-            disabled={demandesTriees.length === 0 || demandesTriees.some((d) => d.est_verrouillee)}
-            title="Créer un devis depuis la première demande visible"
+            disabled={demandesTriees.length === 0 || !demandesTriees.some((d) => peutCreerUnDevis(d))}
+            title="Créer un devis depuis la première demande visible avec devis émis"
           >
                     Devis
           </button>
@@ -493,7 +497,7 @@ export default function ListeDemandes() {
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
-                    {!d.est_verrouillee && (
+                    {peutCreerUnDevis(d) && (
                       <button
                         type="button"
                         className="btn btn-primary btn-icon action-icon action-icon-devis"

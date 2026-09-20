@@ -32,8 +32,16 @@ export default function CreationDevis() {
     ])
       .then(([resFiche, resArticles, resTva, resPreview]) => {
         if (ignore) return;
-        if (resFiche?.data) {
-          setFiche(resFiche.data);
+        const donnees = resFiche?.data;
+        if (donnees?.demande) {
+          const statut = donnees.demande.statut_actuel;
+          const autorise = ['DEVIS_EMIS', 'DEVIS_PAYE'].includes(statut);
+          if (!autorise && !idDevisAEditer) {
+            notifierErreur('Un devis ne peut être créé que lorsque le devis a déjà été émis.');
+            navigate(`/demandes/${id}`, { replace: true });
+            return;
+          }
+          setFiche(donnees);
         }
         if (Array.isArray(resArticles?.data)) {
           setArticleCategories(resArticles.data);
@@ -53,7 +61,7 @@ export default function CreationDevis() {
     return () => {
       ignore = true;
     };
-  }, [id]);
+  }, [id, idDevisAEditer, navigate]);
 
   if (chargement) {
     return (
@@ -88,6 +96,11 @@ export default function CreationDevis() {
   async function enregistrerDevis(payload, estFinalisation = false) {
     if (demandeVerrouillee) {
       notifierErreur('Cette demande est scellée : les modifications sont interdites.');
+      return;
+    }
+
+    if (!devisAEditer && !['DEVIS_EMIS', 'DEVIS_PAYE'].includes(demande?.statut_actuel)) {
+      notifierErreur('Un devis ne peut être créé que lorsque le devis a déjà été émis.');
       return;
     }
 

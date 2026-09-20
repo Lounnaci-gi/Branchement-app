@@ -186,6 +186,10 @@ export default function DetailDemande() {
       notifierErreur('Cette demande est scellée : les modifications sont interdites.');
       return;
     }
+    if (!['DEVIS_EMIS', 'DEVIS_PAYE'].includes(demande.statut_actuel)) {
+      notifierErreur('Un devis ne peut être créé que lorsque le devis a déjà été émis.');
+      return;
+    }
     navigate(`/demandes/${id}/devis/nouveau`);
   }
 
@@ -283,7 +287,7 @@ export default function DetailDemande() {
           >
                 Accusé
           </button>
-          {!demandeEstVerrouillee && devisListe.length === 0 && (
+          {!demandeEstVerrouillee && devisListe.length === 0 && ['DEVIS_EMIS', 'DEVIS_PAYE'].includes(demande.statut_actuel) && (
             <button
               type="button"
               className="obat-btn obat-btn-pri"

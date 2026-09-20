@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { verifierToken } = require('../middleware/auth');
+const { peutCreerOuModifierDevis } = require('../utils/devisWorkflow');
 
 router.use(verifierToken);
 
@@ -1049,6 +1050,17 @@ router.put('/:id/devis', async (req, res) => {
       return res.status(acces.code).json({ erreur: acces.erreur });
     }
 
+    const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
+      .query('SELECT statut_actuel FROM Demandes WHERE id_demande = @id_demande');
+    const statutActuel = demandeRes.recordset[0]?.statut_actuel;
+    const existeDevis = Boolean(id_devis);
+
+    if (!peutCreerOuModifierDevis(statutActuel, { existeDevis })) {
+      return res.status(400).json({
+        erreur: 'Un devis ne peut être créé ou modifié tant que le devis n’a pas été émis.'
+      });
+    }
+
     const idDevisValide = id_devis ? entierPositif(id_devis) : null;
     const existe = idDevisValide
       ? await pool.request().input('id_devis', sql.Int, idDevisValide).input('id_demande', sql.Int, id_demande)
@@ -1158,10 +1170,6 @@ router.put('/:id/devis', async (req, res) => {
 
     const devis = await pool.request().input('id_demande', sql.Int, id_demande)
       .query('SELECT id_devis, numero_devis, statut_paiement FROM Devis WHERE id_demande = @id_demande ORDER BY date_emission DESC');
-
-    const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
-      .query('SELECT statut_actuel FROM Demandes WHERE id_demande = @id_demande');
-    const statutActuel = demandeRes.recordset[0]?.statut_actuel;
 
     const tousPayes = devis.recordset.every((item) => item.statut_paiement === 'PAYE');
     if (statutActuel === 'DEPOSEE' || statutActuel === 'DEVIS_EMIS' || statutActuel === 'DEVIS_PAYE') {

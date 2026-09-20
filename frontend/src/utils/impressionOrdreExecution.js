@@ -45,10 +45,11 @@ function genererCasesDate(dateVal) {
  */
 function genererCasesChiffres(valeur = '', nbTotal = 8, separation = 4) {
   const raw = valeur === null || valeur === undefined ? '' : String(valeur).trim();
-  const hasRealValue = raw !== '' && Number(raw) !== 0;
-  const digits = hasRealValue ? raw.replace(/\D/g, '').slice(0, nbTotal) : '0'.repeat(nbTotal);
-  const str = digits.padEnd(nbTotal, ' ');
-  const chars = Array.from({ length: nbTotal }, (_, i) => str[i] || '');
+  const digits = raw.replace(/\D/g, '').slice(0, nbTotal).split('');
+  const chars = Array.from({ length: nbTotal }, (_, i) => {
+    const c = digits[i] || '';
+    return c === '0' ? '' : c;
+  });
 
   const groupe1 = chars.slice(0, separation > 0 ? separation : nbTotal);
   const groupe2 = separation > 0 ? chars.slice(separation) : [];

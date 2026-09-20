@@ -1118,8 +1118,9 @@ export default function PanneauDevis({
                         <label>N° DE BORDEREAU / VERSEMENT *</label>
                         <input
                           required
+                          maxLength={24}
                           value={paiement.numero_versement}
-                          onChange={(e) => setPaiement({ ...paiement, numero_versement: e.target.value })}
+                          onChange={(e) => setPaiement({ ...paiement, numero_versement: e.target.value.slice(0, 24) })}
                           placeholder="ex: VRS-554433"
                         />
                       </div>

@@ -999,22 +999,6 @@ export default function GestionArticles() {
                     />
                   </div>
                 </div>
-                <div className="obat-live-price-box">
-                  <div className="obat-live-price-header">MONTANT CALCULÉ</div>
-                  <div className="obat-live-price-row">
-                    <span>Net HT :</span>
-                    <strong>{formaterNombre(calculArticleLive.totalHT)} DA HT</strong>
-                  </div>
-                  <div className="obat-live-price-row">
-                    <span>TVA calculée :</span>
-                    <strong>{formaterNombre(calculArticleLive.totalTVA)} DA</strong>
-                  </div>
-                  <div className="obat-live-price-total-banner">
-                    <span>TOTAL TTC</span>
-                    <span className="amount">{formaterNombre(calculArticleLive.totalTTC)} DA TTC</span>
-                  </div>
-                </div>
-
               </div>
 
               <div className="obat-modal-footer">

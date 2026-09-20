@@ -26,7 +26,7 @@ export default function Sidebar({ agent, onOpenSearch }) {
     navigate('/connexion');
   }
 
-  const afficheDevisNonPayes = location.pathname === '/devis-non-payes';
+  const afficheDevis = ['/devis', '/devis-payes', '/devis-non-payes'].includes(location.pathname);
 
   return (
     <aside className="sidebar">
@@ -56,17 +56,14 @@ export default function Sidebar({ agent, onOpenSearch }) {
         <NavLink to="/" end className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
           <span>Tableau de bord</span>
         </NavLink>
-        <NavLink to="/demandes" className={({ isActive }) => `sidebar-lien ${isActive && !afficheDevisNonPayes ? 'actif' : ''}`}>
+        <NavLink to="/demandes" className={({ isActive }) => `sidebar-lien ${isActive && !afficheDevis ? 'actif' : ''}`}>
           <span>Demandes</span>
         </NavLink>
         <NavLink to="/demandes/nouvelle" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
           <span>Nouvelle demande</span>
         </NavLink>
-        <NavLink to="/devis-payes" className={({ isActive }) => `sidebar-lien ${isActive ? 'actif' : ''}`}>
-          <span>Devis payés</span>
-        </NavLink>
-        <NavLink to="/devis-non-payes" className={() => `sidebar-lien ${afficheDevisNonPayes ? 'actif' : ''}`}>
-          <span>Devis non payés</span>
+        <NavLink to="/devis" className={() => `sidebar-lien ${afficheDevis ? 'actif' : ''}`}>
+          <span>Devis</span>
         </NavLink>
         {agentCourant?.role === 'admin' && (
           <>
