@@ -80,6 +80,67 @@ function formaterMontant(valeur) {
   });
 }
 
+function nombreEnLettresSousMille(nombre) {
+  const nombres = [
+    'zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf',
+    'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize'
+  ];
+
+  if (nombre < 17) return nombres[nombre] ?? 'zéro';
+  if (nombre < 20) return `dix-${nombres[nombre - 10]}`;
+  if (nombre < 100) {
+    const dizaine = Math.floor(nombre / 10);
+    const unite = nombre % 10;
+    const dizaines = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
+
+    if (dizaine === 7) return nombre === 71 ? 'soixante et onze' : `soixante-${nombreEnLettresSousMille(nombre - 60)}`;
+    if (dizaine === 8) return nombre === 80 ? 'quatre-vingts' : `quatre-vingt-${nombreEnLettresSousMille(unite)}`;
+    if (dizaine === 9) return `quatre-vingt-${nombreEnLettresSousMille(nombre - 80)}`;
+    if (unite === 0) return dizaines[dizaine];
+    return unite === 1 ? `${dizaines[dizaine]} et un` : `${dizaines[dizaine]}-${nombres[unite]}`;
+  }
+
+  const centaines = Math.floor(nombre / 100);
+  const reste = nombre % 100;
+  const prefixe = centaines === 1 ? 'cent' : `${nombres[centaines]} cent`;
+  if (reste === 0) return centaines === 1 ? prefixe : `${prefixe}s`;
+  return `${prefixe} ${nombreEnLettresSousMille(reste)}`;
+}
+
+function montantEnLettres(valeur) {
+  const montant = Math.max(0, Math.round((Number(valeur) || 0) * 100) / 100);
+  const entier = Math.floor(montant);
+  const centimes = Math.round((montant - entier) * 100);
+  const millions = Math.floor(entier / 1000000);
+  const resteMillions = entier % 1000000;
+  const parties = [];
+
+  if (millions > 0) {
+    parties.push(`${nombreEnLettresSousMille(millions)} million${millions > 1 ? 's' : ''}`);
+  }
+
+  if (resteMillions > 0) {
+    const milliers = Math.floor(resteMillions / 1000);
+    const reste = resteMillions % 1000;
+    if (milliers > 0) {
+      parties.push(milliers === 1 ? 'mille' : `${nombreEnLettresSousMille(milliers)} mille`);
+    }
+    if (reste > 0) {
+      parties.push(nombreEnLettresSousMille(reste));
+    }
+  }
+
+  if (parties.length === 0) {
+    parties.push('zéro');
+  }
+
+  const texte = `${parties.join(' ')} dinar${entier > 1 ? 's' : ''}`;
+  if (centimes > 0) {
+    return `${texte} et ${nombreEnLettresSousMille(centimes)} centime${centimes > 1 ? 's' : ''}`;
+  }
+  return texte;
+}
+
 function libelleArticleSansCategorie(libelle) {
   return String(libelle || '—').replace(/^\s*\[[^\]]+\]\s*/, '').trim() || '—';
 }
@@ -199,8 +260,10 @@ export default function AffichageDevis() {
         </header>
 
         <div className="devis-document-title">
-          <div><span>DEVIS QUANTITATIF ET ESTIMATIF</span><small>N° : {devis.numero_devis}</small></div>
-          <span>{new Date(devis.date_emission).toLocaleDateString('fr-FR')}</span>
+          <div>
+            <span>DEVIS QUANTITATIF ET ESTIMATIF</span>
+            <small>{devis.numero_devis} du : {new Date(devis.date_emission).toLocaleDateString('fr-FR')}</small>
+          </div>
         </div>
 
         <section className="devis-client-box devis-client-box-droite">
@@ -299,12 +362,13 @@ export default function AffichageDevis() {
           )}
           <div className="devis-total-ttc"><span>Total du devis (TTC)</span><strong>{formaterMontant(devis.montant)} DA</strong></div>
         </section>
+        <p className="devis-total-ttc-lettres">Le montant de devis est arrêté à la somme de : <strong>{montantEnLettres(devis.montant)}</strong></p>
         <p className="devis-validite">Le présent devis est valable pour une durée de 01 mois.</p>
         <footer className="devis-signature">LE CHEF D’AGENCE COMMERCIALE</footer>
       </article>
 
       <style>{`@media print {
-        @page { margin: 0.5cm; size: A4 portrait; }
+        @page { margin: 5mm; size: A4 portrait; }
         html, body, #root, .app-shell, .app-content, main {
           display: block !important;
           width: 100% !important;
@@ -314,27 +378,7 @@ export default function AffichageDevis() {
           background: #fff !important;
         }
         .no-print {
-          display: block !important;
-          opacity: 1 !important;
-          visibility: visible !important;
-        }
-        .sidebar {
-          position: static !important;
-          display: flex !important;
-          width: 100% !important;
-          min-width: 0 !important;
-          height: auto !important;
-          border-right: none !important;
-          border-bottom: 1px solid #dfe4ea !important;
-          box-shadow: none !important;
-          padding: 12px 16px !important;
-        }
-        .app-topbar {
-          position: static !important;
-          height: auto !important;
-          padding: 14px 16px !important;
-          border-bottom: 1px solid #dfe4ea !important;
-          background: #fff !important;
+          display: none !important;
         }
         .page {
           margin: 0 !important;
@@ -363,28 +407,77 @@ export default function AffichageDevis() {
           max-width: none !important;
           background: #fff !important;
         }
-        .devis-document-entete,
-        .devis-document-title,
-        .devis-client-box,
-        .devis-client-box > div,
-        .devis-client-box > div + div,
-        .devis-client-box-droite > div,
-        .devis-client-box-droite > div + div,
-        .devis-articles-table,
-        .devis-articles-table th,
-        .devis-articles-table td,
-        .devis-totaux,
-        .devis-totaux div,
-        .devis-total-ttc,
-        .devis-article-ligne,
+        .devis-document {
+          width: 100% !important;
+          max-width: 100% !important;
+          padding: 8mm 10mm 6mm !important;
+          zoom: 0.88;
+          transform-origin: top left;
+        }
         .devis-document * {
-          border: none !important;
-          border-left: none !important;
-          border-right: none !important;
-          border-top: none !important;
-          border-bottom: none !important;
-          border-color: transparent !important;
-          box-shadow: none !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        .devis-document-entete {
+          gap: 8px !important;
+          padding-bottom: 8px !important;
+        }
+        .devis-institution, .devis-agence {
+          font-size: 9px !important;
+          gap: 2px !important;
+        }
+        .devis-logo { width: 60px !important; height: 60px !important; }
+        .devis-document-title {
+          margin: 10px 0 8px !important;
+          padding-bottom: 4px !important;
+        }
+        .devis-document-title span {
+          font-size: 14px !important;
+        }
+        .devis-document-title small {
+          font-size: 11px !important;
+        }
+        .devis-client-box {
+          margin-bottom: 8px !important;
+        }
+        .devis-client-box > div {
+          min-height: 52px !important;
+          padding: 6px 8px !important;
+        }
+        .devis-objet {
+          margin: 8px 0 10px !important;
+          font-size: 12px !important;
+        }
+        .devis-articles-table {
+          font-size: 10px !important;
+          margin: 0 !important;
+        }
+        .devis-articles-table th,
+        .devis-articles-table td {
+          padding: 4px 4px !important;
+        }
+        .devis-articles-table .devis-categorie-header {
+          font-size: 10px !important;
+        }
+        .devis-totaux {
+          margin-top: 8px !important;
+          width: 48% !important;
+          font-size: 11px !important;
+        }
+        .devis-total-ttc-lettres {
+          margin: 0 0 6px !important;
+          font-size: 10px !important;
+          color: #111827 !important;
+        }
+        .devis-total-ttc-lettres strong {
+          color: #111827 !important;
+        }
+        .devis-validite {
+          margin: 0 0 10px !important;
+          font-size: 10px !important;
+        }
+        .devis-signature {
+          font-size: 11px !important;
         }
       }
       @media print {
@@ -471,7 +564,20 @@ export default function AffichageDevis() {
       .devis-totaux div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-top: none; }
       .devis-totaux strong { text-align: right; }
       .devis-total-ttc { font-size: 14px; font-weight: 800; background: #e9e9e9; }
-      .devis-validite { margin: 18px 0 45px; font-size: 11px; }
+      .devis-total-ttc-lettres {
+        margin: 0 0 8px;
+        padding: 0;
+        font-size: 12px;
+        color: #111827;
+        font-style: italic;
+        line-height: 1.5;
+      }
+      .devis-total-ttc-lettres strong {
+        text-transform: lowercase;
+        font-size: 1.05em;
+        color: #111827;
+      }
+      .devis-validite { margin: 0 0 14px; font-size: 11px; }
       .devis-signature { text-align: right; font-weight: 800; font-size: 12px; }
       .devis-article-meta { display: block; color: var(--color-text-muted, #666); }
       :root[data-theme='dark'] .devis-document { background: var(--color-surface, #1A2235); color: var(--color-text, #E8EDF5); border-color: var(--color-border, #2A3550); }
@@ -497,6 +603,10 @@ export default function AffichageDevis() {
       }
       :root[data-theme='dark'] .devis-choix-badge { background-color: var(--color-primary-selection, rgba(59, 170, 232, 0.14)) !important; color: var(--color-primary, #3BAAE8) !important; border-color: var(--color-border-primary, rgba(59, 170, 232, 0.25)) !important; }
       :root[data-theme='dark'] .devis-document small, :root[data-theme='dark'] .devis-article-meta { color: var(--color-text-muted, #8B99B3); }
+      :root[data-theme='dark'] .devis-total-ttc-lettres,
+      :root[data-theme='dark'] .devis-total-ttc-lettres strong {
+        color: #f3f4f6 !important;
+      }
       @media print {
         .sidebar,
         .app-topbar,
@@ -601,6 +711,10 @@ export default function AffichageDevis() {
         :root[data-theme='dark'] .devis-document small,
         :root[data-theme='dark'] .devis-article-meta {
           color: #666 !important;
+        }
+        :root[data-theme='dark'] .devis-total-ttc-lettres,
+        :root[data-theme='dark'] .devis-total-ttc-lettres strong {
+          color: #111827 !important;
         }
       }
       @media print {

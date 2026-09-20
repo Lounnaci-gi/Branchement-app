@@ -58,40 +58,61 @@ export function genererHtmlDevis(demande, dateEmission = null) {
 <title>Demande d'établissement de devis quantitatif et estimatif</title>
 <style>
   * { box-sizing: border-box; }
-  @page { size: A4 portrait; margin: 0; }
+  @page { size: A4 portrait; margin: 7mm; }
+  html, body {
+    width: 100%;
+    min-height: 100%;
+    background: #fff;
+  }
   body {
     font-family: 'Poppins', Arial, sans-serif;
-    font-size: 13px;
+    font-size: 12px;
     color: #000;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px 30px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 8mm 10mm;
+    overflow: hidden;
   }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-  .header-left { display: flex; align-items: center; padding-left: 40px; }
-  .adresse-ade { font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; justify-content: center; text-align: center; }
-  .header-left img { width: 78px; height: auto; display: block; align-self: center; margin-left: 90px; }
-  .header-right { font-size: 13px; margin-top: 6px; white-space: nowrap; }
-  .agence-line { display: inline-block; min-width: 160px; border-bottom: none; text-decoration: none; }
-  .titre { font-weight: bold; font-size: 17px; text-transform: uppercase; margin: 18px 0 0 40px; }
-  .titre-bar { background: #000; height: 10px; width: 100%; margin: 6px 0 18px 0; }
-  .enreg-date { display: flex; align-items: center; justify-content: space-between; gap: 30px; margin-bottom: 22px; font-size: 14px; flex-wrap: nowrap; letter-spacing: .5px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .header-left { display: flex; align-items: center; padding-left: 0; }
+  .adresse-ade { font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+  .header-left img { width: 68px; height: auto; display: block; align-self: center; margin-left: 12px; }
+  .header-right { font-size: 12px; margin-top: 6px; white-space: normal; }
+  .agence-line { display: inline-block; min-width: 150px; border-bottom: none; text-decoration: none; }
+  .titre { font-weight: bold; font-size: 15px; text-transform: uppercase; margin: 12px 0 0 0; }
+  .titre-bar { background: #000; height: 8px; width: 100%; margin: 4px 0 12px 0; }
+  .enreg-date { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font-size: 12px; flex-wrap: nowrap; letter-spacing: .2px; }
   .cases { display: inline-flex; vertical-align: middle; gap: 2px; margin-left: 4px; letter-spacing: 0; }
-  .case { display: inline-flex; width: 16px; height: 18px; align-items: center; justify-content: center; border: 1px solid #000; font-size: 12px; line-height: 1; }
-  .consigne { font-weight: bold; margin-bottom: 14px; }
-  .field { margin-bottom: 8px; display: flex; align-items: flex-end; white-space: nowrap; }
-  .field label { flex-shrink: 0; margin-right: 4px; font-size: 14px; }
-  .field .line { flex-grow: 1; border-bottom: 1px solid #000; height: 1.4em; text-align: center; font-size: 14px; }
-  .section-title { text-decoration: underline; margin: 16px 0 4px 0; font-size: 14px; }
-  .full-line { border-bottom: 1px solid #000; height: 1.6em; margin-top: 4px; text-align: center; font-size: 14px; }
-  .nature-block { margin-top: 16px; }
-  .nature-lines .full-line { margin-bottom: 14px; }
-  table.visas { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 40px; }
+  .case { display: inline-flex; width: 14px; height: 16px; align-items: center; justify-content: center; border: 1px solid #000; font-size: 11px; line-height: 1; }
+  .consigne { font-weight: bold; margin-bottom: 10px; }
+  .field { margin-bottom: 6px; display: flex; align-items: flex-end; white-space: nowrap; }
+  .field label { flex-shrink: 0; margin-right: 4px; font-size: 12px; }
+  .field .line { flex-grow: 1; border-bottom: 1px solid #000; height: 1.3em; text-align: center; font-size: 12px; }
+  .section-title { text-decoration: underline; margin: 10px 0 4px 0; font-size: 12px; }
+  .full-line { border-bottom: 1px solid #000; height: 1.3em; margin-top: 2px; text-align: center; font-size: 12px; }
+  .nature-block { margin-top: 12px; }
+  .nature-lines .full-line { margin-bottom: 10px; }
+  table.visas { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 18px; }
   table.visas caption { background: #5a5a5a; color: #fff; font-weight: bold; padding: 5px; caption-side: top; border: 1px solid #000; }
   table.visas th, table.visas td { border: 1px solid #000; text-align: center; padding: 6px; }
   table.visas th { font-weight: bold; }
-  table.visas td { height: 90px; vertical-align: top; }
-  @media print { body { margin: 0 auto; padding: 0; max-width: none; } }
+  table.visas td { height: 58px; vertical-align: top; }
+  @media print {
+    html, body {
+      width: 210mm;
+      height: 297mm;
+    }
+    body {
+      margin: 0;
+      padding: 7mm;
+      overflow: visible;
+    }
+    .field, .section-title, .nature-block, table.visas {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
 </style>
 </head>
 <body>
