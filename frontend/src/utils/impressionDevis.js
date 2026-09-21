@@ -75,6 +75,22 @@ export function genererHtmlDevis(demande, dateEmission = null) {
     overflow: hidden;
   }
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .header-centre {
+    width: 100%;
+    text-align: center;
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+  }
+  .republique-arabe {
+    font-size: 18px;
+    font-weight: bold;
+    direction: rtl;
+    unicode-bidi: plaintext;
+  }
+  .republique-francais {
+    font-size: 12px;
+    font-weight: bold;
+  }
   .header-left { display: flex; align-items: center; padding-left: 0; }
   .adresse-ade { font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; justify-content: center; text-align: center; }
   .header-left img { width: 68px; height: auto; display: block; align-self: center; margin-left: 12px; }
@@ -116,6 +132,11 @@ export function genererHtmlDevis(demande, dateEmission = null) {
 </style>
 </head>
 <body>
+  <div class="header-centre">
+    <div class="republique-arabe">يبعشلا ةيطارقميدلا ةيرئازجلا ةيروهمجلا</div>
+    <div class="republique-francais">République Algérienne Démocratique et Populaire</div>
+  </div>
+
   <div class="header">
     <div class="header-left">
       <div class="adresse-ade">ALGERIENNE DES EAUX<br>Zone d'Alger<br>Unité de Médéa</div>

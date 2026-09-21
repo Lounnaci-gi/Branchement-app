@@ -245,39 +245,50 @@ export default function AffichageDevis() {
 
       <article className="devis-document">
         <header className="devis-document-entete">
-          <div className="devis-institution">
+          <div className="devis-republique-block">
             <div className="devis-republique">الجمهورية الجزائرية الديمقراطية الشعبية</div>
             <strong>République Algérienne Démocratique et Populaire</strong>
+          </div>
+
+          <div className="devis-centre-header">
+            <img className="devis-logo" src="/ade.png" alt="Logo ADE" />
+          </div>
+
+          <div className="devis-gauche-header">
             <span>Ministère des ressources en eau</span>
             <b>E.P. ALGÉRIENNE DES EAUX</b>
-          </div>
-          <img className="devis-logo" src="/ade.png" alt="Logo ADE" />
-          <div className="devis-agence">
             <strong>Zone d’Alger</strong>
             <span>Unité de Médéa</span>
-            <b>{demande.nom_agence || 'Agence'}</b>
+            <b>Agence Berrouaghia</b>
+          </div>
+
+          <div className="devis-droite-header">
+            <span>وزارة الموارد المائية</span>
+            <b>الجزائرية للمياه</b>
           </div>
         </header>
 
-        <div className="devis-document-title">
-          <div>
-            <span>DEVIS QUANTITATIF ET ESTIMATIF</span>
-            <small>{devis.numero_devis} du : {new Date(devis.date_emission).toLocaleDateString('fr-FR')}</small>
+        <div className="devis-document-header-row">
+          <div className="devis-document-title">
+            <div>
+              <span>DEVIS QUANTITATIF ET ESTIMATIF</span>
+              <small>{devis.numero_devis} du : {new Date(devis.date_emission).toLocaleDateString('fr-FR')}</small>
+            </div>
           </div>
-        </div>
 
-        <section className="devis-client-box devis-client-box-droite">
-          <div>
-            <span>Doit :</span>
-            <strong>Nom &amp; prénom : {nomAbonne(demande)}</strong>
-            <small>N° téléphone : {demande.telephone || demande.telephone_secondaire || 'Non renseigné'}</small>
-          </div>
-          <div>
-            <span>Adresse des travaux :</span>
-            <strong>Adresse : {demande.adresse_branchement || '—'}</strong>
-            <small>Commune : {demande.nom_commune || 'Non renseignée'}</small>
-          </div>
-        </section>
+          <section className="devis-client-box devis-client-box-droite">
+            <div>
+              <span>Doit :</span>
+              <strong>Nom &amp; prénom : {nomAbonne(demande)}</strong>
+              <small>N° téléphone : {demande.telephone || demande.telephone_secondaire || 'Non renseigné'}</small>
+            </div>
+            <div>
+              <span>Adresse des travaux :</span>
+              <strong>Adresse : {demande.adresse_branchement || '—'}</strong>
+              <small>Commune : {demande.nom_commune || 'Non renseignée'}</small>
+            </div>
+          </section>
+        </div>
 
         <div className="devis-objet"><b>Objet :</b> {nature}</div>
 
@@ -508,20 +519,108 @@ export default function AffichageDevis() {
         }
       }
       .devis-document { max-width: 920px; margin: 0 auto; padding: 24px 28px 30px; color: var(--color-text, #111); background: var(--color-surface, #fff); border: none !important; border-radius: 0; box-shadow: none !important; }
-      .devis-document-entete { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; gap: 16px; padding-bottom: 15px; border-bottom: none; }
-      .devis-institution, .devis-agence { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
-      .devis-institution strong { font-size: 12px; }
-      .devis-institution b { font-size: 13px; margin-top: 5px; }
-      .devis-republique { font-weight: 700; font-size: 12px; }
-      .devis-logo { width: 105px; height: 105px; object-fit: contain; justify-self: center; }
-      .devis-agence { text-align: right; font-size: 12px; }
+      .devis-document-header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-top: 8px; }
+      .devis-document-entete {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        grid-template-areas:
+          'republique republique republique'
+          'gauche centre droite';
+        align-items: center;
+        row-gap: 10px;
+        column-gap: 14px;
+        padding-bottom: 15px;
+        border-bottom: none;
+      }
+      .devis-republique-block {
+        grid-area: republique;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 4px;
+        font-size: 11px;
+        min-width: 0;
+      }
+      .devis-centre-header {
+        grid-area: centre;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .devis-gauche-header,
+      .devis-droite-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+      }
+      .devis-gauche-header {
+        grid-area: gauche;
+        align-items: flex-start;
+        text-align: left;
+        justify-self: start;
+      }
+      .devis-droite-header {
+        grid-area: droite;
+        align-items: flex-end;
+        text-align: right;
+        justify-self: end;
+      }
+      .devis-gauche-header span,
+      .devis-gauche-header b,
+      .devis-gauche-header strong,
+      .devis-droite-header span,
+      .devis-droite-header b {
+        font-weight: 700;
+      }
+      .devis-droite-header span,
+      .devis-droite-header b {
+        direction: rtl;
+        unicode-bidi: plaintext;
+      }
+      .devis-republique-block strong { font-size: 15px; }
+      .devis-republique-block b { font-size: 13px; margin-top: 5px; }
+      .devis-republique {
+        font-weight: 700;
+        font-size: 14px;
+        text-align: center;
+        direction: rtl;
+        unicode-bidi: plaintext;
+        line-height: 1.3;
+      }
+      .devis-logo { width: 123px; height: 123px; object-fit: contain; align-self: center; margin: 0; display: block; }
       .devis-agence b { margin-top: 8px; border-top: none; padding-top: 7px; }
-      .devis-document-title { display: flex; justify-content: space-between; align-items: end; margin: 18px 0 14px; border-bottom: none; padding-bottom: 7px; }
-      .devis-document-title div { display: flex; flex-direction: column; gap: 5px; }
-      .devis-document-title span { font-size: 17px; font-weight: 800; text-decoration: underline; }
-      .devis-document-title small { font-size: 12px; font-weight: 700; }
-      .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: none; margin-bottom: 15px; border-radius: 0; overflow: hidden; }
-      .devis-client-box-droite { width: 42%; margin-left: auto; grid-template-columns: 1fr; border-radius: 0; overflow: hidden; }
+      .devis-gauche-header span,
+      .devis-droite-header span,
+      .devis-gauche-header b,
+      .devis-droite-header b {
+        display: block;
+      }
+      .devis-document-title { flex: 1 1 0; min-width: 0; margin: 0; padding: 0; }
+      .devis-document-title div { display: flex; flex-direction: column; gap: 4px; }
+      .devis-document-title span {
+        font-size: 17px;
+        font-weight: 800;
+        text-decoration: underline;
+        line-height: 1.2;
+        display: block;
+      }
+      .devis-document-title small {
+        font-size: 12px;
+        font-weight: 700;
+        display: block;
+      }
+      .devis-client-box { display: grid; grid-template-columns: 1fr 1fr; border: none; margin-bottom: 15px; border-radius: 0; overflow: hidden; background: #f3f3f3; }
+      .devis-client-box-droite {
+        width: 39%;
+        max-width: 380px;
+        margin-left: auto;
+        grid-template-columns: 1fr;
+        border-radius: 0;
+        overflow: hidden;
+      }
       .devis-client-box-droite > div { min-height: 0; padding: 4px 10px; }
       .devis-client-box-droite > div + div { padding-top: 0; }
       .devis-client-box-droite strong { font-size: 12px; }
