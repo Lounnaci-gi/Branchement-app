@@ -133,7 +133,9 @@ export function genererHtmlDevis(demande, dateEmission = null) {
 </head>
 <body>
   <div class="header-centre">
-    <div class="republique-arabe">يبعشلا ةيطارقميدلا ةيرئازجلا ةيروهمجلا</div>
+    <div class="republique-arabe">وزارة الموارد المائية</div>
+    <div class="republique-arabe" style="font-size: 12px; margin-top: 2px;">وحدة المدية</div>
+    <div class="republique-arabe" style="font-size: 18px; margin-top: 4px;">يبعشلا ةيطارقميدلا ةيرئازجلا ةيروهمجلا</div>
     <div class="republique-francais">République Algérienne Démocratique et Populaire</div>
   </div>
 

@@ -265,6 +265,8 @@ export default function AffichageDevis() {
           <div className="devis-droite-header">
             <span>وزارة الموارد المائية</span>
             <b>الجزائرية للمياه</b>
+            <span>وحدة المدية</span>
+            <span>مركز البرواقية</span>
           </div>
         </header>
 
