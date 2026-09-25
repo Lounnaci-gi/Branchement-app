@@ -373,13 +373,17 @@ export default function NouvelleDemande() {
         ]}
       />
 
-      <header className="obat-page-header">
-        <div>
-          <span>ADE • RACCORDEMENT AU RÉSEAU</span>
+      <header className="obat-page-header nouv-demande-header">
+        <div className="nouv-demande-header-copy">
+          <span className="obat-page-eyebrow">ADE • Raccordement au réseau</span>
           <h1 className="obat-page-title">{modeEdition ? 'Modifier la demande' : 'Nouvelle demande de branchement'}</h1>
           <p className="obat-page-subtitle">
             {modeEdition ? 'Mise à jour des informations du dossier et des spécifications techniques' : 'Enregistrement d’un nouveau raccordement au réseau AEP'}
           </p>
+        </div>
+        <div className="nouv-demande-header-meta">
+          <span className="nouv-demande-badge">{modeEdition ? 'Modification' : 'Création'}</span>
+          <span className="nouv-demande-badge mutted">Dossier ADE</span>
         </div>
       </header>
 
@@ -399,10 +403,12 @@ export default function NouvelleDemande() {
         {/* Formulaire */}
         <form onSubmit={soumettre} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {/* Bloc 1: Identité du demandeur */}
-          <div className="card" style={{ padding: 28 }}>
-            <h3 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              Identité du demandeur
-            </h3>
+          <section className="card nouv-demande-form-card">
+            <div className="nouv-demande-card-header">
+              <h3><span>👤</span> Identité du demandeur</h3>
+              <span className="nouv-demande-chip">Étape 1</span>
+            </div>
+            <div className="nouv-demande-card-body">
 
           <div className="champ">
             <label htmlFor="type-demandeur">Type de demandeur *</label>
@@ -578,13 +584,16 @@ export default function NouvelleDemande() {
               ))}
             </select>
           </div>
-          </div>
+            </div>
+          </section>
 
           {/* Bloc 2: Emplacement & Spécifications du branchement */}
-          <div className="card" style={{ padding: 28 }}>
-            <h3 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>📍</span> Emplacement & Spécifications du branchement
-            </h3>
+          <section className="card nouv-demande-form-card">
+            <div className="nouv-demande-card-header">
+              <h3><span>📍</span> Emplacement & Spécifications du branchement</h3>
+              <span className="nouv-demande-chip">Étape 2</span>
+            </div>
+            <div className="nouv-demande-card-body">
 
           <div className="form-grille-2">
             <div className="champ">
@@ -688,65 +697,68 @@ export default function NouvelleDemande() {
             <label>Observations & Notes complémentaires</label>
             <textarea rows={3} value={form.observations ?? ''} onChange={(e) => maj('observations', e.target.value)} placeholder="Contraintes terrain, repère particulier..." />
           </div>
-          </div>
+            </div>
 
-          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            <button type="submit" className="btn btn-primary" disabled={envoi || (modeEdition && demandeVerrouillee)}>
-              <span>💾</span>
-              <span>{envoi ? 'Enregistrement...' : modeEdition ? (demandeVerrouillee ? 'Demande scellée' : 'Enregistrer les modifications') : 'Déposer la demande'}</span>
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>Annuler</button>
-          </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <button type="submit" className="btn btn-primary" disabled={envoi || (modeEdition && demandeVerrouillee)}>
+                <span>💾</span>
+                <span>{envoi ? 'Enregistrement...' : modeEdition ? (demandeVerrouillee ? 'Demande scellée' : 'Enregistrer les modifications') : 'Déposer la demande'}</span>
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>Annuler</button>
+            </div>
+          </section>
         </form>
 
         {/* Volet de prévisualisation latérale en temps réel */}
         <div style={{ position: 'sticky', top: 20 }}>
-          <div className="card" style={{ padding: 22, border: '1px dashed var(--color-border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-primary)' }}>
-                Aperçu du dossier en direct
-              </span>
+          <aside className="card nouv-demande-preview-card">
+            <div className="nouv-demande-preview-summary">
+              <span className="nouv-demande-preview-kicker">Aperçu du dossier</span>
               <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>ADE Suivi AEP</span>
             </div>
 
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: 12, marginBottom: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)' }}>
-                {form.est_personne_morale
-                  ? (form.raison_sociale || 'Raison sociale non saisie')
-                  : ([form.nom, form.prenom].filter(Boolean).join(' ') || 'Nom & Prénom')}
+            <div className="nouv-demande-preview-body">
+              <div className="nouv-demande-preview-row">
+                <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--color-text)' }}>
+                  {form.est_personne_morale
+                    ? (form.raison_sociale || 'Raison sociale non saisie')
+                    : ([form.nom, form.prenom].filter(Boolean).join(' ') || 'Nom & Prénom')}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                  {form.qualite_demandeur || 'Qualité non spécifiée'} · {form.telephone || 'Sans téléphone'}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                {form.qualite_demandeur || 'Qualité non spécifiée'} · {form.telephone || 'Sans téléphone'}
+
+              <div className="nouv-demande-preview-row">
+                <span className="label">Pièce d’identité</span>
+                <strong className="value">{form.type_piece_identite || 'Pièce'} : {form.cin || '—'}</strong>
+              </div>
+
+              <div className="nouv-demande-preview-row">
+                <span className="label">Résidence</span>
+                <span className="value">{form.adresse || '—'} {communeResidence ? `(${communeResidence.nom_commune})` : ''}</span>
+              </div>
+
+              <div className="nouv-demande-preview-row">
+                <span className="label">Type de branchement</span>
+                <strong className="value" style={{ color: 'var(--color-primary)' }}>{typeSelectionne?.libelle || 'Non sélectionné'}</strong>
+              </div>
+
+              <div className="nouv-demande-preview-row">
+                <span className="label">Lieu de raccordement</span>
+                <span className="value">{form.adresse_branchement || '—'}</span>
+              </div>
+
+              <div className="nouv-demande-preview-row">
+                <span className="label">Agence responsable</span>
+                <span className="value" style={{ fontWeight: 600 }}>{communeBranchement?.nom_agence || 'Sélectionner une commune'}</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12.5 }}>
-              <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11 }}>Pièce d’identité</span>
-                <strong>{form.type_piece_identite || 'Pièce'} : {form.cin || '—'}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11 }}>Résidence</span>
-                <span>{form.adresse || '—'} {communeResidence ? `(${communeResidence.nom_commune})` : ''}</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11 }}>Type de branchement</span>
-                <strong style={{ color: 'var(--color-primary)' }}>{typeSelectionne?.libelle || 'Non sélectionné'}</strong>
-              </div>
-              <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11 }}>Lieu de raccordement</span>
-                <span>{form.adresse_branchement || '—'}</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: 11 }}>Agence responsable</span>
-                <span style={{ fontWeight: 600 }}>{communeBranchement?.nom_agence || 'Sélectionner une commune'}</span>
-              </div>
+            <div className="nouv-demande-preview-cta">
+              Après soumission, vous pourrez choisir d’imprimer l’accusé de réception et le formulaire A4.
             </div>
-
-            <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid var(--color-border)', fontSize: 11.5, color: 'var(--color-text-muted)' }}>
-              Après soumission, vous pourrez choisir d'imprimer l'accusé de réception et le formulaire A4.
-            </div>
-          </div>
+          </aside>
         </div>
 
       </div>
