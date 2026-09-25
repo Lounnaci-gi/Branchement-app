@@ -2226,10 +2226,11 @@
 :root[data-theme='dark'] .obat-section-preview-title,
 :root[data-theme='dark'] .obat-accord-title {
   color: var(--color-text);
+}
+
 :root[data-theme='dark'] .obat-section-number,
 :root[data-theme='dark'] .obat-numbering-control {
   color: var(--color-text-muted);
-}
 }
 
 :root[data-theme='dark'] .obat-client-box-header {

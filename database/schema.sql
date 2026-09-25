@@ -14,10 +14,7 @@
         TypesBranchement sont conservées.
      4) LignesDevis.choix_prix est maintenant contraint aux
         valeurs PRESTATION / FOURNITURE / POSE / FOURNITURE_POSE.
-     5) Ajout de la fonction fn_PrixArticle : calcule le prix
-        effectif d'une ligne selon choix_prix, a partir du tarif
-        ouvert de l'article (permet de facturer fourniture seule,
-        pose seule, ou les deux, pour les articles FOURNITURE_POSE).
+     5) HistoriqueTva stocke les taux applicables (PRESTATION / TRAVAUX).
    Date : 2026-09-19
 
    VERIFICATION : les seuls INSERT de seed presents sont
@@ -276,6 +273,17 @@ CREATE TABLE TarifsArticlesDevis (
     CONSTRAINT CK_TarifsArticles_Periode CHECK (date_fin IS NULL OR date_fin >= date_debut)
 );
 
+CREATE TABLE HistoriqueTva (
+    id_tva          INT IDENTITY(1,1) PRIMARY KEY,
+    type_tva        NVARCHAR(20) NOT NULL,
+    taux            DECIMAL(5,2) NOT NULL,
+    date_effet      DATE NOT NULL,
+    date_creation   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT CK_HistoriqueTva_Type CHECK (type_tva IN (N'PRESTATION', N'TRAVAUX')),
+    CONSTRAINT CK_HistoriqueTva_Taux CHECK (taux >= 0 AND taux <= 100),
+    CONSTRAINT UQ_HistoriqueTva_TypeDate UNIQUE (type_tva, date_effet)
+);
+
 /* ------------------------------------------------------------
    11. TRAVAUX D'EXECUTION
    ------------------------------------------------------------ */
@@ -367,34 +375,6 @@ BEGIN
     VALUES (@id_demande, @nouveau_statut, @id_agent, @commentaire);
 
     COMMIT TRANSACTION;
-END
-GO
-
-/* ============================================================
-   FONCTION : prix effectif d'un article selon le choix_prix
-   Utilisee lors de l'ajout d'une ligne de devis pour calculer
-   prix_unitaire a partir du tarif ouvert (date_fin IS NULL) :
-     - PRESTATION       -> prix_unitaire (fourniture/pose NULL)
-     - FOURNITURE       -> prix_fourniture seul
-     - POSE             -> prix_pose seul
-     - FOURNITURE_POSE  -> prix_unitaire (= fourniture + pose)
-   Retourne NULL si aucun tarif ouvert n'existe pour l'article,
-   ou si le choix_prix demande une composante non definie
-   (ex. FOURNITURE sur un article en mode PRESTATION).
-   ============================================================ */
-CREATE FUNCTION fn_PrixArticle (@id_article INT, @choix_prix NVARCHAR(20))
-RETURNS DECIMAL(12,2)
-AS
-BEGIN
-    DECLARE @prix DECIMAL(12,2);
-    SELECT @prix = CASE @choix_prix
-        WHEN N'FOURNITURE' THEN t.prix_fourniture
-        WHEN N'POSE'       THEN t.prix_pose
-        ELSE t.prix_unitaire   -- PRESTATION ou FOURNITURE_POSE (les deux)
-    END
-    FROM TarifsArticlesDevis t
-    WHERE t.id_article = @id_article AND t.date_fin IS NULL;
-    RETURN @prix;
 END
 GO
 
@@ -504,6 +484,14 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM HistoriqueTva)
+BEGIN
+    INSERT INTO HistoriqueTva (type_tva, taux, date_effet) VALUES
+    (N'PRESTATION', 19, CONVERT(date, GETDATE())),
+    (N'TRAVAUX', 19, CONVERT(date, GETDATE()));
+END
+GO
+
 /* ============================================================
    ETAPE 2 — SECURITE / MOINDRE PRIVILEGE
    (securite-moindre-privilege.sql)
@@ -552,6 +540,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueModificationsDeman
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CategoriesArticles TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueTva TO db_aep_app_role;
 
 -- Permissions en lecture sur les référentiels et vues
 GRANT SELECT ON OBJECT::dbo.Centres TO db_aep_app_role;
@@ -563,7 +552,6 @@ GRANT SELECT ON OBJECT::dbo.vw_DemandesSynthese TO db_aep_app_role;
 
 -- Droit d'exécution sur les procédures stockées et fonctions
 GRANT EXECUTE ON OBJECT::dbo.sp_ChangerStatutDemande TO db_aep_app_role;
-GRANT EXECUTE ON OBJECT::dbo.fn_PrixArticle TO db_aep_app_role;
 
 -- Ajout de l'utilisateur au rôle applicatif
 ALTER ROLE db_aep_app_role ADD MEMBER ade_app_user;

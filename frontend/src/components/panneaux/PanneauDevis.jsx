@@ -1120,7 +1120,8 @@ export default function PanneauDevis({
                           required
                           maxLength={24}
                           value={paiement.numero_versement}
-                          onChange={(e) => setPaiement({ ...paiement, numero_versement: e.target.value.slice(0, 24) })}
+                          onChange={(e) => setPaiement({ ...paiement, numero_versement: e.target.value.toUpperCase().slice(0, 24) })}
+                          style={{ textTransform: 'uppercase' }}
                           placeholder="ex: VRS-554433"
                         />
                       </div>

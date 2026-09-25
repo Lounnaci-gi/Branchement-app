@@ -1,4 +1,4 @@
-import { ETAPES_PIPELINE, indexEtape, estStatutTerminalNegatif, STATUTS_TERMINAUX, LIBELLES_STATUT } from '../constants/statuts';
+import { ETAPES_PIPELINE, indexEtape, estStatutTerminalNegatif, STATUTS_TERMINAUX } from '../constants/statuts';
 import './Pipeline.css';
 
 // Représente la progression d'une demande sous forme de conduite segmentée.
@@ -85,10 +85,4 @@ export default function Pipeline({ statutActuel, compact = false, showLegend = f
       )}
     </div>
   );
-}
-
-/** Libellé textuel de l'étape courante — utile hors du composant Pipeline */
-export function libelleEtapeCourante(statut) {
-  if (estStatutTerminalNegatif(statut)) return STATUTS_TERMINAUX[statut].libelle;
-  return LIBELLES_STATUT[statut] || statut;
 }

@@ -3122,8 +3122,8 @@ export default function EditeurDevisObat({
                           maxLength={24}
                           placeholder="ex: VRS-5544"
                           value={donneesPaiement.numero_versement}
-                          onChange={(e) => setDonneesPaiement({ ...donneesPaiement, numero_versement: e.target.value.slice(0, 24) })}
-                          style={{ width: '100%', padding: '6px 8px', borderRadius: 4, border: '1px solid #D1D5DB' }}
+                          onChange={(e) => setDonneesPaiement({ ...donneesPaiement, numero_versement: e.target.value.toUpperCase().slice(0, 24) })}
+                          style={{ width: '100%', padding: '6px 8px', borderRadius: 4, border: '1px solid #D1D5DB', textTransform: 'uppercase' }}
                         />
                       </div>
                       <div>

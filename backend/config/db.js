@@ -341,20 +341,6 @@ async function verifierEtMigrerBase(pool) {
     await pool.request().query(migrationLignesDevisSQL);
 
     const migrationParametresSQL = `
-      IF OBJECT_ID('dbo.ParametresApplication', 'U') IS NULL
-      BEGIN
-        CREATE TABLE ParametresApplication (
-          cle NVARCHAR(50) PRIMARY KEY,
-          valeur DECIMAL(5,2) NOT NULL,
-          date_maj DATETIME2 NOT NULL DEFAULT SYSDATETIME()
-        );
-      END;
-
-      IF NOT EXISTS (SELECT 1 FROM ParametresApplication WHERE cle = N'TVA_PRESTATION')
-        INSERT INTO ParametresApplication (cle, valeur) VALUES (N'TVA_PRESTATION', 19);
-      IF NOT EXISTS (SELECT 1 FROM ParametresApplication WHERE cle = N'TVA_TRAVAUX')
-        INSERT INTO ParametresApplication (cle, valeur) VALUES (N'TVA_TRAVAUX', 19);
-
       IF OBJECT_ID('dbo.HistoriqueTva', 'U') IS NULL
       BEGIN
         CREATE TABLE HistoriqueTva (
@@ -371,13 +357,33 @@ async function verifierEtMigrerBase(pool) {
 
       IF NOT EXISTS (SELECT 1 FROM HistoriqueTva)
       BEGIN
-        INSERT INTO HistoriqueTva (type_tva, taux, date_effet)
-        SELECT N'PRESTATION', valeur, CONVERT(date, GETDATE())
-        FROM ParametresApplication WHERE cle = N'TVA_PRESTATION';
-        INSERT INTO HistoriqueTva (type_tva, taux, date_effet)
-        SELECT N'TRAVAUX', valeur, CONVERT(date, GETDATE())
-        FROM ParametresApplication WHERE cle = N'TVA_TRAVAUX';
+        IF OBJECT_ID('dbo.ParametresApplication', 'U') IS NOT NULL
+        BEGIN
+          INSERT INTO HistoriqueTva (type_tva, taux, date_effet)
+          SELECT N'PRESTATION', valeur, CONVERT(date, GETDATE())
+          FROM ParametresApplication WHERE cle = N'TVA_PRESTATION';
+          INSERT INTO HistoriqueTva (type_tva, taux, date_effet)
+          SELECT N'TRAVAUX', valeur, CONVERT(date, GETDATE())
+          FROM ParametresApplication WHERE cle = N'TVA_TRAVAUX';
+        END;
+
+        IF NOT EXISTS (SELECT 1 FROM HistoriqueTva)
+        BEGIN
+          INSERT INTO HistoriqueTva (type_tva, taux, date_effet) VALUES
+          (N'PRESTATION', 19, CONVERT(date, GETDATE())),
+          (N'TRAVAUX', 19, CONVERT(date, GETDATE()));
+        END;
       END;
+
+      IF OBJECT_ID('dbo.ParametresApplication', 'U') IS NOT NULL
+        DROP TABLE ParametresApplication;
+
+      IF OBJECT_ID('dbo.fn_PrixArticle', 'FN') IS NOT NULL
+        DROP FUNCTION dbo.fn_PrixArticle;
+
+      IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'db_aep_app_role' AND type = 'R')
+         AND OBJECT_ID(N'dbo.HistoriqueTva', N'U') IS NOT NULL
+        GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueTva TO db_aep_app_role;
     `;
     await pool.request().query(migrationParametresSQL);
 

@@ -666,12 +666,45 @@ export default function AffichageDevis() {
       .devis-validite { margin: 0 0 14px; font-size: 11px; }
       .devis-signature { text-align: right; font-weight: 800; font-size: 12px; }
       .devis-article-meta { display: block; color: var(--color-text-muted, #666); }
-      :root[data-theme='dark'] .devis-document { background: var(--color-surface, #1A2235); color: var(--color-text, #E8EDF5); border-color: var(--color-border, #2A3550); }
+      :root[data-theme='dark'] .page-affichage-devis {
+        background: var(--color-bg, #0F172A);
+        color: var(--color-text, #E8EDF5);
+      }
+      :root[data-theme='dark'] .page-affichage-devis .page-header h1,
+      :root[data-theme='dark'] .page-affichage-devis .page-header p,
+      :root[data-theme='dark'] .devis-document,
+      :root[data-theme='dark'] .devis-document .devis-republique,
+      :root[data-theme='dark'] .devis-document .devis-gauche-header,
+      :root[data-theme='dark'] .devis-document .devis-droite-header,
+      :root[data-theme='dark'] .devis-document .devis-document-title span,
+      :root[data-theme='dark'] .devis-document .devis-document-title small,
+      :root[data-theme='dark'] .devis-document .devis-client-box,
+      :root[data-theme='dark'] .devis-document .devis-client-box strong,
+      :root[data-theme='dark'] .devis-document .devis-client-box small,
+      :root[data-theme='dark'] .devis-document .devis-client-box span,
+      :root[data-theme='dark'] .devis-document .devis-objet,
+      :root[data-theme='dark'] .devis-document .devis-total-ttc-lettres,
+      :root[data-theme='dark'] .devis-document .devis-validite,
+      :root[data-theme='dark'] .devis-document .devis-signature,
+      :root[data-theme='dark'] .devis-document .devis-articles-table td,
+      :root[data-theme='dark'] .devis-document .devis-articles-table th,
+      :root[data-theme='dark'] .devis-document .devis-totaux div,
+      :root[data-theme='dark'] .devis-document .devis-totaux strong,
+      :root[data-theme='dark'] .devis-document .devis-total-ttc strong {
+        color: var(--color-text, #E8EDF5);
+      }
+      :root[data-theme='dark'] .devis-document { background: var(--color-surface, #1A2235); border-color: var(--color-border, #2A3550); }
       :root[data-theme='dark'] .devis-document-entete, :root[data-theme='dark'] .devis-document-title { border-color: var(--color-border, #2A3550); }
       :root[data-theme='dark'] .devis-client-box, :root[data-theme='dark'] .devis-client-box > div + div, :root[data-theme='dark'] .devis-articles-table th, :root[data-theme='dark'] .devis-articles-table td, :root[data-theme='dark'] .devis-totaux, :root[data-theme='dark'] .devis-totaux div { border-color: var(--color-border, #2A3550); }
+      :root[data-theme='dark'] .devis-client-box { background: var(--color-surface-sunken, #141B2A); }
       :root[data-theme='dark'] .devis-articles-table th, :root[data-theme='dark'] .devis-total-ttc { background: var(--color-surface-sunken, #141B2A); }
       :root[data-theme='dark'] .devis-articles-table td.devis-categorie-header { background: var(--color-surface-sunken, #141B2A) !important; color: var(--color-text, #E8EDF5) !important; }
       :root[data-theme='dark'] .devis-articles-table td.devis-categorie-header strong { color: var(--color-text, #E8EDF5) !important; }
+      :root[data-theme='dark'] .devis-document small, :root[data-theme='dark'] .devis-article-meta { color: var(--color-text-muted, #8B99B3); }
+      :root[data-theme='dark'] .devis-total-ttc-lettres,
+      :root[data-theme='dark'] .devis-total-ttc-lettres strong {
+        color: #f3f4f6 !important;
+      }
       @media print {
         :root[data-theme='dark'] .devis-document,
         :root[data-theme='dark'] td.devis-categorie-header {
@@ -686,11 +719,6 @@ export default function AffichageDevis() {
         :root[data-theme='dark'] td.devis-categorie-header strong {
           color: #e8edf5 !important;
         }
-      }
-      :root[data-theme='dark'] .devis-document small, :root[data-theme='dark'] .devis-article-meta { color: var(--color-text-muted, #8B99B3); }
-      :root[data-theme='dark'] .devis-total-ttc-lettres,
-      :root[data-theme='dark'] .devis-total-ttc-lettres strong {
-        color: #f3f4f6 !important;
       }
       @media print {
         .sidebar,

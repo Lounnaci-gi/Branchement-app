@@ -363,8 +363,8 @@ export default function DetailDemande() {
         </div>
         <Pipeline statutActuel={demande.statut_actuel} showLegend />
         <div className="pipeline-statut-actuel">
-          <span>{LIBELLES_STATUT[demande.statut_actuel] || demande.statut_actuel}</span>
-          <span>— {LIBELLES_STATUT[demande.statut_actuel]}</span>
+          <span>Statut actuel</span>
+          <strong>{LIBELLES_STATUT[demande.statut_actuel] || demande.statut_actuel}</strong>
         </div>
       </div>
 
