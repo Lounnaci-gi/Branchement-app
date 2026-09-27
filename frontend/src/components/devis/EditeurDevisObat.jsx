@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import './EditeurDevisObat.css';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
+import { isDevisQuantitatif } from '../../utils/devisAffichage';
 
 const LIBELLES_UNITES = {
   U: 'U (Unité)',
@@ -251,6 +252,7 @@ export default function EditeurDevisObat({
 }) {
   // Mode de visualisation : 'edition' ou 'preview' (Comme dans la vidéo Obat 1:14)
   const [modeOnglet, setModeOnglet] = useState('edition');
+  const [modeAffichageDevis, setModeAffichageDevis] = useState('estimatif'); // 'estimatif' | 'quantitatif'
 
   // Tiroir latéral "Bibliothèques" (Obat 4:25)
   const [drawerBiblioOuvert, setDrawerBiblioOuvert] = useState(false);
@@ -502,6 +504,11 @@ export default function EditeurDevisObat({
   // AJOUT D'UNE NOUVELLE LIGNE / ARTICLE VIDE DANS LE DEVIS
   // -------------------------------------------------------------
   function ajouterLigneVide(idSection) {
+    if (devisQuantitatif) {
+      notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
+      return;
+    }
+
     let targetId = idSection || idSectionActive;
 
     const sectionCible = sections.find((section) => section.id_section === targetId);
@@ -610,6 +617,11 @@ export default function EditeurDevisObat({
   // ACTIONS SUR LES SECTIONS ET LIGNES
   // -------------------------------------------------------------
   function ajouterSection() {
+    if (devisQuantitatif) {
+      notifierErreur("Le devis quantitatif ne permet pas l'ajout de sections ni d'articles. Passez en mode estimatif pour modifier le devis.");
+      return;
+    }
+
     const nouvelleSec = {
       id_section: `sec_${Date.now()}`,
       titre: 'Nouvelle section de travaux',
@@ -628,6 +640,11 @@ export default function EditeurDevisObat({
   }
 
   function ajouterLigneDansSection(idSection, article, categorie = 'Fourniture', choixPrixInitial = null) {
+    if (devisQuantitatif) {
+      notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
+      return;
+    }
+
     const codeArticle = (article?.code || article?.code_article || '').trim().toUpperCase();
     if (codeArticle) {
       const dejaPresent = sections.some((s) =>
@@ -1350,6 +1367,8 @@ export default function EditeurDevisObat({
   const communeClient = demande?.nom_commune || 'Commune de rattachement';
   const telClient = demande?.demandeur_telephone || 'Non renseigné';
   const numDemandeRef = demande?.numero_demande || 'DEM-2026';
+  const devisQuantitatif = isDevisQuantitatif(modeAffichageDevis);
+  const afficherColonnesPrix = !devisQuantitatif;
   const sectionsAffichees = modeOnglet === 'preview'
     ? sections.filter((section) => section.lignes.length > 0)
     : sections;
@@ -1379,6 +1398,23 @@ export default function EditeurDevisObat({
               Prévisualisation
             </button>
           </nav>
+
+          <div className="obat-nav-tabs" style={{ marginLeft: 12 }}>
+            <button
+              type="button"
+              className={`obat-nav-tab ${!devisQuantitatif ? 'active' : ''}`}
+              onClick={() => setModeAffichageDevis('estimatif')}
+            >
+              Estimatif
+            </button>
+            <button
+              type="button"
+              className={`obat-nav-tab ${devisQuantitatif ? 'active' : ''}`}
+              onClick={() => setModeAffichageDevis('quantitatif')}
+            >
+              Quantitatif
+            </button>
+          </div>
         </div>
 
         <div className="obat-topbar-right">
@@ -1490,7 +1526,7 @@ export default function EditeurDevisObat({
       </header>
 
       {/* 2. ONGLET FLOTTANT ET TIROIR LATÉRAL */}
-      {modeOnglet === 'edition' && (
+      {modeOnglet === 'edition' && !devisQuantitatif && (
         <button
           type="button"
           className="obat-floating-biblio-btn"
@@ -1907,8 +1943,8 @@ export default function EditeurDevisObat({
                   <th className="center obat-col-type">Type</th>
                   <th className="center obat-col-qte">Qté</th>
                   {afficherColonneUnite && <th className="center obat-col-unite">Unité</th>}
-                  <th className="right obat-col-pu">Prix U. HT</th>
-                  <th className="right obat-col-total">Total HT</th>
+                  {afficherColonnesPrix && <th className="right obat-col-pu">Prix U. HT</th>}
+                  {afficherColonnesPrix && <th className="right obat-col-total">Total HT</th>}
                   {modeOnglet === 'edition' && <th className="center obat-col-del" />}
                 </tr>
               </thead>
@@ -1937,11 +1973,28 @@ export default function EditeurDevisObat({
                       </h3>
                     </div>
 
-                    <div className="obat-section-bar-right">
-                      <span>
-                        Sous-total : <strong>{formaterNombre(totalSectionHT)} DA HT</strong>
-                      </span>
-                      {modeOnglet === 'edition' && sections.length > 1 && (
+                    {!devisQuantitatif && (
+                      <div className="obat-section-bar-right">
+                        <span>
+                          Sous-total : <strong>{formaterNombre(totalSectionHT)} DA HT</strong>
+                        </span>
+                        {modeOnglet === 'edition' && sections.length > 1 && (
+                          <button
+                            type="button"
+                            className="obat-btn-del-section"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              supprimerSection(section.id_section);
+                            }}
+                            title="Supprimer cette section"
+                          >
+                            ✕ Supprimer section
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {devisQuantitatif && modeOnglet === 'edition' && sections.length > 1 && (
+                      <div className="obat-section-bar-right">
                         <button
                           type="button"
                           className="obat-btn-del-section"
@@ -1953,23 +2006,34 @@ export default function EditeurDevisObat({
                         >
                           ✕ Supprimer section
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
                   <table className="obat-table">
                     <tbody>
-                      {section.lignes.length === 0 ? (
+                      {section.lignes.length === 0 && !devisQuantitatif ? (
                         <tr>
                           <td
-                            colSpan={modeOnglet === 'edition' ? (afficherColonneUnite ? 8 : 7) : (afficherColonneUnite ? 7 : 6)}
+                            colSpan={modeOnglet === 'edition'
+                              ? (afficherColonneUnite ? (afficherColonnesPrix ? 8 : 6) : (afficherColonnesPrix ? 7 : 5))
+                              : (afficherColonneUnite ? (afficherColonnesPrix ? 7 : 5) : (afficherColonnesPrix ? 6 : 4))}
                             className={`obat-table-empty ${modeOnglet === 'edition' ? 'is-clickable' : ''}`}
                             onClick={() => {
                               if (modeOnglet !== 'edition') return;
+                              if (devisQuantitatif) {
+                                notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
+                                return;
+                              }
                               ajouterLigneVide(section.id_section);
                             }}
                             onKeyDown={(e) => {
                               if (modeOnglet !== 'edition' || !['Enter', ' '].includes(e.key)) return;
+                              if (devisQuantitatif) {
+                                e.preventDefault();
+                                notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
+                                return;
+                              }
                               e.preventDefault();
                               ajouterLigneVide(section.id_section);
                             }}
@@ -1980,7 +2044,8 @@ export default function EditeurDevisObat({
                             Cette section est vide. Cliquez pour créer un nouvel article.
                           </td>
                         </tr>
-                      ) : (
+                      ) : null}
+                      {section.lignes.length > 0 && (
                         section.lignes.map((ligne, lIdx) => {
                           const qte = Number(ligne.quantite) || 0;
                           const pu = Number(ligne.prix) || 0;
@@ -1991,7 +2056,7 @@ export default function EditeurDevisObat({
                             <tr key={ligne.id_ligne || lIdx} className={estOuvrage ? 'obat-tr-ouvrage' : ''}>
                               <td className="center obat-col-num">{lIdx + 1}</td>
                               <td className="obat-col-desig">
-                                {modeOnglet === 'edition' ? (
+                                {modeOnglet === 'edition' && !devisQuantitatif ? (
                                   <div>
                                     <div className="obat-line-designation-editor">
                                       <input
@@ -2069,7 +2134,7 @@ export default function EditeurDevisObat({
                                 )}
                               </td>
                               <td className="center obat-col-type">
-                                {modeOnglet === 'edition' ? (() => {
+                                {modeOnglet === 'edition' && !devisQuantitatif ? (() => {
                                   const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
                                   const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
                                   return (
@@ -2120,7 +2185,7 @@ export default function EditeurDevisObat({
                                 })()}
                               </td>
                               <td className="center obat-col-qte">
-                                {modeOnglet === 'edition' ? (
+                                {modeOnglet === 'edition' && !devisQuantitatif ? (
                                   <input
                                     type="number"
                                     min="0"
@@ -2135,7 +2200,7 @@ export default function EditeurDevisObat({
                               </td>
                               {afficherColonneUnite && (
                                 <td className="center obat-col-unite">
-                                  {modeOnglet === 'edition' ? (
+                                  {modeOnglet === 'edition' && !devisQuantitatif ? (
                                     <select
                                       value={ligne.unite}
                                       onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'unite', e.target.value)}
@@ -2155,23 +2220,27 @@ export default function EditeurDevisObat({
                                   )}
                                 </td>
                               )}
-                              <td className="right obat-col-pu">
-                                {modeOnglet === 'edition' ? (
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="10"
-                                    value={normaliserPrix(ligne.prix)}
-                                    onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'prix', e.target.value)}
-                                    style={{ textAlign: 'right' }}
-                                  />
-                                ) : (
-                                  <span>{formaterNombre(ligne.prix)} DA</span>
-                                )}
-                              </td>
-                              <td className="right obat-col-total">
-                                <strong>{formaterNombre(ligneHT)} DA</strong>
-                              </td>
+                              {afficherColonnesPrix && (
+                                <td className="right obat-col-pu">
+                                  {modeOnglet === 'edition' && !devisQuantitatif ? (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="10"
+                                      value={normaliserPrix(ligne.prix)}
+                                      onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'prix', e.target.value)}
+                                      style={{ textAlign: 'right' }}
+                                    />
+                                  ) : (
+                                    <span>{formaterNombre(ligne.prix)} DA</span>
+                                  )}
+                                </td>
+                              )}
+                              {afficherColonnesPrix && (
+                                <td className="right obat-col-total">
+                                  <strong>{formaterNombre(ligneHT)} DA</strong>
+                                </td>
+                              )}
                               {modeOnglet === 'edition' && (
                                 <td className="center obat-col-del">
                                   <div className="obat-line-actions">
@@ -2214,15 +2283,24 @@ export default function EditeurDevisObat({
                           );
                         })
                       )}
-                      {modeOnglet === 'edition' && section.lignes.length > 0 && (
+                      {modeOnglet === 'edition' && !devisQuantitatif && section.lignes.length > 0 && (
                         <tr
                           className={`obat-table-add-row ${section.lignes.some((ligne) => ligne.estLigneLibre) ? 'is-disabled' : ''}`}
                           onClick={() => {
                             if (section.lignes.some((ligne) => ligne.estLigneLibre)) return;
+                            if (devisQuantitatif) {
+                              notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
+                              return;
+                            }
                             ajouterLigneVide(section.id_section);
                           }}
                           onKeyDown={(e) => {
                             if (!['Enter', ' '].includes(e.key) || section.lignes.some((ligne) => ligne.estLigneLibre)) return;
+                            if (devisQuantitatif) {
+                              e.preventDefault();
+                              notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
+                              return;
+                            }
                             e.preventDefault();
                             ajouterLigneVide(section.id_section);
                           }}
@@ -2233,7 +2311,7 @@ export default function EditeurDevisObat({
                             ? "Enregistrez d'abord l'article en cours avant d'en créer un autre"
                             : 'Créer un autre article dans cette section'}
                         >
-                          <td colSpan={afficherColonneUnite ? 8 : 7}>
+                          <td colSpan={afficherColonneUnite ? (afficherColonnesPrix ? 8 : 6) : (afficherColonnesPrix ? 7 : 5)}>
                             {section.lignes.some((ligne) => ligne.estLigneLibre)
                               ? "Enregistrez l'article en cours avant d'en créer un autre"
                               : 'Cliquez ici pour créer un autre article'}
@@ -2249,7 +2327,7 @@ export default function EditeurDevisObat({
           </div>
 
           {/* 5. BARRE D'AJOUT DE SECTION GLOBALE */}
-          {modeOnglet === 'edition' && (
+          {modeOnglet === 'edition' && !devisQuantitatif && (
             <div className="obat-add-elements-wrapper">
               <div className="obat-add-toolbar">
                 <div className="obat-add-group-left">
@@ -2555,46 +2633,56 @@ export default function EditeurDevisObat({
               </div>
 
               <div className="obat-summary-card">
-                <div className="obat-summary-line">
-                  <span>Total Net HT</span>
-                  <strong>{formaterNombre(totalNetHT)} DA</strong>
-                </div>
-
-                {aRemise && (
-                  <div className="obat-summary-line" style={{ color: '#D32F2F' }}>
-                    <span>Remise ({tauxRemise} %)</span>
-                    <strong>- {formaterNombre(montantRemise)} DA</strong>
+                {devisQuantitatif ? (
+                  <div style={{ color: '#475569', fontSize: 13, lineHeight: 1.6 }}>
+                    <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>Devis quantitatif</div>
+                    <div>Le devis est affiché sans prix ni montants.</div>
+                    <div style={{ marginTop: 8 }}>Les quantités et désignations restent visibles pour validation technique.</div>
                   </div>
+                ) : (
+                  <>
+                    <div className="obat-summary-line">
+                      <span>Total Net HT</span>
+                      <strong>{formaterNombre(totalNetHT)} DA</strong>
+                    </div>
+
+                    {aRemise && (
+                      <div className="obat-summary-line" style={{ color: '#D32F2F' }}>
+                        <span>Remise ({tauxRemise} %)</span>
+                        <strong>- {formaterNombre(montantRemise)} DA</strong>
+                      </div>
+                    )}
+
+                    <div className="obat-summary-line">
+                      <span>
+                        Total TVA {autoliquidationTva ? '(Autoliquidation 0%)' : '(19%)'}
+                      </span>
+                      <strong>{formaterNombre(totalTVA)} DA</strong>
+                    </div>
+
+                    <div className="obat-summary-line obat-summary-total-ttc">
+                      <span>Total TTC</span>
+                      <strong>{formaterNombre(totalTTC)} DA</strong>
+                    </div>
+
+                    {aRetenueGarantie && (
+                      <div className="obat-summary-line" style={{ color: '#D97706' }}>
+                        <span>Retenue de garantie ({tauxRetenueGarantie}%)</span>
+                        <strong>- {formaterNombre(montantRetenue)} DA</strong>
+                      </div>
+                    )}
+
+                    <div className="obat-net-payer-banner">
+                      <div className="net-label">NET À PAYER</div>
+                      <div className="net-valeur">{formaterNombre(netAPayerTTC)} DA TTC</div>
+                    </div>
+
+                    <div className="obat-amount-words">
+                      <span>Montant en lettres</span>
+                      <strong>{nombreEnLettres(netAPayerTTC)}</strong>
+                    </div>
+                  </>
                 )}
-
-                <div className="obat-summary-line">
-                  <span>
-                    Total TVA {autoliquidationTva ? '(Autoliquidation 0%)' : '(19%)'}
-                  </span>
-                  <strong>{formaterNombre(totalTVA)} DA</strong>
-                </div>
-
-                <div className="obat-summary-line obat-summary-total-ttc">
-                  <span>Total TTC</span>
-                  <strong>{formaterNombre(totalTTC)} DA</strong>
-                </div>
-
-                {aRetenueGarantie && (
-                  <div className="obat-summary-line" style={{ color: '#D97706' }}>
-                    <span>Retenue de garantie ({tauxRetenueGarantie}%)</span>
-                    <strong>- {formaterNombre(montantRetenue)} DA</strong>
-                  </div>
-                )}
-
-                <div className="obat-net-payer-banner">
-                  <div className="net-label">NET À PAYER</div>
-                  <div className="net-valeur">{formaterNombre(netAPayerTTC)} DA TTC</div>
-                </div>
-
-                <div className="obat-amount-words">
-                  <span>Montant en lettres</span>
-                  <strong>{nombreEnLettres(netAPayerTTC)}</strong>
-                </div>
               </div>
 
               {modeOnglet === 'preview' && (
