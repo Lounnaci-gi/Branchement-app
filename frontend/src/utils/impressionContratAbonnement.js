@@ -21,6 +21,13 @@ function libelleAgence(nomAgence) {
   return /^agence\b/i.test(agenceBrute) ? agenceBrute : `Agence de ${agenceBrute}`;
 }
 
+export function normaliserNumeroContratAbonnement(demande = {}, travaux = {}, devis = {}) {
+  const anneeEnCours = new Date().getFullYear();
+  const numeroAbonne = String(travaux?.numero_abonne ?? demande?.numero_abonne ?? devis?.numero_abonne ?? '').trim();
+  const serial = numeroAbonne.replace(/\D/g, '').slice(-4) || '0000';
+  return `${String(serial).padStart(4, '0')}/${anneeEnCours}`;
+}
+
 function categorieTypeBranchement(demande) {
   const type = String(demande.type_branchement || demande.libelle_type || '').toLowerCase();
   const natureTravaux = String(demande.type_autre || '').toLowerCase();
@@ -63,7 +70,7 @@ export function genererHtmlContratAbonnement(donnees) {
   const diametreBranchement = etude.diametre_conduite || '';
   const diametreCompteur = travaux.diametre_compteur || '';
   const dateInstallation = travaux.date_fin || travaux.date_debut || '';
-  const numeroContrat = demande.numero_demande || '';
+  const numeroContrat = normaliserNumeroContratAbonnement(demande, travaux, donnees.devis || {});
   const agence = libelleAgence(demande.nom_agence);
   const lieuSignature = communeBranchement || communeResidence || agence.replace(/^Agence de\s*/i, '');
   const dateSignature = dateFrancaise(travaux.date_fin || new Date());
