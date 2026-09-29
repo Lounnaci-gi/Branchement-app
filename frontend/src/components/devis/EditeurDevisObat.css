@@ -650,12 +650,14 @@
 .obat-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 13px;
 }
 
 .obat-columns-header {
   margin-bottom: 0;
   border-radius: 4px 4px 0 0;
+  border: 1px solid #D1D5DB;
 }
 
 .obat-section-block .obat-table {
@@ -670,10 +672,13 @@
 .obat-table th {
   padding: 8px 6px;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
+  font-family: inherit;
   text-align: left;
+  vertical-align: middle;
   white-space: nowrap;
   border-right: 1px solid rgba(255, 255, 255, 0.2);
+  box-sizing: border-box;
 }
 
 .obat-table th:last-child {
@@ -694,6 +699,7 @@
   border-right: 1px solid #F3F4F6;
   color: #374151;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
 .obat-table td:last-child {
@@ -735,12 +741,16 @@
 .obat-col-num {
   width: 38px;
   text-align: center;
-  color: #6B7280;
   font-weight: 600;
 }
 
+.obat-table tbody .obat-col-num {
+  color: #374151;
+}
+
 .obat-col-desig {
-  min-width: 200px;
+  width: auto;
+  min-width: 0;
   position: relative;
   z-index: 1;
 }
@@ -764,6 +774,11 @@
 
 .obat-col-qte {
   width: 75px;
+  text-align: center;
+}
+
+.obat-col-type {
+  width: 64px;
   text-align: center;
 }
 
@@ -791,7 +806,10 @@
   width: 105px;
   text-align: right;
   font-weight: 700;
-  color: #1F2937;
+}
+
+.obat-table tbody .obat-col-total {
+  color: #374151;
 }
 
 .obat-col-del {
@@ -1559,6 +1577,8 @@
 .obat-pack-total {
   font-size: 12px;
   color: #4B5563;
+  flex: 1;
+  min-width: 0;
 }
 
 .obat-btn-add-pack {
@@ -2218,7 +2238,6 @@
 :root[data-theme='dark'] .obat-payment-methods strong,
 :root[data-theme='dark'] .obat-summary-line strong,
 :root[data-theme='dark'] .obat-col-desig strong,
-:root[data-theme='dark'] .obat-col-total,
 :root[data-theme='dark'] .obat-item-name,
 :root[data-theme='dark'] .obat-item-price,
 :root[data-theme='dark'] .obat-pack-title,
@@ -2241,7 +2260,8 @@
 :root[data-theme='dark'] .obat-meta-row span.label,
 :root[data-theme='dark'] .obat-client-line,
 :root[data-theme='dark'] .obat-table td,
-:root[data-theme='dark'] .obat-col-num,
+:root[data-theme='dark'] .obat-table tbody .obat-col-num,
+:root[data-theme='dark'] .obat-table tbody .obat-col-total,
 :root[data-theme='dark'] .obat-col-desig small,
 :root[data-theme='dark'] .obat-add-elements-prompt,
 :root[data-theme='dark'] .obat-payment-methods,

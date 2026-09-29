@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Trash2 } from 'lucide-react';
 import './EditeurDevisObat.css';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
@@ -86,6 +87,30 @@ function normaliserQuantite(valeur) {
 function normaliserPrix(valeur) {
   const prix = Number(valeur);
   return Number.isFinite(prix) && prix >= 0 ? prix : 0;
+}
+
+function cleStockageDevisTypes() {
+  try {
+    const agent = JSON.parse(sessionStorage.getItem('agent') || '{}');
+    return `devis-types:${agent.id_agent || 'local'}`;
+  } catch {
+    return 'devis-types:local';
+  }
+}
+
+function chargerDevisTypes() {
+  try {
+    const cles = [...new Set([cleStockageDevisTypes(), 'devis-types'])];
+    const modeles = cles.flatMap((cle) => {
+      const valeur = JSON.parse(localStorage.getItem(cle) || '[]');
+      return Array.isArray(valeur) ? valeur : [];
+    });
+    return modeles.filter((modele, index, liste) => (
+      liste.findIndex((element) => element.id === modele.id) === index
+    ));
+  } catch {
+    return [];
+  }
 }
 
 function numeroRomain(valeur) {
@@ -204,13 +229,13 @@ const PACKS_OUVRAGES_AEP = [
     description: 'Tranchée ordinaire 5m, PEHD Ø25, collier de prise en charge, vanne d’arrêt, compteur DN15 et mise en eau.',
     sectionCible: 'Travaux de branchement standard',
     lignes: [
-      { code: 'TERR-01', libelle: 'Fouille en tranchée ordinaire (larg. 0.40m, prof. 0.80m)', type: 'P/', quantite: 5, unite: 'ML', prix: 1400, marge: 15, tauxTva: 19 },
-      { code: 'PEHD-25', libelle: 'Fourniture et pose de tube PEHD PN16 Ø25 mm', type: 'FP/', quantite: 5, unite: 'ML', prix: 450, marge: 20, tauxTva: 19, diametre: '25' },
-      { code: 'COL-PRISE', libelle: 'Collier de prise en charge avec robinet de prise en charge', type: 'F/', quantite: 1, unite: 'U', prix: 3800, marge: 18, tauxTva: 19 },
-      { code: 'VANN-20', libelle: 'Vanne d’arrêt quart de tour avant compteur Ø20', type: 'F/', quantite: 1, unite: 'U', prix: 2200, marge: 20, tauxTva: 19, diametre: '20' },
-      { code: 'COMPT-15', libelle: 'Fourniture et pose compteur de vitesse DN15 avec clapet anti-pollution', type: 'FP/', quantite: 1, unite: 'U', prix: 7500, marge: 15, tauxTva: 19, diametre: '15' },
-      { code: 'REG-NICHE', libelle: 'Fourniture et scellement d’une niche/regard de comptage préfabriqué', type: 'F/', quantite: 1, unite: 'U', prix: 6800, marge: 15, tauxTva: 19 },
-      { code: 'MO-ESSAI', libelle: 'Raccordement sur conduite principale, mise en eau et épreuve d’étanchéité', type: 'P/', quantite: 1, unite: 'FF', prix: 5000, marge: 10, tauxTva: 19 }
+      { code: 'TERR-01', libelle: 'Fouille en tranchée ordinaire (larg. 0.40m, prof. 0.80m)', categorie: 'Travaux & Terrassement', type: 'P/', quantite: 5, unite: 'ML', prix: 1400, marge: 15, tauxTva: 19 },
+      { code: 'PEHD-25', libelle: 'Fourniture et pose de tube PEHD PN16 Ø25 mm', categorie: 'Canalisations & Raccords', type: 'FP/', quantite: 5, unite: 'ML', prix: 450, marge: 20, tauxTva: 19, diametre: '25' },
+      { code: 'COL-PRISE', libelle: 'Collier de prise en charge avec robinet de prise en charge', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 3800, marge: 18, tauxTva: 19 },
+      { code: 'VANN-20', libelle: 'Vanne d’arrêt quart de tour avant compteur Ø20', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 2200, marge: 20, tauxTva: 19, diametre: '20' },
+      { code: 'COMPT-15', libelle: 'Fourniture et pose compteur de vitesse DN15 avec clapet anti-pollution', categorie: 'Comptage', type: 'FP/', quantite: 1, unite: 'U', prix: 7500, marge: 15, tauxTva: 19, diametre: '15' },
+      { code: 'REG-NICHE', libelle: 'Fourniture et scellement d’une niche/regard de comptage préfabriqué', categorie: 'Comptage', type: 'F/', quantite: 1, unite: 'U', prix: 6800, marge: 15, tauxTva: 19 },
+      { code: 'MO-ESSAI', libelle: 'Raccordement sur conduite principale, mise en eau et épreuve d’étanchéité', categorie: 'Frais & Prestations', type: 'P/', quantite: 1, unite: 'FF', prix: 5000, marge: 10, tauxTva: 19 }
     ]
   },
   {
@@ -219,11 +244,11 @@ const PACKS_OUVRAGES_AEP = [
     description: 'Tranchée, conduite PEHD Ø40/50, vanne de sectionnement enterrée sous bouche à clé et batterie de compteurs.',
     sectionCible: 'Branchement gros calibre',
     lignes: [
-      { code: 'TERR-02', libelle: 'Fouille en tranchée avec évacuation des déblais excédentaires', type: 'P/', quantite: 8, unite: 'ML', prix: 1800, marge: 15, tauxTva: 19 },
-      { code: 'PEHD-40', libelle: 'Tube PEHD PN16 Ø40 mm bandes bleues AEP', type: 'F/', quantite: 8, unite: 'ML', prix: 820, marge: 20, tauxTva: 19, diametre: '40' },
-      { code: 'VANN-BAC', libelle: 'Vanne d’arrêt à opercule avec bouche à clé et tube allonge', type: 'F/', quantite: 1, unite: 'U', prix: 14500, marge: 15, tauxTva: 19 },
-      { code: 'CLAP-40', libelle: 'Clapet de non-retour à brides DN40', type: 'F/', quantite: 1, unite: 'U', prix: 9200, marge: 18, tauxTva: 19, diametre: '40' },
-      { code: 'MO-COLL', libelle: 'Pose spécialisée, percement et épreuve sous pression 10 bars', type: 'P/', quantite: 1, unite: 'FF', prix: 12000, marge: 10, tauxTva: 19 }
+      { code: 'TERR-02', libelle: 'Fouille en tranchée avec évacuation des déblais excédentaires', categorie: 'Travaux & Terrassement', type: 'P/', quantite: 8, unite: 'ML', prix: 1800, marge: 15, tauxTva: 19 },
+      { code: 'PEHD-40', libelle: 'Tube PEHD PN16 Ø40 mm bandes bleues AEP', categorie: 'Canalisations & Raccords', type: 'F/', quantite: 8, unite: 'ML', prix: 820, marge: 20, tauxTva: 19, diametre: '40' },
+      { code: 'VANN-BAC', libelle: 'Vanne d’arrêt à opercule avec bouche à clé et tube allonge', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 14500, marge: 15, tauxTva: 19 },
+      { code: 'CLAP-40', libelle: 'Clapet de non-retour à brides DN40', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 9200, marge: 18, tauxTva: 19, diametre: '40' },
+      { code: 'MO-COLL', libelle: 'Pose spécialisée, percement et épreuve sous pression 10 bars', categorie: 'Frais & Prestations', type: 'P/', quantite: 1, unite: 'FF', prix: 12000, marge: 10, tauxTva: 19 }
     ]
   },
   {
@@ -232,9 +257,9 @@ const PACKS_OUVRAGES_AEP = [
     description: 'Découpe d’enrobé à la scie, remblai en tout-venant compacté et couche de roulement enrobé.',
     sectionCible: 'Voirie et génie civil',
     lignes: [
-      { code: 'VOIR-DEC', libelle: 'Découpage du revêtement bitumineux à la disqueuse diamantée', type: 'P/', quantite: 6, unite: 'ML', prix: 650, marge: 15, tauxTva: 19 },
-      { code: 'VOIR-REM', libelle: 'Remblaiement méthodique en tout-venant 0/31.5 et compactage par couches', type: 'F/', quantite: 3, unite: 'M3', prix: 3200, marge: 20, tauxTva: 19 },
-      { code: 'VOIR-ENR', libelle: 'Réfection définitive de la chaussée en béton bitumineux (enrobé à chaud)', type: 'FP/', quantite: 4, unite: 'M²', prix: 4800, marge: 15, tauxTva: 19 }
+      { code: 'VOIR-DEC', libelle: 'Découpage du revêtement bitumineux à la disqueuse diamantée', categorie: 'Travaux & Terrassement', type: 'P/', quantite: 6, unite: 'ML', prix: 650, marge: 15, tauxTva: 19 },
+      { code: 'VOIR-REM', libelle: 'Remblaiement méthodique en tout-venant 0/31.5 et compactage par couches', categorie: 'Travaux & Terrassement', type: 'F/', quantite: 3, unite: 'M3', prix: 3200, marge: 20, tauxTva: 19 },
+      { code: 'VOIR-ENR', libelle: 'Réfection définitive de la chaussée en béton bitumineux (enrobé à chaud)', categorie: 'Travaux & Terrassement', type: 'FP/', quantite: 4, unite: 'M²', prix: 4800, marge: 15, tauxTva: 19 }
     ]
   }
 ];
@@ -265,6 +290,11 @@ export default function EditeurDevisObat({
   // Dropdown options
   const [menuOptionsOuvert, setMenuOptionsOuvert] = useState(false);
   const [modalFinaliserOuvert, setModalFinaliserOuvert] = useState(false);
+  const [modalDevisTypesOuvert, setModalDevisTypesOuvert] = useState(false);
+  const [propositionDevisTypeOuverte, setPropositionDevisTypeOuverte] = useState(false);
+  const [actionApresPropositionDevisType, setActionApresPropositionDevisType] = useState(null);
+  const [nomDevisType, setNomDevisType] = useState('');
+  const [devisTypes, setDevisTypes] = useState(chargerDevisTypes);
   const [ventilationOuverte, setVentilationOuverte] = useState(false);
 
   // Options d'affichage Obat
@@ -398,6 +428,64 @@ export default function EditeurDevisObat({
     ];
   });
 
+  function sauvegarderDevisType(nom, notifier = true) {
+    const sectionsAvecArticles = sections.filter((section) => section.lignes.length > 0);
+
+    if (!nom) return false;
+    if (sectionsAvecArticles.length === 0) {
+      return false;
+    }
+
+    const modele = {
+      id: `modele_${Date.now()}`,
+      nom,
+      date_creation: new Date().toISOString(),
+      sections: JSON.parse(JSON.stringify(sectionsAvecArticles))
+    };
+    const modelesMisAJour = [modele, ...devisTypes];
+    localStorage.setItem(cleStockageDevisTypes(), JSON.stringify(modelesMisAJour));
+    localStorage.setItem('devis-types', JSON.stringify(modelesMisAJour));
+    setDevisTypes(modelesMisAJour);
+    setNomDevisType('');
+    if (notifier) notifierSucces(`Le devis type « ${nom} » a été enregistré.`);
+    return true;
+  }
+
+  function enregistrerDevisType() {
+    const nom = nomDevisType.trim();
+    if (!nom) {
+      notifierErreur('Veuillez donner un nom au devis type.');
+      return;
+    }
+    if (!sauvegarderDevisType(nom)) {
+      notifierErreur('Ajoutez au moins un article avant d’enregistrer un devis type.');
+    }
+  }
+
+  function chargerDevisType(modele) {
+    const sectionsChargees = (modele.sections || []).map((section, sectionIndex) => ({
+      ...section,
+      id_section: `sec_modele_${Date.now()}_${sectionIndex}`,
+      lignes: (section.lignes || []).map((ligne, ligneIndex) => ({
+        ...ligne,
+        id_ligne: `lig_modele_${Date.now()}_${sectionIndex}_${ligneIndex}`
+      }))
+    }));
+
+    setSections(sectionsChargees);
+    setIdSectionActive(sectionsChargees[0]?.id_section || 'sec_1');
+    setModalDevisTypesOuvert(false);
+    setDrawerBiblioOuvert(false);
+    notifierSucces(`Le devis type « ${modele.nom} » a été chargé.`);
+  }
+
+  function supprimerDevisType(idModele) {
+    const modelesMisAJour = devisTypes.filter((modele) => modele.id !== idModele);
+    localStorage.setItem(cleStockageDevisTypes(), JSON.stringify(modelesMisAJour));
+    localStorage.setItem('devis-types', JSON.stringify(modelesMisAJour));
+    setDevisTypes(modelesMisAJour);
+  }
+
   // Section active pour l'insertion
   const [idSectionActive, setIdSectionActive] = useState('sec_1');
 
@@ -465,6 +553,12 @@ export default function EditeurDevisObat({
   useEffect(() => {
     setCategoriesLocales(articleCategories);
   }, [articleCategories]);
+
+  useEffect(() => {
+    if (drawerBiblioOuvert) {
+      setDevisTypes(chargerDevisTypes());
+    }
+  }, [drawerBiblioOuvert]);
 
   // Tous les articles aplatis du référentiel
   const tousLesArticles = categoriesLocales.flatMap((f) =>
@@ -996,7 +1090,7 @@ export default function EditeurDevisObat({
         ...l,
         id_ligne: `lig_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         tauxTva: autoliquidationTva ? 0 : l.tauxTva,
-        categorie: obtenirCategorieArticle(l, tousLesArticles)
+        categorie: l.categorie || obtenirCategorieArticle(l, tousLesArticles)
       }))
       .forEach((ligne) => {
         if (!lignesParCategorie.has(ligne.categorie)) lignesParCategorie.set(ligne.categorie, []);
@@ -1340,11 +1434,16 @@ export default function EditeurDevisObat({
       paiementDirect: enregistrerPaiementDirect ? donneesPaiement : null
     };
 
-    if (estFinalisation) {
-      onFinaliser?.(payload);
-    } else {
-      onEnregistrer?.(payload);
-    }
+    const poursuivreEnregistrement = () => {
+      if (estFinalisation) {
+        onFinaliser?.(payload);
+      } else {
+        onEnregistrer?.(payload);
+      }
+    };
+
+    setActionApresPropositionDevisType(() => poursuivreEnregistrement);
+    setPropositionDevisTypeOuverte(true);
   }
 
   // Export CSV
@@ -1453,6 +1552,14 @@ export default function EditeurDevisObat({
           >
             {debutTravaux && dureeEstimee ? 'Mentions d’exécution OK' : 'Mentions à renseigner'}
           </div>
+
+          <button
+            type="button"
+            className="obat-btn-option"
+            onClick={() => setModalDevisTypesOuvert(true)}
+          >
+            Devis types
+          </button>
 
           <div style={{ position: 'relative' }}>
             <button
@@ -1607,7 +1714,7 @@ export default function EditeurDevisObat({
                 className={`obat-drawer-tab ${ongletBiblio === 'packs' ? 'active' : ''}`}
                 onClick={() => setOngletBiblio('packs')}
               >
-                Packs Ouvrages AEP ({PACKS_OUVRAGES_AEP.length})
+                Packs Ouvrages AEP ({PACKS_OUVRAGES_AEP.length + devisTypes.length})
               </button>
             </div>
 
@@ -1700,7 +1807,7 @@ export default function EditeurDevisObat({
                                   }
                                   title="Insérer avec fourniture et pose"
                                 >
-                                  + FP/ Les deux
+                                  Fourniture + pose (FP/)
                                 </button>
                                 <div className="obat-sub-actions">
                                   <button
@@ -1711,7 +1818,7 @@ export default function EditeurDevisObat({
                                     }
                                     title="Insérer uniquement la fourniture"
                                   >
-                                    + F/ Fourn.
+                                    Fourniture (F/)
                                   </button>
                                   <button
                                     type="button"
@@ -1721,7 +1828,7 @@ export default function EditeurDevisObat({
                                     }
                                     title="Insérer uniquement la pose"
                                   >
-                                    + P/ Pose
+                                    Pose (P/)
                                   </button>
                                 </div>
                               </div>
@@ -1749,6 +1856,57 @@ export default function EditeurDevisObat({
               </>
             ) : (
               <div className="obat-drawer-list">
+                {devisTypes.length > 0 && (
+                  <div>
+                    <div style={{ margin: '12px 16px 8px', fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                      Mes devis types
+                    </div>
+                    {devisTypes.map((modele) => {
+                      const totalModele = (modele.sections || []).reduce(
+                        (total, section) => total + (section.lignes || []).reduce(
+                          (sectionTotal, ligne) => sectionTotal + ((Number(ligne.quantite) || 0) * (Number(ligne.prix) || 0)),
+                          0
+                        ),
+                        0
+                      );
+                      return (
+                        <div key={modele.id} className="obat-pack-card">
+                          <div className="obat-pack-header">
+                            <div className="obat-pack-title">{modele.nom}</div>
+                            <span className="obat-pack-count">
+                              {(modele.sections || []).reduce((total, section) => total + (section.lignes || []).length, 0)} articles
+                            </span>
+                          </div>
+                          <p className="obat-pack-desc">Modèle de devis enregistré pour être réutilisé.</p>
+                          <div className="obat-pack-footer">
+                            <div className="obat-pack-total">
+                              Total estimé : <strong>{formaterNombre(totalModele)} DA HT</strong>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              className="obat-btn-add-pack"
+                              style={{ whiteSpace: 'nowrap' }}
+                              onClick={() => chargerDevisType(modele)}
+                            >
+                              + Insérer ce pack
+                            </button>
+                            <button
+                              type="button"
+                              className="obat-btn-annuler"
+                              onClick={() => supprimerDevisType(modele.id)}
+                              title="Supprimer ce devis type"
+                              aria-label="Supprimer ce devis type"
+                            >
+                              <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+                            </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="obat-pack-intro" style={{ padding: '8px 14px', fontSize: 12, color: '#64748B', background: '#F8FAFC' }}>
                   Ces packs regroupent l’ensemble des fournitures et prestations standard d’un branchement eau potable selon les normes ADE.
                 </div>
@@ -2120,10 +2278,10 @@ export default function EditeurDevisObat({
                                       <div style={{ marginTop: 3 }}>
                                         <span>
                                           {ligne.choixPrix === 'FOURNITURE'
-                                            ? `Fourniture seule (${formaterNombre(ligne.prixFourniture)} DA)`
+                                            ? `Fourniture seule (${formaterNombre(ligne.prixFourniture)})`
                                             : ligne.choixPrix === 'POSE'
-                                            ? `Pose seule (${formaterNombre(ligne.prixPose)} DA)`
-                                            : `Fourniture & Pose (${formaterNombre(Number(ligne.prixFourniture) + Number(ligne.prixPose))} DA)`}
+                                            ? `Pose seule (${formaterNombre(ligne.prixPose)})`
+                                            : `Fourniture & Pose (${formaterNombre(Number(ligne.prixFourniture) + Number(ligne.prixPose))})`}
                                         </span>
                                       </div>
                                     )}
@@ -2241,13 +2399,13 @@ export default function EditeurDevisObat({
                                       style={{ textAlign: 'right' }}
                                     />
                                   ) : (
-                                    <span>{formaterNombre(ligne.prix)} DA</span>
+                                    <span>{formaterNombre(ligne.prix)}</span>
                                   )}
                                 </td>
                               )}
                               {afficherColonnesPrix && (
                                 <td className="right obat-col-total">
-                                  <strong>{formaterNombre(ligneHT)} DA</strong>
+                                  <strong>{formaterNombre(ligneHT)}</strong>
                                 </td>
                               )}
                               {modeOnglet === 'edition' && !devisQuantitatif && (
@@ -3120,6 +3278,159 @@ export default function EditeurDevisObat({
                   Valider et recalculer l’ouvrage
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {propositionDevisTypeOuverte && (
+        <div className="obat-modal-overlay">
+          <div className="obat-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>Enregistrer comme devis type ?</h3>
+            <p style={{ color: '#64748B', fontSize: 13 }}>
+              Souhaitez-vous conserver ce devis pour le réutiliser avec un autre dossier ?
+            </p>
+            <label htmlFor="nom-devis-type-proposition" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              Nom du devis type
+            </label>
+            <input
+              id="nom-devis-type-proposition"
+              type="text"
+              value={nomDevisType}
+              onChange={(e) => setNomDevisType(e.target.value)}
+              placeholder="Ex. Branchement standard particulier"
+              maxLength={120}
+              autoFocus
+              style={{ width: '100%', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+              <button
+                type="button"
+                className="obat-btn-action-secondary"
+                onClick={() => {
+                  const action = actionApresPropositionDevisType;
+                  setPropositionDevisTypeOuverte(false);
+                  setActionApresPropositionDevisType(null);
+                  action?.();
+                }}
+              >
+                Continuer sans enregistrer
+              </button>
+              <button
+                type="button"
+                className="obat-btn-action-primary"
+                onClick={() => {
+                  const nom = nomDevisType.trim();
+                  if (!nom) {
+                    notifierErreur('Veuillez donner un nom au devis type.');
+                    return;
+                  }
+                  if (!sauvegarderDevisType(nom, false)) {
+                    notifierErreur('Ajoutez au moins un article avant d’enregistrer un devis type.');
+                    return;
+                  }
+                  const action = actionApresPropositionDevisType;
+                  setPropositionDevisTypeOuverte(false);
+                  setActionApresPropositionDevisType(null);
+                  notifierSucces(`Le devis type « ${nom} » a été enregistré.`);
+                  action?.();
+                }}
+              >
+                Enregistrer et continuer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalDevisTypesOuvert && (
+        <div className="obat-modal-overlay" onClick={() => setModalDevisTypesOuvert(false)}>
+          <div className="obat-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="obat-config-header">
+              <div>
+                <span>Bibliothèque personnelle</span>
+                <h3>Devis types</h3>
+              </div>
+              <button
+                type="button"
+                className="obat-btn-close"
+                onClick={() => setModalDevisTypesOuvert(false)}
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
+              <label htmlFor="nom-devis-type" style={{ fontSize: 12, fontWeight: 600 }}>
+                Nom du devis type
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  id="nom-devis-type"
+                  type="text"
+                  value={nomDevisType}
+                  onChange={(e) => setNomDevisType(e.target.value)}
+                  placeholder="Ex. Branchement standard particulier"
+                  maxLength={120}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="obat-btn-action-primary"
+                  onClick={enregistrerDevisType}
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+                Modèles enregistrés ({devisTypes.length})
+              </div>
+              {devisTypes.length === 0 ? (
+                <p style={{ margin: 0, color: '#64748B', fontSize: 13 }}>
+                  Aucun devis type enregistré.
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {devisTypes.map((modele) => (
+                    <div
+                      key={modele.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        padding: '9px 10px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: 5
+                      }}
+                    >
+                      <strong style={{ fontSize: 13 }}>{modele.nom}</strong>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className="obat-btn-action-secondary"
+                          onClick={() => chargerDevisType(modele)}
+                        >
+                          Charger
+                        </button>
+                        <button
+                          type="button"
+                          className="obat-btn-annuler"
+                          onClick={() => supprimerDevisType(modele.id)}
+                          title="Supprimer ce devis type"
+                          aria-label="Supprimer ce devis type"
+                        >
+                          <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
