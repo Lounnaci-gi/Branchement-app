@@ -255,7 +255,7 @@ export default function EditeurDevisObat({
   const [modeAffichageDevis, setModeAffichageDevis] = useState('estimatif'); // 'estimatif' | 'quantitatif'
 
   // Tiroir latéral "Bibliothèques" (Obat 4:25)
-  const [drawerBiblioOuvert, setDrawerBiblioOuvert] = useState(false);
+  const [drawerBiblioOuvert, setDrawerBiblioOuvert] = useState(() => !devisInitial);
   const [ongletBiblio, setOngletBiblio] = useState('articles'); // 'articles' ou 'packs'
   const [filtreCategorie, setFiltreCategorie] = useState('TOUS');
   const [rechercheBiblio, setRechercheBiblio] = useState('');
@@ -503,11 +503,14 @@ export default function EditeurDevisObat({
   // -------------------------------------------------------------
   // AJOUT D'UNE NOUVELLE LIGNE / ARTICLE VIDE DANS LE DEVIS
   // -------------------------------------------------------------
+  function refuserEditionArticlesQuantitatif() {
+    if (!devisQuantitatif) return false;
+    notifierErreur("Le devis quantitatif ne permet pas l'ajout, la suppression ou la modification d'articles. Passez en mode estimatif pour modifier le devis.");
+    return true;
+  }
+
   function ajouterLigneVide(idSection) {
-    if (devisQuantitatif) {
-      notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
-      return;
-    }
+    if (refuserEditionArticlesQuantitatif()) return;
 
     let targetId = idSection || idSectionActive;
 
@@ -617,10 +620,7 @@ export default function EditeurDevisObat({
   // ACTIONS SUR LES SECTIONS ET LIGNES
   // -------------------------------------------------------------
   function ajouterSection() {
-    if (devisQuantitatif) {
-      notifierErreur("Le devis quantitatif ne permet pas l'ajout de sections ni d'articles. Passez en mode estimatif pour modifier le devis.");
-      return;
-    }
+    if (refuserEditionArticlesQuantitatif()) return;
 
     const nouvelleSec = {
       id_section: `sec_${Date.now()}`,
@@ -632,6 +632,11 @@ export default function EditeurDevisObat({
   }
 
   function supprimerSection(idSection) {
+    if (devisQuantitatif) {
+      notifierErreur("Le devis quantitatif ne permet pas la suppression de sections. Passez en mode estimatif pour modifier le devis.");
+      return;
+    }
+
     if (sections.length <= 1) {
       alert('Un devis doit comporter au moins une section.');
       return;
@@ -640,10 +645,7 @@ export default function EditeurDevisObat({
   }
 
   function ajouterLigneDansSection(idSection, article, categorie = 'Fourniture', choixPrixInitial = null) {
-    if (devisQuantitatif) {
-      notifierErreur("Le devis quantitatif ne permet pas l'ajout d'articles. Passez en mode estimatif pour modifier le devis.");
-      return;
-    }
+    if (refuserEditionArticlesQuantitatif()) return;
 
     const codeArticle = (article?.code || article?.code_article || '').trim().toUpperCase();
     if (codeArticle) {
@@ -763,6 +765,8 @@ export default function EditeurDevisObat({
   }
 
   function changerChoixPrixLigne(idSection, idLigne, nouveauChoix) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     setSections((prev) =>
       prev.map((s) =>
         s.id_section === idSection
@@ -800,6 +804,8 @@ export default function EditeurDevisObat({
   }
 
   function supprimerLigne(idSection, idLigne) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     setSections((prev) =>
       prev.map((s) =>
         s.id_section === idSection
@@ -810,6 +816,8 @@ export default function EditeurDevisObat({
   }
 
   function ouvrirEnregistrementLigneLibre(ligne) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     if (!ligne.estLigneLibre) {
       notifierErreur("Cet article existe déjà dans le référentiel.");
       return;
@@ -827,6 +835,8 @@ export default function EditeurDevisObat({
   }
 
   function modifierChampLigne(idSection, idLigne, champ, valeur) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     setSections((prev) =>
       prev.map((s) =>
         s.id_section === idSection
@@ -870,6 +880,8 @@ export default function EditeurDevisObat({
   }
 
   function selectionnerSuggestionArticle(idSection, idLigne, article) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     const codeArticle = String(article.code || article.code_article || '').trim().toUpperCase();
     const categorieArticle = obtenirCategorieArticle(article, tousLesArticles);
 
@@ -937,6 +949,8 @@ export default function EditeurDevisObat({
   }
 
   function modifierDesignationLigne(idSection, idLigne, valeur) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     setSections((prev) => prev.map((section) => (
       section.id_section !== idSection
         ? section
@@ -960,6 +974,8 @@ export default function EditeurDevisObat({
 
   // Insérer un pack complet d'ouvrages types AEP
   function insererPackOuvrage(pack) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     const codesExistants = new Set(
       sections
         .flatMap((s) => s.lignes.map((l) => (l.code || l.code_article || '').trim().toUpperCase()))
@@ -1011,6 +1027,8 @@ export default function EditeurDevisObat({
 
   // Ouvrir le configurateur d'ouvrage (Obat 3:12)
   function ouvrirConfigurateurOuvrage(idSection, ligne) {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     const sousElementsInit = ligne.sousElements?.length > 0
       ? JSON.parse(JSON.stringify(ligne.sousElements))
       : [
@@ -1030,6 +1048,7 @@ export default function EditeurDevisObat({
   }
 
   function appliquerConfigurationOuvrage() {
+    if (refuserEditionArticlesQuantitatif()) return;
     if (!ouvrageEnConfig) return;
     const { idSection, idLigne, sousElements, coefAjustement } = ouvrageEnConfig;
 
@@ -1172,6 +1191,8 @@ export default function EditeurDevisObat({
 
   // Enregistre les articles libres dans le référentiel puis appelle le callback
   async function enregistrerArticlesLibresPuisSauvegarder() {
+    if (refuserEditionArticlesQuantitatif()) return;
+
     const nonChoisies = lignesLibresAPersister.filter((l) => !categoriesChoisies[l.id_ligne]);
     if (nonChoisies.length > 0) {
       notifierErreur(`Veuillez choisir une catégorie pour : ${nonChoisies.map((l) => l.libelle).join(', ')}`);
@@ -1945,7 +1966,7 @@ export default function EditeurDevisObat({
                   {afficherColonneUnite && <th className="center obat-col-unite">Unité</th>}
                   {afficherColonnesPrix && <th className="right obat-col-pu">Prix U. HT</th>}
                   {afficherColonnesPrix && <th className="right obat-col-total">Total HT</th>}
-                  {modeOnglet === 'edition' && <th className="center obat-col-del" />}
+                  {modeOnglet === 'edition' && !devisQuantitatif && <th className="center obat-col-del" />}
                 </tr>
               </thead>
             </table>
@@ -1991,21 +2012,6 @@ export default function EditeurDevisObat({
                             ✕ Supprimer section
                           </button>
                         )}
-                      </div>
-                    )}
-                    {devisQuantitatif && modeOnglet === 'edition' && sections.length > 1 && (
-                      <div className="obat-section-bar-right">
-                        <button
-                          type="button"
-                          className="obat-btn-del-section"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            supprimerSection(section.id_section);
-                          }}
-                          title="Supprimer cette section"
-                        >
-                          ✕ Supprimer section
-                        </button>
                       </div>
                     )}
                   </div>
@@ -2241,7 +2247,7 @@ export default function EditeurDevisObat({
                                   <strong>{formaterNombre(ligneHT)} DA</strong>
                                 </td>
                               )}
-                              {modeOnglet === 'edition' && (
+                              {modeOnglet === 'edition' && !devisQuantitatif && (
                                 <td className="center obat-col-del">
                                   <div className="obat-line-actions">
                                     {ligne.estLigneLibre && (

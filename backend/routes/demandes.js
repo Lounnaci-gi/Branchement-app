@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { verifierToken } = require('../middleware/auth');
-const { peutCreerOuModifierDevis } = require('../utils/devisWorkflow');
+const {
+  peutCreerOuModifierDevis,
+  tousLesDevisSontPayes,
+  tousLesDevisOntDesArticles
+} = require('../utils/devisWorkflow');
 
 router.use(verifierToken);
 
@@ -859,6 +863,26 @@ router.patch('/:id/statut', async (req, res) => {
       });
     }
 
+    if (nouveau_statut === 'DEVIS_PAYE') {
+      const devisResultat = await pool.request()
+        .input('id_demande', sql.Int, id_demande)
+        .query(`SELECT d.statut_paiement,
+                       (SELECT COUNT(*) FROM LignesDevis l WHERE l.id_devis = d.id_devis) AS nombre_articles
+                FROM Devis d
+                WHERE d.id_demande = @id_demande`);
+      const devis = devisResultat.recordset;
+
+      if (devis.length === 0) {
+        return res.status(400).json({ erreur: 'Impossible de passer la demande au statut « Devis payé » : aucun devis n’existe pour cette demande.' });
+      }
+      if (!tousLesDevisOntDesArticles(devis)) {
+        return res.status(400).json({ erreur: 'Impossible de passer la demande au statut « Devis payé » : chaque devis doit contenir au moins un article.' });
+      }
+      if (!tousLesDevisSontPayes(devis)) {
+        return res.status(400).json({ erreur: 'Tous les devis doivent être enregistrés comme payés avant ce changement de statut.' });
+      }
+    }
+
     const motifObligatoire = nouveau_statut === 'REJETEE' || statutActuel === 'REJETEE';
     if (motifObligatoire && !String(commentaire || '').trim()) {
       return res.status(400).json({ erreur: 'Un motif est obligatoire pour rejeter ou lever le rejet de la demande.' });
@@ -1169,9 +1193,14 @@ router.put('/:id/devis', async (req, res) => {
     }
 
     const devis = await pool.request().input('id_demande', sql.Int, id_demande)
-      .query('SELECT id_devis, numero_devis, statut_paiement FROM Devis WHERE id_demande = @id_demande ORDER BY date_emission DESC');
+      .query(`SELECT d.id_devis, d.numero_devis, d.statut_paiement,
+                     (SELECT COUNT(*) FROM LignesDevis l WHERE l.id_devis = d.id_devis) AS nombre_articles
+              FROM Devis d
+              WHERE d.id_demande = @id_demande
+              ORDER BY d.date_emission DESC`);
 
-    const tousPayes = devis.recordset.every((item) => item.statut_paiement === 'PAYE');
+    const tousPayes = tousLesDevisSontPayes(devis.recordset)
+      && tousLesDevisOntDesArticles(devis.recordset);
     if (statutActuel === 'DEPOSEE' || statutActuel === 'DEVIS_EMIS' || statutActuel === 'DEVIS_PAYE') {
       const nouveauStatut = tousPayes ? 'DEVIS_PAYE' : 'DEVIS_EMIS';
       await synchroniserStatut(pool, id_demande, nouveauStatut, req.agent.id_agent, 'Devis enregistré');
@@ -1192,7 +1221,10 @@ router.put('/:id/devis', async (req, res) => {
 router.patch('/:id/devis/paiement', async (req, res) => {
   try {
     const id_demande = req.params.id;
-    const id_devis = req.body.id_devis ? parseInt(req.body.id_devis, 10) : 0;
+    const id_devis = entierPositif(req.body?.id_devis);
+    if (id_devis === null) {
+      return res.status(400).json({ erreur: 'Un identifiant de devis valide est obligatoire pour enregistrer un paiement.' });
+    }
     const {
       mode_paiement,
       date_paiement,
@@ -1224,10 +1256,16 @@ router.patch('/:id/devis/paiement', async (req, res) => {
     }
 
     const devisResultat = await pool.request().input('id_demande', sql.Int, id_demande).input('id_devis', sql.Int, id_devis)
-      .query('SELECT id_devis, date_emission FROM Devis WHERE id_demande = @id_demande AND (@id_devis = 0 OR id_devis = @id_devis)');
+      .query(`SELECT d.id_devis, d.date_emission,
+                     (SELECT COUNT(*) FROM LignesDevis l WHERE l.id_devis = d.id_devis) AS nombre_articles
+              FROM Devis d
+              WHERE d.id_demande = @id_demande AND d.id_devis = @id_devis`);
     const devis = devisResultat.recordset[0];
     if (!devis) {
       return res.status(404).json({ erreur: 'Devis introuvable.' });
+    }
+    if (!(Number(devis.nombre_articles) > 0)) {
+      return res.status(400).json({ erreur: 'Impossible de payer ce devis : il ne contient aucun article.' });
     }
     const dateEmission = new Date(devis.date_emission).toISOString().slice(0, 10);
     if (date_paiement < dateEmission) {
@@ -1248,8 +1286,12 @@ router.patch('/:id/devis/paiement', async (req, res) => {
               WHERE id_devis=@id_devis AND id_demande=@id_demande`);
 
     const tousDevis = await pool.request().input('id_demande', sql.Int, id_demande)
-      .query('SELECT statut_paiement FROM Devis WHERE id_demande = @id_demande');
-    const tousPayes = tousDevis.recordset.every((item) => item.statut_paiement === 'PAYE');
+      .query(`SELECT d.statut_paiement,
+                     (SELECT COUNT(*) FROM LignesDevis l WHERE l.id_devis = d.id_devis) AS nombre_articles
+              FROM Devis d
+              WHERE d.id_demande = @id_demande`);
+    const tousPayes = tousLesDevisSontPayes(tousDevis.recordset)
+      && tousLesDevisOntDesArticles(tousDevis.recordset);
 
     const demandeRes = await pool.request().input('id_demande', sql.Int, id_demande)
       .query('SELECT statut_actuel FROM Demandes WHERE id_demande = @id_demande');
