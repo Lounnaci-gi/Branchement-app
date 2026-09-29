@@ -873,7 +873,7 @@ router.patch('/:id/statut', async (req, res) => {
       const devis = devisResultat.recordset;
 
       if (devis.length === 0) {
-        return res.status(400).json({ erreur: 'Impossible de passer la demande au statut « Devis payé » : aucun devis n’existe pour cette demande.' });
+        return res.status(400).json({ erreur: 'Aucun devis n’existe pour cette demande.' });
       }
       if (!tousLesDevisOntDesArticles(devis)) {
         return res.status(400).json({ erreur: 'Impossible de passer la demande au statut « Devis payé » : chaque devis doit contenir au moins un article.' });

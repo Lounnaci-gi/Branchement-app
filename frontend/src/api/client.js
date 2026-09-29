@@ -3,7 +3,7 @@ import axios from 'axios';
 const client = axios.create({ baseURL: '/api' });
 
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -12,8 +12,8 @@ client.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('agent');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('agent');
       window.location.href = '/connexion';
     }
     return Promise.reject(err);

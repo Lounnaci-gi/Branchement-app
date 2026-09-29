@@ -68,8 +68,8 @@ export default function Connexion() {
         localStorage.removeItem('login_remember_identifiant');
       }
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('agent', JSON.stringify(data.agent));
+      sessionStorage.setItem('token', data.token);
+      sessionStorage.setItem('agent', JSON.stringify(data.agent));
       navigate('/');
     } catch (err) {
       const message = err.response?.data?.erreur || 'Erreur de connexion au serveur.';

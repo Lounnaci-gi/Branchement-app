@@ -37,7 +37,7 @@ export default function Profil() {
         setPrenomInitial(data.prenom || '');
         setNom(data.nom || '');
         setPrenom(data.prenom || '');
-        localStorage.setItem('agent', JSON.stringify(data));
+        sessionStorage.setItem('agent', JSON.stringify(data));
       })
       .catch((err) => notifierErreur(err.response?.data?.erreur || 'Impossible de charger le profil.'));
   }, []);
@@ -91,8 +91,8 @@ export default function Profil() {
       if (prenomChange) payload.prenom = prenom.trim();
 
       const { data } = await client.patch('/auth/profil', payload);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('agent', JSON.stringify(data.agent));
+      sessionStorage.setItem('token', data.token);
+      sessionStorage.setItem('agent', JSON.stringify(data.agent));
       setEmailInitial(data.agent.email);
       setEmail(data.agent.email);
       setNomInitial(data.agent.nom || '');

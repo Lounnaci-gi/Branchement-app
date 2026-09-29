@@ -41,9 +41,9 @@ function EspaceProtege({ children }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (!token) return <Navigate to="/connexion" replace />;
-  const agent = JSON.parse(localStorage.getItem('agent') || '{}');
+  const agent = JSON.parse(sessionStorage.getItem('agent') || '{}');
 
   return (
     <div className="app-shell">

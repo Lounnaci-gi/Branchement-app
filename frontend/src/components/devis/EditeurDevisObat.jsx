@@ -391,7 +391,7 @@ export default function EditeurDevisObat({
     return [
       {
         id_section: 'sec_1',
-        titre: `Travaux de branchement AEP (${natureDefaut})`,
+        titre: '',
         categorie: 'Sans catégorie',
         lignes: []
       }
@@ -525,7 +525,7 @@ export default function EditeurDevisObat({
       if (updated.length === 0) {
         const nouvelleSec = {
           id_section: `sec_${Date.now()}`,
-          titre: 'Section 1',
+          titre: '',
           description: '',
           lignes: []
         };
@@ -1390,9 +1390,12 @@ export default function EditeurDevisObat({
   const numDemandeRef = demande?.numero_demande || 'DEM-2026';
   const devisQuantitatif = isDevisQuantitatif(modeAffichageDevis);
   const afficherColonnesPrix = !devisQuantitatif;
-  const sectionsAffichees = modeOnglet === 'preview'
-    ? sections.filter((section) => section.lignes.length > 0)
-    : sections;
+  const sectionsAvecLignes = sections.filter((section) => section.lignes.length > 0);
+  const sectionsAffichees = sectionsAvecLignes.length > 0
+    ? sectionsAvecLignes
+    : modeOnglet === 'edition'
+      ? sections.slice(0, 1).map((section) => ({ ...section, titre: '' }))
+      : [];
 
   return (
     <div className="obat-devis-wrapper">

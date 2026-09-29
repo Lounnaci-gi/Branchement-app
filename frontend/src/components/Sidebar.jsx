@@ -14,15 +14,15 @@ export default function Sidebar({ agent, onOpenSearch }) {
 
   useEffect(() => {
     function actualiserAgent() {
-      setAgentCourant(JSON.parse(localStorage.getItem('agent') || '{}'));
+      setAgentCourant(JSON.parse(sessionStorage.getItem('agent') || '{}'));
     }
     window.addEventListener('agent-updated', actualiserAgent);
     return () => window.removeEventListener('agent-updated', actualiserAgent);
   }, []);
 
   function deconnexion() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('agent');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('agent');
     navigate('/connexion');
   }
 

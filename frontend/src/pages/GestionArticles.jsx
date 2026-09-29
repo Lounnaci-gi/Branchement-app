@@ -95,7 +95,7 @@ export default function GestionArticles() {
   const [erreursCategorie, setErreursCategorie] = useState({});
   const [envoiCategorie, setEnvoiCategorie] = useState(false);
 
-  const agent = JSON.parse(localStorage.getItem('agent') || '{}');
+  const agent = JSON.parse(sessionStorage.getItem('agent') || '{}');
 
   async function chargerDonnees() {
     setChargement(true);
