@@ -169,6 +169,7 @@ export default function AffichageDevis() {
   const [fiche, setFiche] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [catalogueArticles, setCatalogueArticles] = useState([]);
+  const [logoDevis, setLogoDevis] = useState('/ade.png');
 
   useEffect(() => {
     client.get(`/demandes/${id}`)
@@ -179,6 +180,10 @@ export default function AffichageDevis() {
     client.get('/referentiels/articles')
       .then((res) => setCatalogueArticles(res.data || []))
       .catch(() => setCatalogueArticles([]));
+
+    client.get('/parametres/logo-devis')
+      .then((res) => setLogoDevis(res.data.logo || '/ade.png'))
+      .catch(() => setLogoDevis('/ade.png'));
   }, [id]);
 
   if (chargement) return <div className="page" aria-busy="true"><div className="squelette squelette-titre" /></div>;
@@ -251,7 +256,7 @@ export default function AffichageDevis() {
           </div>
 
           <div className="devis-centre-header">
-            <img className="devis-logo" src="/ade.png" alt="Logo ADE" />
+            <img className="devis-logo" src={logoDevis} alt="Logo ADE" />
           </div>
 
           <div className="devis-gauche-header">
@@ -424,7 +429,7 @@ export default function AffichageDevis() {
           font-size: 9px !important;
           gap: 2px !important;
         }
-        .devis-logo { width: 90px !important; height: 90px !important; }
+        .devis-logo { width: 210px !important; height: 78px !important; }
         .devis-document-title {
           margin: 10px 0 8px !important;
           padding-bottom: 4px !important;
@@ -550,6 +555,8 @@ export default function AffichageDevis() {
         display: flex;
         align-items: center;
         justify-content: center;
+        width: 260px;
+        max-width: 100%;
       }
       .devis-gauche-header,
       .devis-droite-header {
@@ -592,7 +599,7 @@ export default function AffichageDevis() {
         unicode-bidi: plaintext;
         line-height: 1.3;
       }
-      .devis-logo { width: 123px; height: 123px; object-fit: contain; align-self: center; margin: 0; display: block; }
+      .devis-logo { width: 250px; max-width: 100%; height: 94px; object-fit: contain; align-self: center; margin: 0; display: block; }
       .devis-agence b { margin-top: 8px; border-top: none; padding-top: 7px; }
       .devis-gauche-header span,
       .devis-droite-header span,
@@ -881,6 +888,7 @@ export default function AffichageDevis() {
         }
       }
       @media (max-width: 640px) { .devis-document { padding: 18px 12px; } .devis-document-entete { grid-template-columns: 1fr 88px; } .devis-logo { width: 83px; height: 83px; } .devis-agence { grid-column: 1 / -1; text-align: left; } .devis-client-box, .devis-client-box-droite { width: 100%; grid-template-columns: 1fr; } .devis-client-box > div + div { border-left: 0; border-top: 1px solid #111; } .devis-totaux { width: 100%; } .devis-articles-table { font-size: 10px; } }
+      @media (max-width: 640px) { .devis-centre-header { width: 180px; } .devis-logo { width: 180px; height: 68px; } }
       `}</style>
     </div>
   );

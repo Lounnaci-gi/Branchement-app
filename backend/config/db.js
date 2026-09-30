@@ -355,6 +355,16 @@ async function verifierEtMigrerBase(pool) {
         );
       END;
 
+      IF OBJECT_ID('dbo.LogoDevis', 'U') IS NULL
+      BEGIN
+        CREATE TABLE dbo.LogoDevis (
+          id_logo TINYINT NOT NULL PRIMARY KEY CHECK (id_logo = 1),
+          type_mime NVARCHAR(30) NOT NULL,
+          contenu VARBINARY(MAX) NOT NULL,
+          date_modification DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+        );
+      END;
+
       IF NOT EXISTS (SELECT 1 FROM HistoriqueTva)
       BEGIN
         IF OBJECT_ID('dbo.ParametresApplication', 'U') IS NOT NULL
@@ -384,6 +394,9 @@ async function verifierEtMigrerBase(pool) {
       IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'db_aep_app_role' AND type = 'R')
          AND OBJECT_ID(N'dbo.HistoriqueTva', N'U') IS NOT NULL
         GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueTva TO db_aep_app_role;
+      IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'db_aep_app_role' AND type = 'R')
+        AND OBJECT_ID(N'dbo.LogoDevis', N'U') IS NOT NULL
+        GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.LogoDevis TO db_aep_app_role;
     `;
     await pool.request().query(migrationParametresSQL);
 

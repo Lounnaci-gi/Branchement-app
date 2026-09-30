@@ -2,6 +2,65 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { verifierToken, autoriserRoles } = require('../middleware/auth');
+const { decoderLogo } = require('../utils/logoDevis');
+
+router.get('/logo-devis', verifierToken, async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT type_mime, contenu
+      FROM dbo.LogoDevis
+      WHERE id_logo = 1
+    `);
+    const logo = result.recordset[0];
+    res.json({ logo: logo ? `data:${logo.type_mime};base64,${Buffer.from(logo.contenu).toString('base64')}` : null });
+  } catch (err) {
+    console.error('Erreur lecture logo devis:', err);
+    res.status(500).json({ erreur: 'Impossible de charger le logo du devis.' });
+  }
+});
+
+router.put('/logo-devis', verifierToken, autoriserRoles('admin'), async (req, res) => {
+  let logo;
+  try {
+    logo = decoderLogo(req.body?.image);
+  } catch (err) {
+    return res.status(400).json({ erreur: err.message });
+  }
+
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('typeMime', sql.NVarChar(30), logo.typeMime)
+      .input('contenu', sql.VarBinary(sql.MAX), logo.contenu)
+      .query(`
+        MERGE dbo.LogoDevis WITH (HOLDLOCK) AS cible
+        USING (SELECT CAST(1 AS TINYINT) AS id_logo) AS source
+        ON cible.id_logo = source.id_logo
+        WHEN MATCHED THEN UPDATE SET
+          type_mime = @typeMime,
+          contenu = @contenu,
+          date_modification = SYSDATETIME()
+        WHEN NOT MATCHED THEN INSERT (id_logo, type_mime, contenu)
+          VALUES (1, @typeMime, @contenu);
+      `);
+    res.json({ message: 'Logo du devis enregistré.' });
+  } catch (err) {
+    console.error('Erreur enregistrement logo devis:', err);
+    res.status(500).json({ erreur: 'Impossible d’enregistrer le logo du devis.' });
+  }
+});
+
+router.delete('/logo-devis', verifierToken, autoriserRoles('admin'), async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request().query('DELETE FROM dbo.LogoDevis WHERE id_logo = 1');
+    res.json({ message: 'Logo par défaut rétabli.' });
+  } catch (err) {
+    console.error('Erreur réinitialisation logo devis:', err);
+    res.status(500).json({ erreur: 'Impossible de rétablir le logo par défaut.' });
+  }
+});
 
 router.use(verifierToken, autoriserRoles('admin'));
 

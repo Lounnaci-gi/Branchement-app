@@ -295,6 +295,13 @@ CREATE TABLE HistoriqueTva (
     CONSTRAINT UQ_HistoriqueTva_TypeDate UNIQUE (type_tva, date_effet)
 );
 
+CREATE TABLE LogoDevis (
+    id_logo             TINYINT NOT NULL PRIMARY KEY CONSTRAINT CK_LogoDevis_Singleton CHECK (id_logo = 1),
+    type_mime           NVARCHAR(30) NOT NULL,
+    contenu             VARBINARY(MAX) NOT NULL,
+    date_modification   DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+);
+
 /* ------------------------------------------------------------
    11. TRAVAUX D'EXECUTION
    ------------------------------------------------------------ */
@@ -552,6 +559,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.CategoriesArticles TO db_aep
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.ArticlesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.TarifsArticlesDevis TO db_aep_app_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.HistoriqueTva TO db_aep_app_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.LogoDevis TO db_aep_app_role;
 
 -- Permissions en lecture sur les référentiels et vues
 GRANT SELECT ON OBJECT::dbo.Centres TO db_aep_app_role;
