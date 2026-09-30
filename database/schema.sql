@@ -81,6 +81,17 @@ CREATE TABLE Agents (
     date_creation   DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
 
+CREATE TABLE DevisTypes (
+    id_devis_type   INT IDENTITY(1,1) PRIMARY KEY,
+    id_agent        INT NOT NULL REFERENCES Agents(id_agent),
+    cle_client      NVARCHAR(100) NOT NULL,
+    nom             NVARCHAR(120) NOT NULL,
+    sections_json   NVARCHAR(MAX) NOT NULL,
+    date_creation   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT CK_DevisTypes_SectionsJson CHECK (ISJSON(sections_json) = 1),
+    CONSTRAINT UQ_DevisTypes_AgentClient UNIQUE (id_agent, cle_client)
+);
+
 /* ------------------------------------------------------------
    3. DEMANDEURS (abonnes / clients)
    ------------------------------------------------------------ */

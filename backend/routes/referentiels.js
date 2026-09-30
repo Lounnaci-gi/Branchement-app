@@ -56,6 +56,132 @@ async function remplacerTarifCourant(transaction, {
 
 router.use(verifierToken);
 
+function formaterDevisType(row, agent) {
+  return {
+    id: row.id_devis_type,
+    id_agent: row.id_agent,
+    cle_client: row.cle_client,
+    nom: row.nom,
+    date_creation: row.date_creation,
+    sections: JSON.parse(row.sections_json),
+    peutSupprimer: Number(row.id_agent) === Number(agent.id_agent) || agent.role === 'admin'
+  };
+}
+
+router.get('/devis-types', async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT id_devis_type, id_agent, cle_client, nom, sections_json, date_creation
+      FROM dbo.DevisTypes
+      ORDER BY date_creation DESC, id_devis_type DESC
+    `);
+    res.json(result.recordset.map((row) => formaterDevisType(row, req.agent)));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Impossible de charger les packs enregistrés.' });
+  }
+});
+
+router.post('/devis-types', async (req, res) => {
+  const nom = typeof req.body.nom === 'string' ? req.body.nom.trim() : '';
+  const cleClient = typeof req.body.cle_client === 'string' ? req.body.cle_client.trim() : '';
+  const sections = req.body.sections;
+  const agentId = Number(req.agent.id_agent);
+
+  if (
+    !Number.isInteger(agentId) || agentId <= 0 ||
+    !texteValide(nom, { maxLength: 120, obligatoire: true }) ||
+    !texteValide(cleClient, { maxLength: 100, obligatoire: true }) ||
+    !Array.isArray(sections) || sections.length === 0 ||
+    sections.some((section) => !section || !Array.isArray(section.lignes))
+  ) {
+    return res.status(400).json({ erreur: 'Les informations du pack sont invalides.' });
+  }
+
+  const sectionsJson = JSON.stringify(sections);
+  if (sectionsJson.length > 700000) {
+    return res.status(400).json({ erreur: 'Le contenu du pack est trop volumineux.' });
+  }
+
+  let transaction;
+  try {
+    const pool = await getPool();
+    transaction = new sql.Transaction(pool);
+    await transaction.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
+
+    const recherche = await new sql.Request(transaction)
+      .input('id_agent', sql.Int, agentId)
+      .input('cle_client', sql.NVarChar(100), cleClient)
+      .query('SELECT id_devis_type FROM dbo.DevisTypes WITH (UPDLOCK, HOLDLOCK) WHERE id_agent = @id_agent AND cle_client = @cle_client');
+
+    let result;
+    if (recherche.recordset[0]) {
+      result = await new sql.Request(transaction)
+        .input('id_devis_type', sql.Int, recherche.recordset[0].id_devis_type)
+        .input('nom', sql.NVarChar(120), nom)
+        .input('sections_json', sql.NVarChar(sql.MAX), sectionsJson)
+        .query(`
+          UPDATE dbo.DevisTypes
+          SET nom = @nom, sections_json = @sections_json
+          WHERE id_devis_type = @id_devis_type;
+          SELECT id_devis_type, id_agent, cle_client, nom, sections_json, date_creation
+          FROM dbo.DevisTypes WHERE id_devis_type = @id_devis_type;
+        `);
+    } else {
+      result = await new sql.Request(transaction)
+        .input('id_agent', sql.Int, agentId)
+        .input('cle_client', sql.NVarChar(100), cleClient)
+        .input('nom', sql.NVarChar(120), nom)
+        .input('sections_json', sql.NVarChar(sql.MAX), sectionsJson)
+        .query(`
+          INSERT INTO dbo.DevisTypes (id_agent, cle_client, nom, sections_json)
+          OUTPUT INSERTED.id_devis_type, INSERTED.id_agent, INSERTED.cle_client,
+                 INSERTED.nom, INSERTED.sections_json, INSERTED.date_creation
+          VALUES (@id_agent, @cle_client, @nom, @sections_json);
+        `);
+    }
+
+    await transaction.commit();
+    res.status(recherche.recordset[0] ? 200 : 201).json(formaterDevisType(result.recordset[0], req.agent));
+  } catch (err) {
+    if (transaction) {
+      try {
+        await transaction.rollback();
+      } catch {}
+    }
+    console.error(err);
+    res.status(500).json({ erreur: 'Impossible d’enregistrer le pack dans la base de données.' });
+  }
+});
+
+router.delete('/devis-types/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ erreur: 'Identifiant de pack invalide.' });
+  }
+
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('id_devis_type', sql.Int, id)
+      .input('id_agent', sql.Int, Number(req.agent.id_agent))
+      .input('role', sql.NVarChar(30), req.agent.role)
+      .query(`
+        DELETE FROM dbo.DevisTypes
+        WHERE id_devis_type = @id_devis_type
+          AND (@role = N'admin' OR id_agent = @id_agent)
+      `);
+    if (!result.rowsAffected[0]) {
+      return res.status(404).json({ erreur: 'Pack introuvable ou suppression non autorisée.' });
+    }
+    res.json({ message: 'Pack supprimé.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erreur: 'Impossible de supprimer le pack.' });
+  }
+});
+
 router.get('/articles', async (req, res) => {
   try {
     const pool = await getPool();

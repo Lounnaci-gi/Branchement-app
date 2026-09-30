@@ -387,6 +387,26 @@ async function verifierEtMigrerBase(pool) {
     `;
     await pool.request().query(migrationParametresSQL);
 
+    const migrationDevisTypesSQL = `
+      IF OBJECT_ID('dbo.DevisTypes', 'U') IS NULL
+      BEGIN
+        CREATE TABLE dbo.DevisTypes (
+          id_devis_type INT IDENTITY(1,1) PRIMARY KEY,
+          id_agent INT NOT NULL REFERENCES dbo.Agents(id_agent),
+          cle_client NVARCHAR(100) NOT NULL,
+          nom NVARCHAR(120) NOT NULL,
+          sections_json NVARCHAR(MAX) NOT NULL,
+          date_creation DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+          CONSTRAINT CK_DevisTypes_SectionsJson CHECK (ISJSON(sections_json) = 1),
+          CONSTRAINT UQ_DevisTypes_AgentClient UNIQUE (id_agent, cle_client)
+        );
+      END;
+
+      IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'db_aep_app_role' AND type = 'R')
+        GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::dbo.DevisTypes TO db_aep_app_role;
+    `;
+    await pool.request().query(migrationDevisTypesSQL);
+
     const updateViewSQL = `
       CREATE OR ALTER VIEW vw_DemandesSynthese AS
       SELECT

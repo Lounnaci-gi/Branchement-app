@@ -4,6 +4,8 @@ import './EditeurDevisObat.css';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import { isDevisQuantitatif } from '../../utils/devisAffichage';
+import { chargerDevisTypes } from '../../utils/devisTypes';
+import PACKS_OUVRAGES_AEP from './packsOuvragesAep';
 
 const LIBELLES_UNITES = {
   U: 'U (Unité)',
@@ -87,30 +89,6 @@ function normaliserQuantite(valeur) {
 function normaliserPrix(valeur) {
   const prix = Number(valeur);
   return Number.isFinite(prix) && prix >= 0 ? prix : 0;
-}
-
-function cleStockageDevisTypes() {
-  try {
-    const agent = JSON.parse(sessionStorage.getItem('agent') || '{}');
-    return `devis-types:${agent.id_agent || 'local'}`;
-  } catch {
-    return 'devis-types:local';
-  }
-}
-
-function chargerDevisTypes() {
-  try {
-    const cles = [...new Set([cleStockageDevisTypes(), 'devis-types'])];
-    const modeles = cles.flatMap((cle) => {
-      const valeur = JSON.parse(localStorage.getItem(cle) || '[]');
-      return Array.isArray(valeur) ? valeur : [];
-    });
-    return modeles.filter((modele, index, liste) => (
-      liste.findIndex((element) => element.id === modele.id) === index
-    ));
-  } catch {
-    return [];
-  }
 }
 
 function numeroRomain(valeur) {
@@ -221,49 +199,6 @@ function normaliserMotRecherche(valeur) {
     .trim();
 }
 
-// Modèles d'ouvrages types AEP (Spécifiques ADE pour eau potable)
-const PACKS_OUVRAGES_AEP = [
-  {
-    id: 'pack_std_dn25',
-    titre: 'Branchement Standard Particulier PEHD Ø25 (5m)',
-    description: 'Tranchée ordinaire 5m, PEHD Ø25, collier de prise en charge, vanne d’arrêt, compteur DN15 et mise en eau.',
-    sectionCible: 'Travaux de branchement standard',
-    lignes: [
-      { code: 'TERR-01', libelle: 'Fouille en tranchée ordinaire (larg. 0.40m, prof. 0.80m)', categorie: 'Travaux & Terrassement', type: 'P/', quantite: 5, unite: 'ML', prix: 1400, marge: 15, tauxTva: 19 },
-      { code: 'PEHD-25', libelle: 'Fourniture et pose de tube PEHD PN16 Ø25 mm', categorie: 'Canalisations & Raccords', type: 'FP/', quantite: 5, unite: 'ML', prix: 450, marge: 20, tauxTva: 19, diametre: '25' },
-      { code: 'COL-PRISE', libelle: 'Collier de prise en charge avec robinet de prise en charge', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 3800, marge: 18, tauxTva: 19 },
-      { code: 'VANN-20', libelle: 'Vanne d’arrêt quart de tour avant compteur Ø20', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 2200, marge: 20, tauxTva: 19, diametre: '20' },
-      { code: 'COMPT-15', libelle: 'Fourniture et pose compteur de vitesse DN15 avec clapet anti-pollution', categorie: 'Comptage', type: 'FP/', quantite: 1, unite: 'U', prix: 7500, marge: 15, tauxTva: 19, diametre: '15' },
-      { code: 'REG-NICHE', libelle: 'Fourniture et scellement d’une niche/regard de comptage préfabriqué', categorie: 'Comptage', type: 'F/', quantite: 1, unite: 'U', prix: 6800, marge: 15, tauxTva: 19 },
-      { code: 'MO-ESSAI', libelle: 'Raccordement sur conduite principale, mise en eau et épreuve d’étanchéité', categorie: 'Frais & Prestations', type: 'P/', quantite: 1, unite: 'FF', prix: 5000, marge: 10, tauxTva: 19 }
-    ]
-  },
-  {
-    id: 'pack_collectif_dn40',
-    titre: 'Branchement Gros Calibre PEHD Ø40 / Ø50 (Collectif)',
-    description: 'Tranchée, conduite PEHD Ø40/50, vanne de sectionnement enterrée sous bouche à clé et batterie de compteurs.',
-    sectionCible: 'Branchement gros calibre',
-    lignes: [
-      { code: 'TERR-02', libelle: 'Fouille en tranchée avec évacuation des déblais excédentaires', categorie: 'Travaux & Terrassement', type: 'P/', quantite: 8, unite: 'ML', prix: 1800, marge: 15, tauxTva: 19 },
-      { code: 'PEHD-40', libelle: 'Tube PEHD PN16 Ø40 mm bandes bleues AEP', categorie: 'Canalisations & Raccords', type: 'F/', quantite: 8, unite: 'ML', prix: 820, marge: 20, tauxTva: 19, diametre: '40' },
-      { code: 'VANN-BAC', libelle: 'Vanne d’arrêt à opercule avec bouche à clé et tube allonge', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 14500, marge: 15, tauxTva: 19 },
-      { code: 'CLAP-40', libelle: 'Clapet de non-retour à brides DN40', categorie: 'Robinetterie & Accessoires', type: 'F/', quantite: 1, unite: 'U', prix: 9200, marge: 18, tauxTva: 19, diametre: '40' },
-      { code: 'MO-COLL', libelle: 'Pose spécialisée, percement et épreuve sous pression 10 bars', categorie: 'Frais & Prestations', type: 'P/', quantite: 1, unite: 'FF', prix: 12000, marge: 10, tauxTva: 19 }
-    ]
-  },
-  {
-    id: 'pack_refection_voirie',
-    titre: 'Pack Réfection de Chaussée / Enrobé à chaud',
-    description: 'Découpe d’enrobé à la scie, remblai en tout-venant compacté et couche de roulement enrobé.',
-    sectionCible: 'Voirie et génie civil',
-    lignes: [
-      { code: 'VOIR-DEC', libelle: 'Découpage du revêtement bitumineux à la disqueuse diamantée', categorie: 'Travaux & Terrassement', type: 'P/', quantite: 6, unite: 'ML', prix: 650, marge: 15, tauxTva: 19 },
-      { code: 'VOIR-REM', libelle: 'Remblaiement méthodique en tout-venant 0/31.5 et compactage par couches', categorie: 'Travaux & Terrassement', type: 'F/', quantite: 3, unite: 'M3', prix: 3200, marge: 20, tauxTva: 19 },
-      { code: 'VOIR-ENR', libelle: 'Réfection définitive de la chaussée en béton bitumineux (enrobé à chaud)', categorie: 'Travaux & Terrassement', type: 'FP/', quantite: 4, unite: 'M²', prix: 4800, marge: 15, tauxTva: 19 }
-    ]
-  }
-];
-
 export default function EditeurDevisObat({
   demande,
   devisInitial = null,
@@ -294,7 +229,7 @@ export default function EditeurDevisObat({
   const [propositionDevisTypeOuverte, setPropositionDevisTypeOuverte] = useState(false);
   const [actionApresPropositionDevisType, setActionApresPropositionDevisType] = useState(null);
   const [nomDevisType, setNomDevisType] = useState('');
-  const [devisTypes, setDevisTypes] = useState(chargerDevisTypes);
+  const [devisTypes, setDevisTypes] = useState([]);
   const [ventilationOuverte, setVentilationOuverte] = useState(false);
 
   // Options d'affichage Obat
@@ -428,7 +363,7 @@ export default function EditeurDevisObat({
     ];
   });
 
-  function sauvegarderDevisType(nom, notifier = true) {
+  async function sauvegarderDevisType(nom, notifier = true) {
     const sectionsAvecArticles = sections.filter((section) => section.lignes.length > 0);
 
     if (!nom) return false;
@@ -436,28 +371,32 @@ export default function EditeurDevisObat({
       return false;
     }
 
-    const modele = {
-      id: `modele_${Date.now()}`,
-      nom,
-      date_creation: new Date().toISOString(),
-      sections: JSON.parse(JSON.stringify(sectionsAvecArticles))
-    };
-    const modelesMisAJour = [modele, ...devisTypes];
-    localStorage.setItem(cleStockageDevisTypes(), JSON.stringify(modelesMisAJour));
-    localStorage.setItem('devis-types', JSON.stringify(modelesMisAJour));
-    setDevisTypes(modelesMisAJour);
-    setNomDevisType('');
-    if (notifier) notifierSucces(`Le devis type « ${nom} » a été enregistré.`);
-    return true;
+    try {
+      const cleClient = globalThis.crypto?.randomUUID?.() || `modele_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const response = await client.post('/referentiels/devis-types', {
+        cle_client: cleClient,
+        nom,
+        sections: JSON.parse(JSON.stringify(sectionsAvecArticles))
+      });
+      const modeleEnregistre = response.data;
+      setDevisTypes((modeles) => [modeleEnregistre, ...modeles.filter((modele) => modele.id !== modeleEnregistre.id)]);
+      setNomDevisType('');
+      if (notifier) notifierSucces(`Le devis type « ${nom} » a été enregistré.`);
+      return true;
+    } catch (err) {
+      notifierErreur(err.response?.data?.erreur || 'Impossible d’enregistrer le devis type dans la base de données.');
+      return null;
+    }
   }
 
-  function enregistrerDevisType() {
+  async function enregistrerDevisType() {
     const nom = nomDevisType.trim();
     if (!nom) {
       notifierErreur('Veuillez donner un nom au devis type.');
       return;
     }
-    if (!sauvegarderDevisType(nom)) {
+    const enregistre = await sauvegarderDevisType(nom);
+    if (enregistre === false) {
       notifierErreur('Ajoutez au moins un article avant d’enregistrer un devis type.');
     }
   }
@@ -479,11 +418,13 @@ export default function EditeurDevisObat({
     notifierSucces(`Le devis type « ${modele.nom} » a été chargé.`);
   }
 
-  function supprimerDevisType(idModele) {
-    const modelesMisAJour = devisTypes.filter((modele) => modele.id !== idModele);
-    localStorage.setItem(cleStockageDevisTypes(), JSON.stringify(modelesMisAJour));
-    localStorage.setItem('devis-types', JSON.stringify(modelesMisAJour));
-    setDevisTypes(modelesMisAJour);
+  async function supprimerDevisType(idModele) {
+    try {
+      await client.delete(`/referentiels/devis-types/${encodeURIComponent(idModele)}`);
+      setDevisTypes((modeles) => modeles.filter((modele) => modele.id !== idModele));
+    } catch (err) {
+      notifierErreur(err.response?.data?.erreur || 'Impossible de supprimer le devis type.');
+    }
   }
 
   // Section active pour l'insertion
@@ -556,7 +497,17 @@ export default function EditeurDevisObat({
 
   useEffect(() => {
     if (drawerBiblioOuvert) {
-      setDevisTypes(chargerDevisTypes());
+      let annule = false;
+      chargerDevisTypes(client)
+        .then((modeles) => {
+          if (!annule) setDevisTypes(modeles);
+        })
+        .catch((err) => {
+          if (!annule) notifierErreur(err.response?.data?.erreur || 'Impossible de charger les devis types.');
+        });
+      return () => {
+        annule = true;
+      };
     }
   }, [drawerBiblioOuvert]);
 
@@ -1859,7 +1810,7 @@ export default function EditeurDevisObat({
                 {devisTypes.length > 0 && (
                   <div>
                     <div style={{ margin: '12px 16px 8px', fontSize: 12, fontWeight: 700, color: '#475569' }}>
-                      Mes devis types
+                      Devis types enregistrés
                     </div>
                     {devisTypes.map((modele) => {
                       const totalModele = (modele.sections || []).reduce(
@@ -1891,15 +1842,17 @@ export default function EditeurDevisObat({
                             >
                               + Insérer ce pack
                             </button>
-                            <button
-                              type="button"
-                              className="obat-btn-annuler"
-                              onClick={() => supprimerDevisType(modele.id)}
-                              title="Supprimer ce devis type"
-                              aria-label="Supprimer ce devis type"
-                            >
-                              <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
-                            </button>
+                            {modele.peutSupprimer && (
+                              <button
+                                type="button"
+                                className="obat-btn-annuler"
+                                onClick={() => supprimerDevisType(modele.id)}
+                                title="Supprimer ce devis type"
+                                aria-label="Supprimer ce devis type"
+                              >
+                                <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+                              </button>
+                            )}
                             </div>
                           </div>
                         </div>
@@ -3319,16 +3272,18 @@ export default function EditeurDevisObat({
               <button
                 type="button"
                 className="obat-btn-action-primary"
-                onClick={() => {
+                onClick={async () => {
                   const nom = nomDevisType.trim();
                   if (!nom) {
                     notifierErreur('Veuillez donner un nom au devis type.');
                     return;
                   }
-                  if (!sauvegarderDevisType(nom, false)) {
+                  const enregistre = await sauvegarderDevisType(nom, false);
+                  if (enregistre === false) {
                     notifierErreur('Ajoutez au moins un article avant d’enregistrer un devis type.');
                     return;
                   }
+                  if (!enregistre) return;
                   const action = actionApresPropositionDevisType;
                   setPropositionDevisTypeOuverte(false);
                   setActionApresPropositionDevisType(null);
@@ -3348,7 +3303,7 @@ export default function EditeurDevisObat({
           <div className="obat-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="obat-config-header">
               <div>
-                <span>Bibliothèque personnelle</span>
+                <span>Bibliothèque partagée</span>
                 <h3>Devis types</h3>
               </div>
               <button
@@ -3417,15 +3372,17 @@ export default function EditeurDevisObat({
                         >
                           Charger
                         </button>
-                        <button
-                          type="button"
-                          className="obat-btn-annuler"
-                          onClick={() => supprimerDevisType(modele.id)}
-                          title="Supprimer ce devis type"
-                          aria-label="Supprimer ce devis type"
-                        >
-                          <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
-                        </button>
+                        {modele.peutSupprimer && (
+                          <button
+                            type="button"
+                            className="obat-btn-annuler"
+                            onClick={() => supprimerDevisType(modele.id)}
+                            title="Supprimer ce devis type"
+                            aria-label="Supprimer ce devis type"
+                          >
+                            <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

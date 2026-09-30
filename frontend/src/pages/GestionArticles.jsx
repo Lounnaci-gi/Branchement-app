@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
+import PACKS_OUVRAGES_AEP from '../components/devis/packsOuvragesAep';
+import { chargerDevisTypes } from '../utils/devisTypes';
 import { demanderConfirmation, notifierErreur, notifierSucces } from '../utils/notifications';
 import './GestionArticles.css';
 
@@ -72,6 +74,7 @@ function typeArticleDepuisFormulaire(form) {
 export default function GestionArticles() {
   const [categories, setCategories] = useState([]);
   const [articles, setArticles] = useState([]);
+  const [devisTypes, setDevisTypes] = useState([]);
   const [chargement, setChargement] = useState(true);
   const [parametresTva, setParametresTva] = useState({ prestation: 19, travaux: 19 });
 
@@ -121,6 +124,9 @@ export default function GestionArticles() {
   useEffect(() => {
     if (agent.role !== 'admin') return;
     chargerDonnees();
+    chargerDevisTypes(client)
+      .then(setDevisTypes)
+      .catch((err) => notifierErreur(err.response?.data?.erreur || 'Impossible de charger les packs enregistrés.'));
   }, []);
 
   // Tous les articles aplatis pour calculs et filtrage
@@ -454,7 +460,7 @@ export default function GestionArticles() {
       </div>
 
       {/* 3. BARRE DE RECHERCHE ET FILTRES */}
-      <div className="obat-filter-panel">
+      {ongletPrincipal === 'catalogue' && <div className="obat-filter-panel">
         <div className="obat-search-row">
           <div className="obat-search-input-wrap">
             <input
@@ -488,7 +494,7 @@ export default function GestionArticles() {
           </select>
         </div>
 
-      </div>
+      </div>}
 
       {/* 4. ONGLETS PRINCIPAUX */}
       <div className="obat-main-tabs">
@@ -505,6 +511,13 @@ export default function GestionArticles() {
           onClick={() => setOngletPrincipal('categories')}
         >
           Catégories ({categories.length})
+        </button>
+        <button
+          type="button"
+          className={`obat-main-tab ${ongletPrincipal === 'packs' ? 'active' : ''}`}
+          onClick={() => setOngletPrincipal('packs')}
+        >
+          Packs AEP ({PACKS_OUVRAGES_AEP.length + devisTypes.length})
         </button>
       </div>
 
@@ -785,6 +798,104 @@ export default function GestionArticles() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {ongletPrincipal === 'packs' && (
+        <div className="obat-packs-list">
+          {devisTypes.length > 0 && (
+            <>
+              <h2 className="obat-pack-list-section-title">Modèles ajoutés par les utilisateurs ({devisTypes.length})</h2>
+              {devisTypes.map((modele) => {
+                const lignes = (modele.sections || []).flatMap((section) => section.lignes || []).map((ligne) => ({
+                  ...ligne,
+                  quantiteAffichee: Number(ligne.quantite) || 0,
+                  prixAffiche: Number(ligne.prix ?? ligne.prix_unitaire) || 0
+                }));
+                const totalHT = lignes.reduce((total, ligne) => total + ligne.quantiteAffichee * ligne.prixAffiche, 0);
+                return (
+                  <section key={modele.id} className="obat-pack-list-card">
+                    <header className="obat-pack-list-header">
+                      <div>
+                        <h2>{modele.nom}</h2>
+                        <p>Modèle de devis enregistré par un utilisateur.</p>
+                      </div>
+                      <span>{lignes.length} lignes</span>
+                    </header>
+                    <div className="tableau-responsive">
+                      <table className="obat-articles-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: 110 }}>Code</th>
+                            <th>Désignation</th>
+                            <th className="center" style={{ width: 100 }}>Quantité</th>
+                            <th className="right" style={{ width: 130 }}>Prix unitaire HT</th>
+                            <th className="right" style={{ width: 140 }}>Total HT</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lignes.map((ligne, index) => (
+                            <tr key={ligne.id_ligne || `${ligne.code || ligne.code_article || 'ligne'}-${index}`}>
+                              <td><span>{ligne.code || ligne.code_article || '—'}</span></td>
+                              <td>{ligne.libelle || ligne.designation || ligne.description || 'Article'}</td>
+                              <td className="center">{ligne.quantiteAffichee} {ligne.unite || 'U'}</td>
+                              <td className="right obat-price-cell">{formaterNombre(ligne.prixAffiche)} DA</td>
+                              <td className="right obat-price-total">{formaterNombre(ligne.quantiteAffichee * ligne.prixAffiche)} DA</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <footer className="obat-pack-list-total">
+                      Total estimatif HT <strong>{formaterNombre(totalHT)} DA</strong>
+                    </footer>
+                  </section>
+                );
+              })}
+            </>
+          )}
+          <h2 className="obat-pack-list-section-title">Packs AEP prédéfinis ({PACKS_OUVRAGES_AEP.length})</h2>
+          {PACKS_OUVRAGES_AEP.map((pack) => {
+            const totalHT = pack.lignes.reduce((total, ligne) => total + ligne.quantite * ligne.prix, 0);
+            return (
+              <section key={pack.id} className="obat-pack-list-card">
+                <header className="obat-pack-list-header">
+                  <div>
+                    <h2>{pack.titre}</h2>
+                    <p>{pack.description}</p>
+                  </div>
+                  <span>{pack.lignes.length} lignes</span>
+                </header>
+                <div className="tableau-responsive">
+                  <table className="obat-articles-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 110 }}>Code</th>
+                        <th>Désignation</th>
+                        <th className="center" style={{ width: 100 }}>Quantité</th>
+                        <th className="right" style={{ width: 130 }}>Prix unitaire HT</th>
+                        <th className="right" style={{ width: 140 }}>Total HT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pack.lignes.map((ligne) => (
+                        <tr key={ligne.code}>
+                          <td><span>{ligne.code}</span></td>
+                          <td>{ligne.libelle}</td>
+                          <td className="center">{ligne.quantite} {ligne.unite}</td>
+                          <td className="right obat-price-cell">{formaterNombre(ligne.prix)} DA</td>
+                          <td className="right obat-price-total">{formaterNombre(ligne.quantite * ligne.prix)} DA</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <footer className="obat-pack-list-total">
+                  Total estimatif HT <strong>{formaterNombre(totalHT)} DA</strong>
+                </footer>
+              </section>
+            );
+          })}
         </div>
       )}
 
