@@ -104,7 +104,7 @@ router.put('/tva', async (req, res) => {
     : null;
   const dateValide = Boolean(dateObjet)
     && dateObjet.toISOString().slice(0, 10) === dateEffet;
-  if (![tvaPrestation, tvaTravaux].every((taux) => Number.isFinite(taux) && taux >= 0 && taux <= 100) || !dateValide) {
+    if (![tvaPrestation, tvaTravaux].every((taux) => Number.isFinite(taux) && taux >= 0 && taux <= 100) || !dateValide) {
     return res.status(400).json({ erreur: 'Les taux de TVA doivent être compris entre 0 et 100.' });
   }
 

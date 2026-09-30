@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { notifierErreur } from '../utils/notifications';
+import { formaterDesignationAvecType } from '../utils/devisAffichage';
 
 function nomAbonne(demande) {
   if (demande.est_personne_morale) return demande.raison_sociale || '—';
@@ -303,7 +304,6 @@ export default function AffichageDevis() {
           <thead>
             <tr>
               <th className="col-desig">Désignation des travaux</th>
-              <th className="col-type">Type</th>
               <th className="col-unite">Unité</th>
               <th className="col-qte">Qtité</th>
               <th className="col-pu">P.U.</th>
@@ -316,7 +316,7 @@ export default function AffichageDevis() {
                 const articles = articlesParCategorie.get(categorie) || [];
                 return [
                   <tr key={`categorie-${categorie}`}>
-                    <td colSpan="6" className="devis-categorie-header">
+                    <td colSpan="5" className="devis-categorie-header">
                       <strong>{numeroRomain(categorieIndex + 1)} - {categorie}</strong>
                     </td>
                   </tr>,
@@ -325,12 +325,9 @@ export default function AffichageDevis() {
                     return (
                       <tr key={art.id_ligne || art.code}>
                       <td className="col-desig">
-                        <strong>{libelleArticleSansCategorie(art.libelle)}</strong>
+                        <strong>{formaterDesignationAvecType(codeType, libelleArticleSansCategorie(art.libelle))}</strong>
                         {art.code ? <small className="devis-article-meta">{art.code}</small> : null}
                         {(art.matiere || art.couleur) ? <small className="devis-article-meta">{[art.matiere, art.couleur].filter(Boolean).join(' · ')}</small> : null}
-                      </td>
-                      <td className="col-type">
-                        <span>{codeType}</span>
                       </td>
                       <td className="col-unite">{art.unite || 'U'}</td>
                       <td className="col-qte">{art.quantite}</td>
@@ -344,9 +341,6 @@ export default function AffichageDevis() {
             ) : (
               <tr>
                 <td className="col-desig">Prestations et fournitures relatives aux travaux</td>
-                <td className="col-type">
-                  <span>FP/</span>
-                </td>
                 <td className="col-unite">U</td>
                 <td className="col-qte">1</td>
                 <td className="col-pu">{formaterMontant(devis.montant)}</td>
@@ -647,7 +641,6 @@ export default function AffichageDevis() {
       .devis-articles-table th { background: #1991eb; color: #fff; border-color: transparent; font-weight: 800; text-align: center; }
       .devis-articles-table .devis-categorie-header { background: #eff6ff; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; text-align: left; }
       .devis-articles-table .col-desig { text-align: left; }
-      .devis-articles-table .col-type { width: 48px; text-align: center; }
       .devis-articles-table .col-diam { width: 70px; text-align: center; }
       .devis-articles-table .col-unite { width: 46px; text-align: center; }
       .devis-articles-table .col-qte { width: 48px; text-align: center; }

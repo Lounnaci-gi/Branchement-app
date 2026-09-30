@@ -777,19 +777,73 @@
   text-align: center;
 }
 
-.obat-col-type {
-  width: 64px;
-  text-align: center;
-}
-
 .obat-col-unite {
   width: 65px;
   text-align: center;
 }
 
 .obat-col-pu {
-  width: 95px;
+  width: 180px;
   text-align: right;
+}
+
+.obat-prix-unitaire-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.obat-select-tarif-prix {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-size: 11px;
+}
+
+.obat-tarif-prix-selection,
+.obat-tarif-prix-edition {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.obat-tarif-prix-selection .obat-select-tarif-prix,
+.obat-tarif-prix-edition input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.obat-tarif-prix-edition input {
+  text-align: right;
+}
+
+.obat-btn-modifier-tarif,
+.obat-btn-valider-tarif,
+.obat-btn-annuler-tarif {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: #475569;
+  cursor: pointer;
+}
+
+.obat-btn-valider-tarif {
+  color: #15803D;
+}
+
+.obat-btn-annuler-tarif {
+  color: #B91C1C;
 }
 
 .obat-col-marge {
@@ -916,6 +970,31 @@
 .obat-line-designation-editor {
   position: relative;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.obat-line-designation-type-prefix {
+  flex: 0 0 auto;
+  color: #475569;
+  font-weight: 700;
+}
+
+.obat-select-type-designation {
+  flex: 0 0 48px;
+  width: 48px;
+  padding: 4px 2px;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.obat-line-designation-editor input {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .obat-line-suggestions {

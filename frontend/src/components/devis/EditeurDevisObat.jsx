@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Check, Pencil, Trash2, X } from 'lucide-react';
 import './EditeurDevisObat.css';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
-import { isDevisQuantitatif } from '../../utils/devisAffichage';
+import {
+  formaterDesignationAvecType,
+  isDevisQuantitatif,
+  obtenirPrefixeTypeDevis,
+  retirerPrefixeTypeDesignation
+} from '../../utils/devisAffichage';
 import { chargerDevisTypes } from '../../utils/devisTypes';
 import PACKS_OUVRAGES_AEP from './packsOuvragesAep';
 
@@ -125,6 +130,32 @@ function aTarifsFournitureEtPose(article) {
   const f = Number(article.prixFourniture ?? article.prix_fourniture ?? 0);
   const p = Number(article.prixPose ?? article.prix_pose ?? 0);
   return f > 0 && p > 0;
+}
+
+function obtenirOptionsTarifLigne(ligne) {
+  const fourniture = ligne.prixFourniture == null ? null : Number(ligne.prixFourniture);
+  const pose = ligne.prixPose == null ? null : Number(ligne.prixPose);
+  const options = [];
+
+  if (fourniture > 0) {
+    const prix = ligne.choixPrix === 'FOURNITURE' ? Number(ligne.prix) : fourniture;
+    options.push({ choix: 'FOURNITURE', type: 'F/', prix, libelle: formaterNombre(prix) });
+  }
+  if (pose > 0) {
+    const prix = ligne.choixPrix === 'POSE' ? Number(ligne.prix) : pose;
+    options.push({ choix: 'POSE', type: 'P/', prix, libelle: formaterNombre(prix) });
+  }
+  if (fourniture > 0 && pose > 0) {
+    const prix = ligne.choixPrix === 'FOURNITURE_POSE' ? Number(ligne.prix) : fourniture + pose;
+    options.push({ choix: 'FOURNITURE_POSE', type: 'FP/', prix, libelle: formaterNombre(prix) });
+  }
+
+  if (ligne.modePrix === 'PRESTATION' || ligne.type === 'PR/') {
+    const prix = Number(ligne.prix) || 0;
+    options.push({ choix: 'PRESTATION', type: 'PR/', prix, libelle: formaterNombre(prix) });
+  }
+
+  return options;
 }
 
 export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
@@ -254,6 +285,7 @@ export default function EditeurDevisObat({
   // callback à appeler une fois les articles enregistrés
   const [callbackApresEnregistrement, setCallbackApresEnregistrement] = useState(null);
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
+  const [tarifEnEdition, setTarifEnEdition] = useState(null);
 
   // Données du document
   const [numeroDevis, setNumeroDevis] = useState(
@@ -846,6 +878,45 @@ export default function EditeurDevisObat({
           : s
       )
     );
+  }
+
+  function enregistrerPrixTarif(idSection, idLigne, choix, valeur) {
+    if (refuserEditionArticlesQuantitatif()) return;
+    if (String(valeur).trim() === '' || !Number.isFinite(Number(valeur)) || Number(valeur) <= 0) {
+      notifierErreur('Saisissez un prix strictement supérieur à zéro.');
+      return;
+    }
+
+    const prix = normaliserPrix(valeur);
+    const configuration = {
+      FOURNITURE: { type: 'F/', champ: 'prixFourniture', modePrix: 'FOURNITURE_POSE' },
+      POSE: { type: 'P/', champ: 'prixPose', modePrix: 'FOURNITURE_POSE' },
+      FOURNITURE_POSE: { type: 'FP/', modePrix: 'FOURNITURE_POSE' },
+      PRESTATION: { type: 'PR/', modePrix: 'PRESTATION' }
+    }[choix];
+    if (!configuration) return;
+
+    setSections((prev) => prev.map((section) => (
+      section.id_section !== idSection
+        ? section
+        : {
+            ...section,
+            lignes: section.lignes.map((ligne) => (
+              ligne.id_ligne !== idLigne
+                ? ligne
+                : {
+                    ...ligne,
+                    prix,
+                    type: configuration.type,
+                    modePrix: configuration.modePrix,
+                    choixPrix: choix,
+                    ...(configuration.champ ? { [configuration.champ]: prix } : {}),
+                    ...(choix === 'PRESTATION' ? { typeTva: 'PRESTATION' } : {})
+                  }
+            ))
+          }
+    )));
+    setTarifEnEdition(null);
   }
 
   function supprimerLigne(idSection, idLigne) {
@@ -2075,7 +2146,6 @@ export default function EditeurDevisObat({
                 <tr>
                   <th className="center obat-col-num">N°</th>
                   <th className="obat-col-desig">Désignation</th>
-                  <th className="center obat-col-type">Type</th>
                   <th className="center obat-col-qte">Qté</th>
                   {afficherColonneUnite && <th className="center obat-col-unite">Unité</th>}
                   {afficherColonnesPrix && <th className="right obat-col-pu">Prix U. HT</th>}
@@ -2136,8 +2206,8 @@ export default function EditeurDevisObat({
                         <tr>
                           <td
                             colSpan={modeOnglet === 'edition'
-                              ? (afficherColonneUnite ? (afficherColonnesPrix ? 8 : 6) : (afficherColonnesPrix ? 7 : 5))
-                              : (afficherColonneUnite ? (afficherColonnesPrix ? 7 : 5) : (afficherColonnesPrix ? 6 : 4))}
+                              ? (afficherColonneUnite ? (afficherColonnesPrix ? 7 : 5) : (afficherColonnesPrix ? 6 : 4))
+                              : (afficherColonneUnite ? (afficherColonnesPrix ? 6 : 4) : (afficherColonnesPrix ? 5 : 3))}
                             className={`obat-table-empty ${modeOnglet === 'edition' ? 'is-clickable' : ''}`}
                             onClick={() => {
                               if (modeOnglet !== 'edition') return;
@@ -2171,6 +2241,7 @@ export default function EditeurDevisObat({
                           const pu = Number(ligne.prix) || 0;
                           const ligneHT = qte * pu;
                           const estOuvrage = ligne.type === 'Ouvrage' || ligne.sousElements?.length > 0;
+                          const optionsTarifLigne = obtenirOptionsTarifLigne(ligne);
 
                           return (
                             <tr key={ligne.id_ligne || lIdx} className={estOuvrage ? 'obat-tr-ouvrage' : ''}>
@@ -2179,10 +2250,30 @@ export default function EditeurDevisObat({
                                 {modeOnglet === 'edition' && !devisQuantitatif ? (
                                   <div>
                                     <div className="obat-line-designation-editor">
+                                      {ligne.estLigneLibre ? (() => {
+                                        const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
+                                        const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
+                                        return (
+                                          <select
+                                            className={`obat-select-type-designation ${
+                                              typeActuel === 'P/' ? 'p' : typeActuel === 'PR/' ? 'pr' : typeActuel === 'FP/' ? 'fp' : 'f'
+                                            }`}
+                                            aria-label={`Type de tarif pour ${ligne.libelle || 'l’article'}`}
+                                            value={typeActuel}
+                                            onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'type', e.target.value)}
+                                          >
+                                            {typesDispo.map((type) => <option key={type} value={type}>{type}</option>)}
+                                          </select>
+                                        );
+                                      })() : obtenirPrefixeTypeDevis(ligne.type) && (
+                                        <span className="obat-line-designation-type-prefix">
+                                          {obtenirPrefixeTypeDevis(ligne.type)}
+                                        </span>
+                                      )}
                                       <input
                                         type="text"
                                         placeholder="Désignation de l'article…"
-                                        value={ligne.libelle}
+                                        value={retirerPrefixeTypeDesignation(ligne.type, ligne.libelle)}
                                         onChange={(e) => {
                                           const valeur = e.target.value;
                                           modifierDesignationLigne(section.id_section, ligne.id_ligne, valeur);
@@ -2222,22 +2313,11 @@ export default function EditeurDevisObat({
                                   </div>
                                 ) : (
                                   <div>
-                                    <strong>{ligne.libelle || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Sans désignation</span>}</strong>
+                                    <strong>{formaterDesignationAvecType(ligne.type, ligne.libelle) || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Sans désignation</span>}</strong>
                                     <div style={{ fontSize: 11.5, color: '#64748B' }}>
                                       {ligne.code}
                                       {ligne.matiere ? ` · ${ligne.matiere}` : ''}
                                     </div>
-                                    {aTarifsFournitureEtPose(ligne) && (
-                                      <div style={{ marginTop: 3 }}>
-                                        <span>
-                                          {ligne.choixPrix === 'FOURNITURE'
-                                            ? `Fourniture seule (${formaterNombre(ligne.prixFourniture)})`
-                                            : ligne.choixPrix === 'POSE'
-                                            ? `Pose seule (${formaterNombre(ligne.prixPose)})`
-                                            : `Fourniture & Pose (${formaterNombre(Number(ligne.prixFourniture) + Number(ligne.prixPose))})`}
-                                        </span>
-                                      </div>
-                                    )}
                                     {!masquerDetailsOuvragesPreview && estOuvrage && ligne.sousElements?.length > 0 && (
                                       <div className="obat-preview-sous-elements">
                                         {ligne.sousElements.map((se) => (
@@ -2252,57 +2332,6 @@ export default function EditeurDevisObat({
                                     )}
                                   </div>
                                 )}
-                              </td>
-                              <td className="center obat-col-type">
-                                {modeOnglet === 'edition' && !devisQuantitatif ? (() => {
-                                  const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
-                                  const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
-                                  return (
-                                    <select
-                                      className={`obat-select-type-tag ${
-                                        typeActuel === 'P/' ? 'p' : typeActuel === 'PR/' ? 'pr' : typeActuel === 'FP/' ? 'fp' : 'f'
-                                      }`}
-                                      value={typeActuel}
-                                      disabled={typesDispo.length <= 1}
-                                      style={{
-                                        cursor: typesDispo.length > 1 ? 'pointer' : 'default',
-                                        opacity: 1
-                                      }}
-                                      onChange={(e) => {
-                                        const nType = e.target.value;
-                                        if (aTarifsFournitureEtPose(ligne)) {
-                                          if (nType === 'F/') changerChoixPrixLigne(section.id_section, ligne.id_ligne, 'FOURNITURE');
-                                          else if (nType === 'P/') changerChoixPrixLigne(section.id_section, ligne.id_ligne, 'POSE');
-                                          else if (nType === 'FP/') changerChoixPrixLigne(section.id_section, ligne.id_ligne, 'FOURNITURE_POSE');
-                                          else modifierChampLigne(section.id_section, ligne.id_ligne, 'type', nType);
-                                        } else {
-                                          modifierChampLigne(section.id_section, ligne.id_ligne, 'type', nType);
-                                        }
-                                      }}
-                                      title={
-                                        typesDispo.length <= 1
-                                          ? `Tarif unique disponible : ${typeActuel}`
-                                          : 'Changer le type de tarif appliqué'
-                                      }
-                                    >
-                                      {typesDispo.map((t) => (
-                                        <option key={t} value={t}>
-                                          {t}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  );
-                                })() : (() => {
-                                  const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
-                                  const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
-                                  return (
-                                    <span className={`obat-type-tag ${
-                                      typeActuel === 'P/' ? 'p' : typeActuel === 'PR/' ? 'pr' : typeActuel === 'FP/' ? 'fp' : 'f'
-                                    }`}>
-                                      {typeActuel}
-                                    </span>
-                                  );
-                                })()}
                               </td>
                               <td className="center obat-col-qte">
                                 {modeOnglet === 'edition' && !devisQuantitatif ? (
@@ -2343,14 +2372,100 @@ export default function EditeurDevisObat({
                               {afficherColonnesPrix && (
                                 <td className="right obat-col-pu">
                                   {modeOnglet === 'edition' && !devisQuantitatif ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="10"
-                                      value={normaliserPrix(ligne.prix)}
-                                      onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'prix', e.target.value)}
-                                      style={{ textAlign: 'right' }}
-                                    />
+                                      <div className="obat-prix-unitaire-editor">
+                                        {optionsTarifLigne.length > 0 && (() => {
+                                          const choixActuel = optionsTarifLigne.some((option) => option.choix === ligne.choixPrix)
+                                            ? ligne.choixPrix
+                                            : optionsTarifLigne.find((option) => option.type === ligne.type)?.choix || optionsTarifLigne[0].choix;
+                                          const optionActive = optionsTarifLigne.find((option) => option.choix === choixActuel);
+                                          const estEditionTarifActive = tarifEnEdition?.idLigne === ligne.id_ligne
+                                            && tarifEnEdition?.choix === choixActuel;
+                                          return (
+                                            <>
+                                              <div className="obat-tarif-prix-selection">
+                                                <select
+                                                  className="obat-select-tarif-prix"
+                                                  aria-label={`Tarif appliqué à ${ligne.libelle || 'l’article'}`}
+                                                  value={choixActuel}
+                                                  onChange={(e) => {
+                                                    setTarifEnEdition(null);
+                                                    if (e.target.value === 'PRESTATION') {
+                                                      modifierChampLigne(section.id_section, ligne.id_ligne, 'type', 'PR/');
+                                                    } else {
+                                                      changerChoixPrixLigne(section.id_section, ligne.id_ligne, e.target.value);
+                                                    }
+                                                  }}
+                                                >
+                                                  {optionsTarifLigne.map((option) => (
+                                                    <option key={option.choix} value={option.choix}>{option.libelle}</option>
+                                                  ))}
+                                                </select>
+                                                <button
+                                                  type="button"
+                                                  className="obat-btn-modifier-tarif"
+                                                  title="Modifier le prix de ce tarif"
+                                                  aria-label={`Modifier le prix ${optionActive?.libelle || ''}`}
+                                                  onClick={() => setTarifEnEdition({
+                                                    idSection: section.id_section,
+                                                    idLigne: ligne.id_ligne,
+                                                    choix: choixActuel,
+                                                    valeur: String(optionActive?.prix ?? ligne.prix)
+                                                  })}
+                                                >
+                                                  <Pencil size={14} aria-hidden="true" />
+                                                </button>
+                                              </div>
+                                              {estEditionTarifActive && (
+                                                <div className="obat-tarif-prix-edition">
+                                                  <input
+                                                    type="number"
+                                                    min="0.01"
+                                                    step="0.01"
+                                                    aria-label={`Nouveau prix ${optionActive?.libelle || ''}`}
+                                                    value={tarifEnEdition.valeur}
+                                                    onChange={(e) => setTarifEnEdition((actuel) => ({ ...actuel, valeur: e.target.value }))}
+                                                    autoFocus
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    className="obat-btn-valider-tarif"
+                                                    title="Valider le nouveau prix"
+                                                    aria-label="Valider le nouveau prix"
+                                                    onClick={() => enregistrerPrixTarif(
+                                                      tarifEnEdition.idSection,
+                                                      tarifEnEdition.idLigne,
+                                                      tarifEnEdition.choix,
+                                                      tarifEnEdition.valeur
+                                                    )}
+                                                  >
+                                                    <Check size={14} aria-hidden="true" />
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    className="obat-btn-annuler-tarif"
+                                                    title="Annuler la modification"
+                                                    aria-label="Annuler la modification du prix"
+                                                    onClick={() => setTarifEnEdition(null)}
+                                                  >
+                                                    <X size={14} aria-hidden="true" />
+                                                  </button>
+                                                </div>
+                                              )}
+                                            </>
+                                          );
+                                        })()}
+                                        {optionsTarifLigne.length === 0 && (
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="10"
+                                            aria-label={`Prix unitaire de ${ligne.libelle || 'l’article'}`}
+                                            value={normaliserPrix(ligne.prix)}
+                                            onChange={(e) => modifierChampLigne(section.id_section, ligne.id_ligne, 'prix', e.target.value)}
+                                            style={{ textAlign: 'right' }}
+                                          />
+                                        )}
+                                      </div>
                                   ) : (
                                     <span>{formaterNombre(ligne.prix)}</span>
                                   )}
@@ -2431,7 +2546,7 @@ export default function EditeurDevisObat({
                             ? "Enregistrez d'abord l'article en cours avant d'en créer un autre"
                             : 'Créer un autre article dans cette section'}
                         >
-                          <td colSpan={afficherColonneUnite ? (afficherColonnesPrix ? 8 : 6) : (afficherColonnesPrix ? 7 : 5)}>
+                          <td colSpan={afficherColonneUnite ? (afficherColonnesPrix ? 7 : 5) : (afficherColonnesPrix ? 6 : 4)}>
                             {section.lignes.some((ligne) => ligne.estLigneLibre)
                               ? "Enregistrez l'article en cours avant d'en créer un autre"
                               : 'Cliquez ici pour créer un autre article'}
