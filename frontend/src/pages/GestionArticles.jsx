@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Pencil, Trash2 } from 'lucide-react';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
 import PACKS_OUVRAGES_AEP from '../components/devis/packsOuvragesAep';
@@ -83,10 +84,13 @@ export default function GestionArticles() {
   const [filtreCategorie, setFiltreCategorie] = useState('TOUS');
   const [filtreMode, setFiltreMode] = useState('TOUS');
   const [ongletPrincipal, setOngletPrincipal] = useState('catalogue');
+  const [packsReplis, setPacksReplis] = useState({});
   const [pagesParCategorie, setPagesParCategorie] = useState({});
   const ARTICLES_PAR_PAGE = 20;
 
   const [modalNouvelArticleOuvert, setModalNouvelArticleOuvert] = useState(false);
+  const [packEnEdition, setPackEnEdition] = useState(null);
+  const [enregistrementPack, setEnregistrementPack] = useState(false);
   const [modalCategorieOuvert, setModalCategorieOuvert] = useState(false);
   const [categorieEnEdition, setCategorieEnEdition] = useState(null);
 
@@ -99,6 +103,72 @@ export default function GestionArticles() {
   const [envoiCategorie, setEnvoiCategorie] = useState(false);
 
   const agent = JSON.parse(sessionStorage.getItem('agent') || '{}');
+
+  function basculerPack(idPack) {
+    setPacksReplis((packs) => ({ ...packs, [idPack]: !packs[idPack] }));
+  }
+
+  function ouvrirEditionPack(modele) {
+    setPackEnEdition({ ...modele, sections: JSON.parse(JSON.stringify(modele.sections || [])) });
+  }
+
+  function modifierLignePack(indexSection, indexLigne, champ, valeur) {
+    setPackEnEdition((modele) => ({
+      ...modele,
+      sections: modele.sections.map((section, sectionIndex) => (
+        sectionIndex !== indexSection
+          ? section
+          : {
+            ...section,
+            lignes: section.lignes.map((ligne, ligneIndex) => (
+              ligneIndex !== indexLigne
+                ? ligne
+                : { ...ligne, [champ]: champ === 'quantite' || champ === 'prix' ? Number(valeur) : valeur }
+            ))
+          }
+      ))
+    }));
+  }
+
+  async function enregistrerEditionPack(event) {
+    event.preventDefault();
+    const nom = packEnEdition?.nom?.trim();
+    if (!nom) {
+      notifierErreur('Le nom du pack est obligatoire.');
+      return;
+    }
+
+    setEnregistrementPack(true);
+    try {
+      const response = await client.post('/referentiels/devis-types', {
+        cle_client: packEnEdition.cle_client,
+        nom,
+        sections: packEnEdition.sections
+      });
+      setDevisTypes((modeles) => modeles.map((modele) => (
+        modele.id === response.data.id ? response.data : modele
+      )));
+      setPackEnEdition(null);
+      notifierSucces('Le pack a été modifié.');
+    } catch (err) {
+      notifierErreur(err.response?.data?.erreur || 'Impossible de modifier le pack.');
+    } finally {
+      setEnregistrementPack(false);
+    }
+  }
+
+  async function supprimerPack(modele) {
+    const confirme = await demanderConfirmation(`Supprimer le pack « ${modele.nom} » ?`);
+    if (!confirme) return;
+
+    try {
+      await client.delete(`/referentiels/devis-types/${encodeURIComponent(modele.id)}`);
+      setDevisTypes((modeles) => modeles.filter((item) => item.id !== modele.id));
+      notifierSucces('Le pack a été supprimé.');
+    } catch (err) {
+      notifierErreur(err.response?.data?.erreur || 'Impossible de supprimer le pack.');
+    }
+  }
 
   async function chargerDonnees() {
     setChargement(true);
@@ -813,6 +883,8 @@ export default function GestionArticles() {
                   prixAffiche: Number(ligne.prix ?? ligne.prix_unitaire) || 0
                 }));
                 const totalHT = lignes.reduce((total, ligne) => total + ligne.quantiteAffichee * ligne.prixAffiche, 0);
+                const idPack = `devis-type-${modele.id}`;
+                const replie = Boolean(packsReplis[idPack]);
                 return (
                   <section key={modele.id} className="obat-pack-list-card">
                     <header className="obat-pack-list-header">
@@ -820,35 +892,72 @@ export default function GestionArticles() {
                         <h2>{modele.nom}</h2>
                         <p>Modèle de devis enregistré par un utilisateur.</p>
                       </div>
-                      <span>{lignes.length} lignes</span>
+                      <div className="obat-pack-list-header-meta">
+                        <span>{lignes.length} lignes</span>
+                        {modele.peutSupprimer && (
+                          <div className="obat-actions-inline-group">
+                            <button
+                              type="button"
+                              className="obat-btn-action-icon"
+                              onClick={() => ouvrirEditionPack(modele)}
+                              title="Modifier le pack"
+                              aria-label={`Modifier le pack ${modele.nom}`}
+                            >
+                              <Pencil size={16} aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              className="obat-btn-action-icon obat-btn-delete"
+                              onClick={() => supprimerPack(modele)}
+                              title="Supprimer le pack"
+                              aria-label={`Supprimer le pack ${modele.nom}`}
+                            >
+                              <Trash2 size={16} aria-hidden="true" />
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className="obat-pack-toggle"
+                          aria-expanded={!replie}
+                          aria-controls={`${idPack}-contenu`}
+                          onClick={() => basculerPack(idPack)}
+                          title={replie ? 'Déplier le contenu' : 'Replier le contenu'}
+                        >
+                          <ChevronDown size={16} aria-hidden="true" />
+                          {replie ? 'Déplier' : 'Replier'}
+                        </button>
+                      </div>
                     </header>
-                    <div className="tableau-responsive">
-                      <table className="obat-articles-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: 110 }}>Code</th>
-                            <th>Désignation</th>
-                            <th className="center" style={{ width: 100 }}>Quantité</th>
-                            <th className="right" style={{ width: 130 }}>Prix unitaire HT</th>
-                            <th className="right" style={{ width: 140 }}>Total HT</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lignes.map((ligne, index) => (
-                            <tr key={ligne.id_ligne || `${ligne.code || ligne.code_article || 'ligne'}-${index}`}>
-                              <td><span>{ligne.code || ligne.code_article || '—'}</span></td>
-                              <td>{ligne.libelle || ligne.designation || ligne.description || 'Article'}</td>
-                              <td className="center">{ligne.quantiteAffichee} {ligne.unite || 'U'}</td>
-                              <td className="right obat-price-cell">{formaterNombre(ligne.prixAffiche)} DA</td>
-                              <td className="right obat-price-total">{formaterNombre(ligne.quantiteAffichee * ligne.prixAffiche)} DA</td>
+                    <div id={`${idPack}-contenu`} hidden={replie}>
+                      <div className="tableau-responsive">
+                        <table className="obat-articles-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: 110 }}>Code</th>
+                              <th>Désignation</th>
+                              <th className="center" style={{ width: 100 }}>Quantité</th>
+                              <th className="right" style={{ width: 130 }}>Prix unitaire HT</th>
+                              <th className="right" style={{ width: 140 }}>Total HT</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {lignes.map((ligne, index) => (
+                              <tr key={ligne.id_ligne || `${ligne.code || ligne.code_article || 'ligne'}-${index}`}>
+                                <td><span>{ligne.code || ligne.code_article || '—'}</span></td>
+                                <td>{ligne.libelle || ligne.designation || ligne.description || 'Article'}</td>
+                                <td className="center">{ligne.quantiteAffichee} {ligne.unite || 'U'}</td>
+                                <td className="right obat-price-cell">{formaterNombre(ligne.prixAffiche)} DA</td>
+                                <td className="right obat-price-total">{formaterNombre(ligne.quantiteAffichee * ligne.prixAffiche)} DA</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <footer className="obat-pack-list-total">
+                        Total estimatif HT <strong>{formaterNombre(totalHT)} DA</strong>
+                      </footer>
                     </div>
-                    <footer className="obat-pack-list-total">
-                      Total estimatif HT <strong>{formaterNombre(totalHT)} DA</strong>
-                    </footer>
                   </section>
                 );
               })}
@@ -857,6 +966,8 @@ export default function GestionArticles() {
           <h2 className="obat-pack-list-section-title">Packs AEP prédéfinis ({PACKS_OUVRAGES_AEP.length})</h2>
           {PACKS_OUVRAGES_AEP.map((pack) => {
             const totalHT = pack.lignes.reduce((total, ligne) => total + ligne.quantite * ligne.prix, 0);
+            const idPack = `pack-aep-${pack.id}`;
+            const replie = Boolean(packsReplis[idPack]);
             return (
               <section key={pack.id} className="obat-pack-list-card">
                 <header className="obat-pack-list-header">
@@ -864,38 +975,158 @@ export default function GestionArticles() {
                     <h2>{pack.titre}</h2>
                     <p>{pack.description}</p>
                   </div>
-                  <span>{pack.lignes.length} lignes</span>
+                  <div className="obat-pack-list-header-meta">
+                    <span>{pack.lignes.length} lignes</span>
+                    <button
+                      type="button"
+                      className="obat-pack-toggle"
+                      aria-expanded={!replie}
+                      aria-controls={`${idPack}-contenu`}
+                      onClick={() => basculerPack(idPack)}
+                      title={replie ? 'Déplier le contenu' : 'Replier le contenu'}
+                    >
+                      <ChevronDown size={16} aria-hidden="true" />
+                      {replie ? 'Déplier' : 'Replier'}
+                    </button>
+                  </div>
                 </header>
-                <div className="tableau-responsive">
-                  <table className="obat-articles-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 110 }}>Code</th>
-                        <th>Désignation</th>
-                        <th className="center" style={{ width: 100 }}>Quantité</th>
-                        <th className="right" style={{ width: 130 }}>Prix unitaire HT</th>
-                        <th className="right" style={{ width: 140 }}>Total HT</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pack.lignes.map((ligne) => (
-                        <tr key={ligne.code}>
-                          <td><span>{ligne.code}</span></td>
-                          <td>{ligne.libelle}</td>
-                          <td className="center">{ligne.quantite} {ligne.unite}</td>
-                          <td className="right obat-price-cell">{formaterNombre(ligne.prix)} DA</td>
-                          <td className="right obat-price-total">{formaterNombre(ligne.quantite * ligne.prix)} DA</td>
+                <div id={`${idPack}-contenu`} hidden={replie}>
+                  <div className="tableau-responsive">
+                    <table className="obat-articles-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: 110 }}>Code</th>
+                          <th>Désignation</th>
+                          <th className="center" style={{ width: 100 }}>Quantité</th>
+                          <th className="right" style={{ width: 130 }}>Prix unitaire HT</th>
+                          <th className="right" style={{ width: 140 }}>Total HT</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {pack.lignes.map((ligne) => (
+                          <tr key={ligne.code}>
+                            <td><span>{ligne.code}</span></td>
+                            <td>{ligne.libelle}</td>
+                            <td className="center">{ligne.quantite} {ligne.unite}</td>
+                            <td className="right obat-price-cell">{formaterNombre(ligne.prix)} DA</td>
+                            <td className="right obat-price-total">{formaterNombre(ligne.quantite * ligne.prix)} DA</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <footer className="obat-pack-list-total">
+                    Total estimatif HT <strong>{formaterNombre(totalHT)} DA</strong>
+                  </footer>
                 </div>
-                <footer className="obat-pack-list-total">
-                  Total estimatif HT <strong>{formaterNombre(totalHT)} DA</strong>
-                </footer>
               </section>
             );
           })}
+        </div>
+      )}
+
+      {packEnEdition && (
+        <div className="obat-modal-overlay" onClick={() => setPackEnEdition(null)}>
+          <div className="obat-modal-card obat-pack-edit-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="obat-modal-header">
+              <h3>Modifier le pack</h3>
+              <button
+                type="button"
+                className="obat-btn-close-sm"
+                onClick={() => setPackEnEdition(null)}
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={enregistrerEditionPack}>
+              <div className="obat-modal-body">
+                <div className="obat-form-group">
+                  <label htmlFor="nom-pack-edition">Nom du pack *</label>
+                  <input
+                    id="nom-pack-edition"
+                    type="text"
+                    maxLength={120}
+                    value={packEnEdition.nom}
+                    onChange={(event) => setPackEnEdition((modele) => ({ ...modele, nom: event.target.value }))}
+                  />
+                </div>
+                <div className="tableau-responsive obat-pack-edit-table-wrap">
+                  <table className="obat-articles-table">
+                    <thead>
+                      <tr>
+                        <th>Désignation</th>
+                        <th className="center">Quantité</th>
+                        <th className="center">Unité</th>
+                        <th className="right">Prix unitaire HT</th>
+                      </tr>
+                    </thead>
+                    {packEnEdition.sections.map((section, indexSection) => (
+                      <tbody key={section.id_section || `${section.categorie || 'section'}-${indexSection}`}>
+                        <tr className="obat-pack-edit-section">
+                          <th colSpan={4}>{section.titre || section.categorie || `Section ${indexSection + 1}`}</th>
+                        </tr>
+                        {(section.lignes || []).map((ligne, indexLigne) => (
+                          <tr key={ligne.id_ligne || `${ligne.code || 'ligne'}-${indexLigne}`}>
+                            <td>
+                              <input
+                                className="obat-pack-edit-input"
+                                type="text"
+                                maxLength={150}
+                                aria-label={`Désignation ligne ${indexLigne + 1}`}
+                                value={ligne.libelle || ligne.designation || ligne.description || ''}
+                                onChange={(event) => modifierLignePack(indexSection, indexLigne, 'libelle', event.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                className="obat-pack-edit-input obat-pack-edit-number"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                aria-label={`Quantité ligne ${indexLigne + 1}`}
+                                value={ligne.quantite ?? 0}
+                                onChange={(event) => modifierLignePack(indexSection, indexLigne, 'quantite', event.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                className="obat-pack-edit-input obat-pack-edit-number"
+                                type="text"
+                                maxLength={20}
+                                aria-label={`Unité ligne ${indexLigne + 1}`}
+                                value={ligne.unite || 'U'}
+                                onChange={(event) => modifierLignePack(indexSection, indexLigne, 'unite', event.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                className="obat-pack-edit-input obat-pack-edit-number"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                aria-label={`Prix unitaire HT ligne ${indexLigne + 1}`}
+                                value={ligne.prix ?? ligne.prix_unitaire ?? 0}
+                                onChange={(event) => modifierLignePack(indexSection, indexLigne, 'prix', event.target.value)}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    ))}
+                  </table>
+                </div>
+              </div>
+              <div className="obat-pack-edit-actions">
+                <button type="button" className="obat-btn-secondary" onClick={() => setPackEnEdition(null)}>
+                  Annuler
+                </button>
+                <button type="submit" className="obat-btn-primary" disabled={enregistrementPack}>
+                  {enregistrementPack ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
