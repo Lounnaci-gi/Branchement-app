@@ -788,13 +788,15 @@
 }
 
 .obat-prix-unitaire-editor {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 150px;
+  width: 100%;
+  min-width: 0;
 }
 
-.obat-select-tarif-prix {
+.obat-prix-unitaire-editor input {
   width: 100%;
   min-width: 0;
   padding: 4px 6px;
@@ -802,28 +804,21 @@
   border-radius: 4px;
   background: #FFFFFF;
   font-size: 11px;
-}
-
-.obat-tarif-prix-selection,
-.obat-tarif-prix-edition {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.obat-tarif-prix-selection .obat-select-tarif-prix,
-.obat-tarif-prix-edition input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.obat-tarif-prix-edition input {
   text-align: right;
 }
 
-.obat-btn-modifier-tarif,
-.obat-btn-valider-tarif,
-.obat-btn-annuler-tarif {
+.obat-tarif-combo {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+}
+
+.obat-tarif-combo input {
+  flex: 1 1 auto;
+}
+
+.obat-btn-liste-tarifs {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -838,12 +833,38 @@
   cursor: pointer;
 }
 
-.obat-btn-valider-tarif {
-  color: #15803D;
+.obat-liste-tarifs {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0;
+  padding: 4px;
+  border: 1px solid #CBD5E1;
+  border-radius: 4px;
+  background: #FFFFFF;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
 }
 
-.obat-btn-annuler-tarif {
-  color: #B91C1C;
+.obat-liste-tarifs button {
+  padding: 5px 7px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #1F2937;
+  font-size: 11px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.obat-liste-tarifs button:hover,
+.obat-liste-tarifs button[aria-selected='true'] {
+  background: #EFF6FF;
 }
 
 .obat-col-marge {
@@ -1643,6 +1664,40 @@
   color: #64748B;
   margin: 0 0 12px;
   line-height: 1.4;
+}
+
+.obat-pack-article-list {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  margin: 0 0 12px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.35;
+  column-gap: 4px;
+}
+
+.obat-pack-article-item {
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  align-items: baseline;
+}
+
+.obat-pack-article-item:not(:last-child)::after {
+  content: ',';
+  margin-right: 4px;
+}
+
+.obat-pack-article-name {
+  display: inline-block;
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .obat-pack-footer {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Check, Pencil, Trash2, X } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import './EditeurDevisObat.css';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
@@ -286,6 +286,7 @@ export default function EditeurDevisObat({
   const [callbackApresEnregistrement, setCallbackApresEnregistrement] = useState(null);
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false);
   const [tarifEnEdition, setTarifEnEdition] = useState(null);
+  const [listeTarifsOuverte, setListeTarifsOuverte] = useState(null);
 
   // Données du document
   const [numeroDevis, setNumeroDevis] = useState(
@@ -448,15 +449,6 @@ export default function EditeurDevisObat({
     setModalDevisTypesOuvert(false);
     setDrawerBiblioOuvert(false);
     notifierSucces(`Le devis type « ${modele.nom} » a été chargé.`);
-  }
-
-  async function supprimerDevisType(idModele) {
-    try {
-      await client.delete(`/referentiels/devis-types/${encodeURIComponent(idModele)}`);
-      setDevisTypes((modeles) => modeles.filter((modele) => modele.id !== idModele));
-    } catch (err) {
-      notifierErreur(err.response?.data?.erreur || 'Impossible de supprimer le devis type.');
-    }
   }
 
   // Section active pour l'insertion
@@ -839,45 +831,6 @@ export default function EditeurDevisObat({
       })()
     );
     setIdSectionActive(targetId);
-  }
-
-  function changerChoixPrixLigne(idSection, idLigne, nouveauChoix) {
-    if (refuserEditionArticlesQuantitatif()) return;
-
-    setSections((prev) =>
-      prev.map((s) =>
-        s.id_section === idSection
-          ? {
-              ...s,
-              lignes: s.lignes.map((l) => {
-                if (l.id_ligne !== idLigne) return l;
-                const f = Number(l.prixFourniture || 0);
-                const p = Number(l.prixPose || 0);
-                let nouveauPrix = f + p;
-                let nouveauType = 'FP/';
-
-                if (nouveauChoix === 'FOURNITURE') {
-                  nouveauPrix = f;
-                  nouveauType = 'F/';
-                } else if (nouveauChoix === 'POSE') {
-                  nouveauPrix = p;
-                  nouveauType = 'P/';
-                } else {
-                  nouveauPrix = f + p;
-                  nouveauType = 'FP/';
-                }
-
-                return {
-                  ...l,
-                  choixPrix: nouveauChoix,
-                  prix: nouveauPrix,
-                  type: nouveauType
-                };
-              })
-            }
-          : s
-      )
-    );
   }
 
   function enregistrerPrixTarif(idSection, idLigne, choix, valeur) {
@@ -1878,17 +1831,18 @@ export default function EditeurDevisObat({
               </>
             ) : (
               <div className="obat-drawer-list">
+                <div className="obat-pack-intro" style={{ padding: '8px 14px', fontSize: 12, color: '#64748B', background: '#F8FAFC' }}>
+                  Ces packs regroupent l’ensemble des fournitures et prestations standard d’un branchement eau potable selon les normes ADE.
+                </div>
                 {devisTypes.length > 0 && (
                   <div>
                     <div style={{ margin: '12px 16px 8px', fontSize: 12, fontWeight: 700, color: '#475569' }}>
                       Devis types enregistrés
                     </div>
                     {devisTypes.map((modele) => {
-                      const totalModele = (modele.sections || []).reduce(
-                        (total, section) => total + (section.lignes || []).reduce(
-                          (sectionTotal, ligne) => sectionTotal + ((Number(ligne.quantite) || 0) * (Number(ligne.prix) || 0)),
-                          0
-                        ),
+                      const lignesModele = (modele.sections || []).flatMap((section) => section.lignes || []);
+                      const totalModele = lignesModele.reduce(
+                        (total, ligne) => total + ((Number(ligne.quantite) || 0) * (Number(ligne.prix) || 0)),
                         0
                       );
                       return (
@@ -1896,10 +1850,22 @@ export default function EditeurDevisObat({
                           <div className="obat-pack-header">
                             <div className="obat-pack-title">{modele.nom}</div>
                             <span className="obat-pack-count">
-                              {(modele.sections || []).reduce((total, section) => total + (section.lignes || []).length, 0)} articles
+                              {lignesModele.length} articles
                             </span>
                           </div>
-                          <p className="obat-pack-desc">Modèle de devis enregistré pour être réutilisé.</p>
+                          <div className="obat-pack-article-list" aria-label="Articles du pack">
+                            {lignesModele.map((ligne, index) => {
+                              const libelle = ligne.libelle || ligne.code || `Article ${index + 1}`;
+                              return (
+                                <span
+                                  className="obat-pack-article-item"
+                                  key={ligne.id_ligne || `${ligne.code || ligne.libelle}-${index}`}
+                                >
+                                  <span className="obat-pack-article-name" title={libelle}>{libelle}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
                           <div className="obat-pack-footer">
                             <div className="obat-pack-total">
                               Total estimé : <strong>{formaterNombre(totalModele)} DA HT</strong>
@@ -1913,17 +1879,6 @@ export default function EditeurDevisObat({
                             >
                               + Insérer ce pack
                             </button>
-                            {modele.peutSupprimer && (
-                              <button
-                                type="button"
-                                className="obat-btn-annuler"
-                                onClick={() => supprimerDevisType(modele.id)}
-                                title="Supprimer ce devis type"
-                                aria-label="Supprimer ce devis type"
-                              >
-                                <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
-                              </button>
-                            )}
                             </div>
                           </div>
                         </div>
@@ -1931,9 +1886,6 @@ export default function EditeurDevisObat({
                     })}
                   </div>
                 )}
-                <div className="obat-pack-intro" style={{ padding: '8px 14px', fontSize: 12, color: '#64748B', background: '#F8FAFC' }}>
-                  Ces packs regroupent l’ensemble des fournitures et prestations standard d’un branchement eau potable selon les normes ADE.
-                </div>
                 {PACKS_OUVRAGES_AEP.map((pack) => {
                   const packDoublons = pack.lignes.filter((l) =>
                     codesArticlesDansDevis.has((l.code || '').trim().toUpperCase())
@@ -2372,83 +2324,88 @@ export default function EditeurDevisObat({
                               {afficherColonnesPrix && (
                                 <td className="right obat-col-pu">
                                   {modeOnglet === 'edition' && !devisQuantitatif ? (
-                                      <div className="obat-prix-unitaire-editor">
+                                      <div
+                                        className="obat-prix-unitaire-editor"
+                                        onBlurCapture={(e) => {
+                                          if (!e.currentTarget.contains(e.relatedTarget)) setListeTarifsOuverte(null);
+                                        }}
+                                      >
                                         {optionsTarifLigne.length > 0 && (() => {
                                           const choixActuel = optionsTarifLigne.some((option) => option.choix === ligne.choixPrix)
                                             ? ligne.choixPrix
                                             : optionsTarifLigne.find((option) => option.type === ligne.type)?.choix || optionsTarifLigne[0].choix;
                                           const optionActive = optionsTarifLigne.find((option) => option.choix === choixActuel);
-                                          const estEditionTarifActive = tarifEnEdition?.idLigne === ligne.id_ligne
-                                            && tarifEnEdition?.choix === choixActuel;
+                                          const cleListeTarifs = `${section.id_section}:${ligne.id_ligne}`;
+                                          const editionActive = tarifEnEdition?.idSection === section.id_section
+                                            && tarifEnEdition?.idLigne === ligne.id_ligne;
                                           return (
                                             <>
-                                              <div className="obat-tarif-prix-selection">
-                                                <select
-                                                  className="obat-select-tarif-prix"
-                                                  aria-label={`Tarif appliqué à ${ligne.libelle || 'l’article'}`}
-                                                  value={choixActuel}
-                                                  onChange={(e) => {
-                                                    setTarifEnEdition(null);
-                                                    if (e.target.value === 'PRESTATION') {
-                                                      modifierChampLigne(section.id_section, ligne.id_ligne, 'type', 'PR/');
-                                                    } else {
-                                                      changerChoixPrixLigne(section.id_section, ligne.id_ligne, e.target.value);
-                                                    }
-                                                  }}
-                                                >
-                                                  {optionsTarifLigne.map((option) => (
-                                                    <option key={option.choix} value={option.choix}>{option.libelle}</option>
-                                                  ))}
-                                                </select>
-                                                <button
-                                                  type="button"
-                                                  className="obat-btn-modifier-tarif"
-                                                  title="Modifier le prix de ce tarif"
-                                                  aria-label={`Modifier le prix ${optionActive?.libelle || ''}`}
-                                                  onClick={() => setTarifEnEdition({
+                                              <div
+                                                className="obat-tarif-combo"
+                                              >
+                                                <input
+                                                  type="number"
+                                                  min="0.01"
+                                                  step="0.01"
+                                                  aria-label={`Prix unitaire ${ligne.libelle || 'de l’article'}`}
+                                                  value={editionActive ? tarifEnEdition.valeur : String(optionActive?.prix ?? ligne.prix)}
+                                                  onFocus={() => setTarifEnEdition({
                                                     idSection: section.id_section,
                                                     idLigne: ligne.id_ligne,
                                                     choix: choixActuel,
                                                     valeur: String(optionActive?.prix ?? ligne.prix)
                                                   })}
+                                                  onChange={(e) => setTarifEnEdition((actuel) => ({
+                                                    idSection: section.id_section,
+                                                    idLigne: ligne.id_ligne,
+                                                    choix: actuel?.idLigne === ligne.id_ligne ? actuel.choix : choixActuel,
+                                                    valeur: e.target.value
+                                                  }))}
+                                                  onBlur={(e) => {
+                                                    const valeur = e.currentTarget.value;
+                                                    const optionsCorrespondantes = optionsTarifLigne.filter(
+                                                      (option) => Number(option.prix) === Number(valeur)
+                                                    );
+                                                    const choix = optionsCorrespondantes.find((option) => option.choix === choixActuel)?.choix
+                                                      || optionsCorrespondantes[0]?.choix
+                                                      || (editionActive ? tarifEnEdition.choix : choixActuel);
+                                                    enregistrerPrixTarif(section.id_section, ligne.id_ligne, choix, valeur);
+                                                  }}
+                                                  onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') e.currentTarget.blur();
+                                                  }}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  className="obat-btn-liste-tarifs"
+                                                  aria-label={`Afficher les prix de ${ligne.libelle || 'l’article'}`}
+                                                  aria-expanded={listeTarifsOuverte === cleListeTarifs}
+                                                  aria-haspopup="listbox"
+                                                  onClick={() => setListeTarifsOuverte((actuelle) => (
+                                                    actuelle === cleListeTarifs ? null : cleListeTarifs
+                                                  ))}
                                                 >
-                                                  <Pencil size={14} aria-hidden="true" />
+                                                  <ChevronDown size={15} aria-hidden="true" />
                                                 </button>
                                               </div>
-                                              {estEditionTarifActive && (
-                                                <div className="obat-tarif-prix-edition">
-                                                  <input
-                                                    type="number"
-                                                    min="0.01"
-                                                    step="0.01"
-                                                    aria-label={`Nouveau prix ${optionActive?.libelle || ''}`}
-                                                    value={tarifEnEdition.valeur}
-                                                    onChange={(e) => setTarifEnEdition((actuel) => ({ ...actuel, valeur: e.target.value }))}
-                                                    autoFocus
-                                                  />
-                                                  <button
-                                                    type="button"
-                                                    className="obat-btn-valider-tarif"
-                                                    title="Valider le nouveau prix"
-                                                    aria-label="Valider le nouveau prix"
-                                                    onClick={() => enregistrerPrixTarif(
-                                                      tarifEnEdition.idSection,
-                                                      tarifEnEdition.idLigne,
-                                                      tarifEnEdition.choix,
-                                                      tarifEnEdition.valeur
-                                                    )}
-                                                  >
-                                                    <Check size={14} aria-hidden="true" />
-                                                  </button>
-                                                  <button
-                                                    type="button"
-                                                    className="obat-btn-annuler-tarif"
-                                                    title="Annuler la modification"
-                                                    aria-label="Annuler la modification du prix"
-                                                    onClick={() => setTarifEnEdition(null)}
-                                                  >
-                                                    <X size={14} aria-hidden="true" />
-                                                  </button>
+                                              {listeTarifsOuverte === cleListeTarifs && (
+                                                <div className="obat-liste-tarifs" role="listbox" aria-label="Prix disponibles">
+                                                  {optionsTarifLigne.map((option) => (
+                                                    <button
+                                                      key={option.choix}
+                                                      type="button"
+                                                      role="option"
+                                                      aria-selected={option.choix === choixActuel}
+                                                      aria-label={`Choisir le tarif ${option.type}, ${option.libelle}`}
+                                                      onMouseDown={(e) => e.preventDefault()}
+                                                      onClick={() => {
+                                                        enregistrerPrixTarif(section.id_section, ligne.id_ligne, option.choix, option.prix);
+                                                        setListeTarifsOuverte(null);
+                                                      }}
+                                                    >
+                                                      {option.libelle}
+                                                    </button>
+                                                  ))}
                                                 </div>
                                               )}
                                             </>
@@ -3487,17 +3444,6 @@ export default function EditeurDevisObat({
                         >
                           Charger
                         </button>
-                        {modele.peutSupprimer && (
-                          <button
-                            type="button"
-                            className="obat-btn-annuler"
-                            onClick={() => supprimerDevisType(modele.id)}
-                            title="Supprimer ce devis type"
-                            aria-label="Supprimer ce devis type"
-                          >
-                            <Trash2 size={16} strokeWidth={2} aria-hidden="true" />
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
