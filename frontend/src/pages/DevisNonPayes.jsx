@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { notifierErreur } from '../utils/notifications';
 
 export default function DevisNonPayes() {
+  const navigate = useNavigate();
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [filtre, setFiltre] = useState('');
@@ -75,30 +76,35 @@ export default function DevisNonPayes() {
                     <th>Devis</th>
                     <th>Date d’émission</th>
                     <th>Montant</th>
-                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {detailsFiltres.map((devis) => (
-                    <tr key={devis.id_devis}>
+                    <tr
+                      key={devis.id_devis}
+                      onClick={(event) => {
+                        if (event.target.closest('a, button')) return;
+                        navigate(`/demandes/${devis.id_demande}/devis/${devis.id_devis}`);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td>{devis.numero_demande || '—'}</td>
                       <td>{devis.demandeur || '—'}</td>
-                      <td>{devis.numero_devis || '—'}</td>
-                      <td>{devis.date_emission ? new Date(devis.date_emission).toLocaleDateString('fr-FR') : '—'}</td>
-                      <td className="obat-payment-amount">{Number(devis.montant || 0).toLocaleString('fr-DZ')} DA</td>
                       <td>
-                        <Link className="obat-btn obat-btn-sec" to={`/demandes/${devis.id_demande}/devis/${devis.id_devis}`}>
-                          Voir le devis
+                        <Link to={`/demandes/${devis.id_demande}/devis/${devis.id_devis}`}>
+                          {devis.numero_devis || 'Voir le devis'}
                         </Link>
                       </td>
+                      <td>{devis.date_emission ? new Date(devis.date_emission).toLocaleDateString('fr-FR') : '—'}</td>
+                      <td className="obat-payment-amount">{Number(devis.montant || 0).toLocaleString('fr-DZ')} DA</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <th colSpan="4">Total affiché</th>
+                    <th colSpan="3">Total affiché</th>
                     <th className="obat-payment-amount">{montantTotalFiltre.toLocaleString('fr-DZ')} DA</th>
-                    <th>{detailsFiltres.length} devis</th>
+                    <th colSpan="1">{detailsFiltres.length} devis</th>
                   </tr>
                 </tfoot>
               </table>

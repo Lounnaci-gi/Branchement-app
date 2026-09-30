@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { notifierErreur } from '../utils/notifications';
@@ -11,6 +12,7 @@ function afficherReference(devis) {
 }
 
 export default function DevisPayes({ mode = 'tous' }) {
+  const navigate = useNavigate();
   const [donnees, setDonnees] = useState(null);
   const [chargement, setChargement] = useState(true);
   const [filtre, setFiltre] = useState('');
@@ -240,11 +242,22 @@ export default function DevisPayes({ mode = 'tous' }) {
                 </thead>
                 <tbody>
                   {detailsTries.map((devis) => (
-                    <tr key={devis.id_devis}>
+                    <tr
+                      key={devis.id_devis}
+                      onClick={(event) => {
+                        if (event.target.closest('a, button')) return;
+                        navigate(`/demandes/${devis.id_demande}/devis/${devis.id_devis}`);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td className="mono" style={{ fontWeight: 700 }}>{String(devis._ordre).padStart(3, '0')}</td>
                       <td>{devis.numero_demande || '—'}</td>
                       <td>{devis.demandeur || '—'}</td>
-                      <td>{devis.numero_devis || '—'}</td>
+                      <td>
+                        <Link to={`/demandes/${devis.id_demande}/devis/${devis.id_devis}`}>
+                          {devis.numero_devis || 'Voir le devis'}
+                        </Link>
+                      </td>
                       <td className="obat-payment-amount">{Number(devis.montant || 0).toLocaleString('fr-DZ')} DA</td>
                       <td>{devis.mode_paiement || '—'}</td>
                       <td>{devis.date_paiement ? new Date(devis.date_paiement).toLocaleDateString('fr-FR') : '—'}</td>
