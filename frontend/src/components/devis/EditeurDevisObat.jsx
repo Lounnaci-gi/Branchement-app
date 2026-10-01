@@ -9,6 +9,7 @@ import {
   obtenirPrefixeTypeDevis,
   retirerPrefixeTypeDesignation
 } from '../../utils/devisAffichage';
+import { determinerTypesDisponibles } from '../../utils/devisLigneTypes';
 import { chargerDevisTypes } from '../../utils/devisTypes';
 import PACKS_OUVRAGES_AEP from './packsOuvragesAep';
 
@@ -158,50 +159,6 @@ function obtenirOptionsTarifLigne(ligne) {
   return options;
 }
 
-export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
-  if (!ligne) return ['FP/', 'F/', 'P/', 'PR/'];
-
-  const ref = Array.isArray(tousLesArticles)
-    ? tousLesArticles.find((a) => a.code === (ligne.code || ligne.code_article))
-    : null;
-
-  if (!ref || ligne.estLigneLibre) {
-    return ['FP/', 'F/', 'P/', 'PR/'];
-  }
-
-  const fRaw = ligne.prixFourniture ?? ligne.prix_fourniture ?? ref?.prixFourniture ?? null;
-  const pRaw = ligne.prixPose ?? ligne.prix_pose ?? ref?.prixPose ?? null;
-  const mode = String(ligne.modePrix ?? ligne.mode_prix ?? ref?.modePrix ?? '').trim().toUpperCase();
-  const currentType = String(ligne.type ?? ligne.type_ligne ?? '').trim();
-
-  const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
-  const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
-  const aFourniture = f !== null && f > 0;
-  const aPose = p !== null && p > 0;
-  const aLesDeux = aFourniture && aPose;
-  const types = [];
-
-  if (aFourniture) types.push('F/');
-  if (aPose) types.push('P/');
-  if (aLesDeux) types.push('FP/');
-
-  const estPrestation = mode === 'PRESTATION' || (!aFourniture && !aPose && (currentType === 'PR/' || String(ligne.code || '').startsWith('PR') || String(ligne.typeTva).toUpperCase() === 'PRESTATION'));
-
-  if (estPrestation && !aFourniture && !aPose) {
-    types.push('PR/');
-  }
-
-  if (types.length === 0) {
-    if (['F/', 'P/', 'FP/', 'PR/'].includes(currentType)) {
-      types.push(currentType);
-    } else {
-      types.push('F/');
-    }
-  }
-
-  return types;
-}
-
 function obtenirCategorieArticle(article, tousLesArticles = []) {
   const code = article?.code || article?.code_article;
   const reference = tousLesArticles.find((item) => item.code === code);
@@ -346,7 +303,7 @@ export default function EditeurDevisObat({
         const designation = extraireTitreSection(art.libelle);
         const cleSection = designation.titre || categorie;
         const ligne = (() => {
-            const typesDispo = determinerTypesDisponibles(art);
+            const typesDispo = determinerTypesDisponibles(art, references, { autoriserTousLesTypes: true });
             const typeLigne = typesDispo.includes(art.type || art.type_ligne)
               ? (art.type || art.type_ligne)
               : typesDispo[0];
@@ -670,7 +627,7 @@ export default function EditeurDevisObat({
           const aLesDeux = f !== null && p !== null && f > 0 && p > 0;
           const mode = ref.modePrix || l.modePrix;
           const temp = { ...l, prixFourniture: f, prixPose: p, modePrix: mode };
-          const typesDispo = determinerTypesDisponibles(temp, tousLesArticles);
+          const typesDispo = determinerTypesDisponibles(temp, tousLesArticles, { autoriserTousLesTypes: true });
           const typeLigne = typesDispo.includes(l.type) ? l.type : typesDispo[0];
           return {
             ...l,
@@ -763,7 +720,7 @@ export default function EditeurDevisObat({
       modePrix: modePrix,
       code: article?.code || article?.code_article || ref?.code
     };
-    const typesDispo = determinerTypesDisponibles(tempArticle, tousLesArticles);
+    const typesDispo = determinerTypesDisponibles(tempArticle, tousLesArticles, { autoriserTousLesTypes: true });
 
     let choixPrix = choixPrixInitial || article?.choixPrix || (aLesDeux ? 'FOURNITURE_POSE' : null);
     let prixCalcule = Number(article?.prix || 0);
@@ -2203,7 +2160,7 @@ export default function EditeurDevisObat({
                                   <div>
                                     <div className="obat-line-designation-editor">
                                       {ligne.estLigneLibre ? (() => {
-                                        const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles);
+                                        const typesDispo = determinerTypesDisponibles(ligne, tousLesArticles, { autoriserTousLesTypes: true });
                                         const typeActuel = typesDispo.includes(ligne.type) ? ligne.type : typesDispo[0];
                                         return (
                                           <select

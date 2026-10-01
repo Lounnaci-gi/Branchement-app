@@ -49,7 +49,7 @@ export default function Parametres() {
 
     setEnregistrement(true);
     try {
-      const { data } = await client.put('/parametres/tva', {
+      await client.put('/parametres/tva', {
         tvaPrestation: prestation,
         tvaTravaux: travaux,
         dateEffet

@@ -4,59 +4,11 @@ import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { notifierErreur } from '../utils/notifications';
 import { formaterDesignationAvecType } from '../utils/devisAffichage';
+import { normaliserTypeLigne } from '../utils/devisLigneTypes';
 
 function nomAbonne(demande) {
   if (demande.est_personne_morale) return demande.raison_sociale || '—';
   return `${demande.demandeur_nom || ''} ${demande.demandeur_prenom || ''}`.trim() || '—';
-}
-
-export function determinerTypesDisponibles(ligne) {
-  if (!ligne) return ['F/'];
-
-  const fRaw = ligne.prixFourniture ?? ligne.prix_fourniture ?? null;
-  const pRaw = ligne.prixPose ?? ligne.prix_pose ?? null;
-  const mode = String(ligne.modePrix ?? ligne.mode_prix ?? '').trim().toUpperCase();
-  const currentType = String(ligne.type ?? ligne.type_ligne ?? '').trim();
-
-  const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
-  const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
-
-  const aFourniture = f !== null && f > 0;
-  const aPose = p !== null && p > 0;
-  const aLesDeux = aFourniture && aPose;
-
-  const types = [];
-
-  if (aFourniture) types.push('F/');
-  if (aPose) types.push('P/');
-  if (aLesDeux) types.push('FP/');
-
-  const estPrestation = mode === 'PRESTATION' || (!aFourniture && !aPose && (currentType === 'PR/' || String(ligne.code || '').startsWith('PR') || String(ligne.typeTva).toUpperCase() === 'PRESTATION'));
-
-  if (estPrestation && !aFourniture && !aPose) {
-    types.push('PR/');
-  }
-
-  if (types.length === 0) {
-    if (['F/', 'P/', 'FP/', 'PR/'].includes(currentType)) {
-      types.push(currentType);
-    } else {
-      types.push('F/');
-    }
-  }
-
-  return types;
-}
-
-function normaliserTypeLigne(type, choixPrix, modePrix, article = null) {
-  const typesDispo = determinerTypesDisponibles(article || { type, choixPrix, modePrix });
-  const str = String(type || '').trim();
-  if (typesDispo.includes(str)) return str;
-  if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) return 'F/';
-  if (choixPrix === 'POSE' && typesDispo.includes('P/')) return 'P/';
-  if (choixPrix === 'FOURNITURE_POSE' && typesDispo.includes('FP/')) return 'FP/';
-  if (typesDispo.includes('PR/')) return 'PR/';
-  return typesDispo[0] || 'F/';
 }
 
 function numeroRomain(valeur) {

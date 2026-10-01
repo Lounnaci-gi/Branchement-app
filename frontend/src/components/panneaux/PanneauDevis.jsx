@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 import { notifierErreur, notifierSucces } from '../../utils/notifications';
 import InputDate from '../InputDate';
+import { determinerTypesDisponibles, normaliserTypeLigne } from '../../utils/devisLigneTypes';
 import './PanneauDevis.css';
 
 const LIBELLES_UNITES = {
@@ -12,59 +13,6 @@ const LIBELLES_UNITES = {
   M3: 'M3 (Mètre cube)',
   KG: 'KG (Kilogramme)'
 };
-
-export function determinerTypesDisponibles(ligne, tousLesArticles = []) {
-  if (!ligne) return ['F/'];
-
-  const ref = Array.isArray(tousLesArticles)
-    ? tousLesArticles.find((a) => a.code === (ligne.code || ligne.code_article))
-    : null;
-
-  const fRaw = ligne.prixFourniture ?? ligne.prix_fourniture ?? ref?.prixFourniture ?? null;
-  const pRaw = ligne.prixPose ?? ligne.prix_pose ?? ref?.prixPose ?? null;
-  const mode = String(ligne.modePrix ?? ligne.mode_prix ?? ref?.modePrix ?? '').trim().toUpperCase();
-  const currentType = String(ligne.type ?? ligne.type_ligne ?? '').trim();
-
-  const f = fRaw !== null && fRaw !== undefined ? Number(fRaw) : null;
-  const p = pRaw !== null && pRaw !== undefined ? Number(pRaw) : null;
-
-  const aFourniture = f !== null && f > 0;
-  const aPose = p !== null && p > 0;
-  const aLesDeux = aFourniture && aPose;
-
-  const types = [];
-
-  if (aFourniture) types.push('F/');
-  if (aPose) types.push('P/');
-  if (aLesDeux) types.push('FP/');
-
-  const estPrestation = mode === 'PRESTATION' || (!aFourniture && !aPose && (currentType === 'PR/' || String(ligne.code || '').startsWith('PR') || String(ligne.typeTva).toUpperCase() === 'PRESTATION'));
-
-  if (estPrestation && !aFourniture && !aPose) {
-    types.push('PR/');
-  }
-
-  if (types.length === 0) {
-    if (['F/', 'P/', 'FP/', 'PR/'].includes(currentType)) {
-      types.push(currentType);
-    } else {
-      types.push('F/');
-    }
-  }
-
-  return types;
-}
-
-function normaliserTypeLigne(type, choixPrix, modePrix, article = null, tousLesArticles = []) {
-  const typesDispo = determinerTypesDisponibles(article || { type, choixPrix, modePrix }, tousLesArticles);
-  const str = String(type || '').trim();
-  if (typesDispo.includes(str)) return str;
-  if (choixPrix === 'FOURNITURE' && typesDispo.includes('F/')) return 'F/';
-  if (choixPrix === 'POSE' && typesDispo.includes('P/')) return 'P/';
-  if (choixPrix === 'FOURNITURE_POSE' && typesDispo.includes('FP/')) return 'FP/';
-  if (typesDispo.includes('PR/')) return 'PR/';
-  return typesDispo[0] || 'F/';
-}
 
 function aTarifsFournitureEtPose(article) {
   if (!article) return false;
@@ -95,39 +43,6 @@ function formaterMontant(valeur) {
 
 function tvaArticle(article) {
   return prixArticle(article) * (Number(article.tauxTva ?? 19) / 100);
-}
-
-export function estimerMontantDevis(demande) {
-  if (!demande) return 0;
-
-  const texteType = String(demande.type_branchement || demande.type_autre || '').trim().toLowerCase();
-  const distance = Number(demande.distance_reseau_m ?? 0) || 0;
-  const diametreTexte = String(demande.diametre_defaut ?? demande.diametre_conduite ?? '').replace(/[^\d.]/g, '');
-  const diametre = Number(diametreTexte) || 0;
-
-  const tarifsParUsage = {
-    domestique: { base: 18000, distance: 75, diametre: { 20: 210, 25: 260, 32: 320, 40: 420, 50: 510, 63: 620, 80: 760, 100: 920, 110: 1040, 125: 1180, 150: 1360 } },
-    administratif: { base: 26000, distance: 110, diametre: { 20: 310, 25: 390, 32: 470, 40: 630, 50: 760, 63: 910, 80: 1080, 100: 1280, 110: 1450, 125: 1640, 150: 1870 } },
-    commercial: { base: 31000, distance: 130, diametre: { 20: 410, 25: 500, 32: 610, 40: 820, 50: 990, 63: 1180, 80: 1380, 100: 1630, 110: 1880, 125: 2160, 150: 2450 } },
-    industriel: { base: 44000, distance: 160, diametre: { 20: 520, 25: 640, 32: 780, 40: 980, 50: 1200, 63: 1450, 80: 1740, 100: 2080, 110: 2380, 125: 2710, 150: 3050 } },
-    extension: { base: 34000, distance: 95, diametre: { 20: 290, 25: 350, 32: 420, 40: 560, 50: 690, 63: 830, 80: 980, 100: 1150, 110: 1290, 125: 1460, 150: 1660 } },
-    renovation: { base: 22000, distance: 80, diametre: { 20: 250, 25: 300, 32: 370, 40: 500, 50: 620, 63: 740, 80: 900, 100: 1060, 110: 1200, 125: 1360, 150: 1560 } },
-    resiliation: { base: 22000, distance: 82, diametre: { 20: 250, 25: 300, 32: 370, 40: 500, 50: 620, 63: 740, 80: 900, 100: 1060, 110: 1200, 125: 1360, 150: 1560 } }
-  };
-
-  let profil = 'domestique';
-  if (texteType.includes('administratif')) profil = 'administratif';
-  else if (texteType.includes('commercial')) profil = 'commercial';
-  else if (texteType.includes('industriel')) profil = 'industriel';
-  else if (texteType.includes('extension') || texteType.includes('réseau')) profil = 'extension';
-  else if (texteType.includes('rénovation') || texteType.includes('résiliation')) profil = 'renovation';
-
-  const tarif = tarifsParUsage[profil];
-  const diametreReference = Object.keys(tarif.diametre).map(Number).sort((a, b) => a - b).find((valeur) => diametre <= valeur) || 150;
-  const coutDiametre = tarif.diametre[diametreReference] || tarif.diametre[150] || 0;
-  const montant = tarif.base + (distance * tarif.distance) + coutDiametre;
-
-  return Math.max(0, Math.round(montant / 100) * 100);
 }
 
 export default function PanneauDevis({
