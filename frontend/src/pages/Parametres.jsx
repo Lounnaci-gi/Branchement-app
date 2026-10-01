@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import client from '../api/client';
 import Breadcrumbs from '../components/Breadcrumbs';
+import SelecteurModeleDevis from '../components/devis/SelecteurModeleDevis';
 import { notifierErreur, notifierSucces } from '../utils/notifications';
+import { enregistrerModeleDevisPrefere, lireModeleDevisPrefere } from '../utils/devisModeles';
+import '../components/devis/DocumentDevis.css';
 
 export default function Parametres() {
   const [tvaPrestation, setTvaPrestation] = useState('19');
@@ -14,6 +17,7 @@ export default function Parametres() {
   const [logoSelectionne, setLogoSelectionne] = useState(null);
   const [chargementLogo, setChargementLogo] = useState(true);
   const [enregistrementLogo, setEnregistrementLogo] = useState(false);
+  const [modeleDevis, setModeleDevis] = useState(lireModeleDevisPrefere);
 
   async function chargerParametres() {
     return client.get('/parametres/tva')
@@ -118,9 +122,23 @@ export default function Parametres() {
         <div>
           <span>ADE • ADMINISTRATION</span>
           <h1 className="obat-page-title">Paramètres</h1>
-          <p className="obat-page-subtitle">Configurez les taux de TVA appliqués aux nouveaux tarifs.</p>
+          <p className="obat-page-subtitle">Configurez les taux de TVA, le logo et le modèle d’impression des devis.</p>
         </div>
       </header>
+
+      <section className="obat-section-card" style={{ maxWidth: 920, padding: 24, marginBottom: 16 }}>
+        <div style={{ marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Modèle de devis</h2>
+          <p style={{ color: 'var(--color-text-muted)', margin: '6px 0 0', fontSize: 13 }}>
+            Choisissez la disposition des éléments (en-tête, logo, client, totaux). Ce choix s’applique à l’affichage et à l’impression.
+          </p>
+        </div>
+        <SelecteurModeleDevis
+          variant="liste"
+          valeur={modeleDevis}
+          onChange={(id) => setModeleDevis(enregistrerModeleDevisPrefere(id))}
+        />
+      </section>
 
       <form onSubmit={enregistrer} className="obat-section-card" style={{ maxWidth: 620, padding: 24 }}>
         <div style={{ marginBottom: 20 }}>
