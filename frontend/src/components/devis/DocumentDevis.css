@@ -1,18 +1,62 @@
 .devis-document {
   --ink: #16324f;
   --muted: #5b6b7c;
+  box-sizing: border-box;
   max-width: 880px;
   margin: 0 auto 28px;
   background: #fff;
   color: var(--ink);
+  isolation: isolate;
   overflow: hidden;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 
-.devis-document * {
+.devis-document *,
+.devis-document *::before,
+.devis-document *::after {
+  box-sizing: border-box;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+
+.devis-bloc-client {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 12px 14px;
+  border: 1.5px solid #1f2937;
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.devis-bloc-client-titre {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.devis-bloc-client strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.devis-bloc-client span {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #334155;
+}
+
+.devis-table-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .devis-logo {
@@ -52,7 +96,7 @@
 .devis-articles-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
   font-size: 12px;
   margin: 18px 0;
 }
@@ -79,7 +123,9 @@
 .devis-article-meta { display: block; color: var(--muted); font-size: 10px; }
 
 .devis-totaux {
-  width: min(320px, 100%);
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
   margin-left: auto;
   font-size: 13px;
 }
@@ -104,7 +150,7 @@
 
 .devis-bas-page {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
   gap: 20px;
   align-items: start;
   margin-top: 8px;
@@ -130,10 +176,10 @@
 .devis-classique-corps { padding: 8px 36px 10px; color: #1f2937; }
 
 .devis-classique-entete {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+  align-items: start;
   margin-bottom: 22px;
 }
 
@@ -148,8 +194,9 @@
 
 .devis-classique-intro {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
   gap: 24px;
+  align-items: stretch;
   margin-bottom: 20px;
 }
 
@@ -219,8 +266,9 @@
 
 .devis-moderne-meta {
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, 240px);
   gap: 24px;
+  align-items: stretch;
   margin-bottom: 8px;
 }
 
@@ -286,8 +334,9 @@
 }
 
 .devis-epure-entete {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px;
+  gap: 16px;
   align-items: center;
   border-bottom: 3px solid #22d3ee;
   padding-bottom: 16px;
@@ -296,7 +345,9 @@
 
 .devis-epure-entete h1 {
   margin: 0;
-  font-size: 34px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: clamp(22px, 4vw, 34px);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #22d3ee;
@@ -320,8 +371,9 @@
 
 .devis-epure-colonnes {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: 28px;
+  align-items: stretch;
   margin: 22px 0 8px;
 }
 
@@ -333,14 +385,14 @@
 
 .devis-fiche-meta div {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   padding: 5px 0;
   font-size: 13px;
 }
 
-.devis-fiche-meta dt { color: #64748b; }
-.devis-fiche-meta dd { margin: 0; font-weight: 700; }
+.devis-fiche-meta dt { color: #64748b; min-width: 0; }
+.devis-fiche-meta dd { margin: 0; min-width: 0; overflow-wrap: anywhere; font-weight: 700; text-align: right; }
 
 .devis-modele-compact .devis-destinataire span {
   display: block;

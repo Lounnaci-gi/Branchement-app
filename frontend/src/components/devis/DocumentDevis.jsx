@@ -31,14 +31,15 @@ function CoordonneesAde() {
   );
 }
 
-function InfosClient({ demande }) {
+function BlocClient({ demande, titre = 'Client' }) {
   return (
-    <>
+    <section className="devis-bloc-client">
+      <span className="devis-bloc-client-titre">{titre}</span>
       <strong>{nomAbonne(demande)}</strong>
       <span>{demande.adresse_branchement || '—'}</span>
       <span>{demande.nom_commune || 'Commune non renseignée'}</span>
       <span>Tél. {demande.telephone || demande.telephone_secondaire || 'Non renseigné'}</span>
-    </>
+    </section>
   );
 }
 
@@ -52,6 +53,7 @@ function TableauArticles({
 }) {
   let indexLigne = 0;
   return (
+    <div className="devis-table-wrap">
     <table className={`devis-articles-table ${detailedTva ? 'devis-articles-table--tva' : ''}`}>
       <thead>
         <tr>
@@ -117,6 +119,7 @@ function TableauArticles({
         )}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -171,10 +174,7 @@ export default function DocumentDevis({
         <div className="devis-moderne-page">
           <h1 className="devis-mega-titre">Devis</h1>
           <div className="devis-moderne-meta">
-            <div>
-              <span className="devis-label">Pour</span>
-              <InfosClient demande={demande} />
-            </div>
+            <BlocClient demande={demande} titre="Pour" />
             <div className="devis-moderne-dates">
               <p><b>Date :</b> {dateEmission}</p>
               <p><b>N° :</b> {devis.numero_devis}</p>
@@ -217,10 +217,7 @@ export default function DocumentDevis({
             <div><dt>Date de validité</dt><dd>{validite}</dd></div>
             <div><dt>Objet</dt><dd>{nature}</dd></div>
           </dl>
-          <section className="devis-destinataire">
-            <span>Destinataire</span>
-            <InfosClient demande={demande} />
-          </section>
+          <BlocClient demande={demande} titre="Destinataire" />
         </div>
         <TableauArticles {...tableProps} />
         <Totaux totalHtArticles={totalHtArticles} totalTvaArticles={totalTvaArticles} devis={devis} />
@@ -252,10 +249,7 @@ export default function DocumentDevis({
               <li><b>Émis par :</b> Agence Berrouaghia</li>
               <li><b>Objet :</b> {nature}</li>
             </ul>
-            <div className="devis-destinataire">
-              <b>Nom du destinataire</b>
-              <InfosClient demande={demande} />
-            </div>
+            <BlocClient demande={demande} titre="Destinataire" />
           </div>
           <TableauArticles {...tableProps} />
           <div className="devis-bas-page">
@@ -298,10 +292,7 @@ export default function DocumentDevis({
         </header>
         <div className="devis-theme-corps">
           <div className="devis-theme-infos">
-            <section className="devis-theme-client">
-              <span>Destinataire</span>
-              <InfosClient demande={demande} />
-            </section>
+            <BlocClient demande={demande} titre="Destinataire" />
             <section className="devis-theme-objet">
               <span>Objet du devis</span>
               <strong>{nature}</strong>
@@ -340,9 +331,7 @@ export default function DocumentDevis({
         </header>
         <div className="devis-classique-intro">
           <CoordonneesAde />
-          <section className="devis-cadre-client">
-            <InfosClient demande={demande} />
-          </section>
+          <BlocClient demande={demande} titre="Client" />
         </div>
         <p className="devis-objet"><b>Objet :</b> {nature}</p>
         <TableauArticles {...tableProps} />
