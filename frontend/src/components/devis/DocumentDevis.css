@@ -134,7 +134,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 6px 12px;
+  padding: 6px 10px;
 }
 
 .devis-total-ttc { font-weight: 800; }
@@ -412,7 +412,7 @@
 
 .devis-modele-compact .devis-categorie-header { background: #ecfeff; color: #0e7490; }
 
-.devis-modele-compact .devis-total-ttc { color: #06b6d4; background: transparent; padding-right: 0; }
+.devis-modele-compact .devis-total-ttc { color: #06b6d4; background: transparent; }
 
 .devis-bon-accord--bande {
   background: #f1f5f9;
@@ -497,6 +497,7 @@
 
 .devis-modele-institutionnel .devis-categorie-header { background: #dbe4ee; color: #12344d; }
 
+.devis-modele-institutionnel .devis-bas-page { grid-template-columns: minmax(0, 1fr); }
 .devis-modele-institutionnel .devis-totaux { border: 0; }
 .devis-modele-institutionnel .devis-total-ttc {
   background: #12344d;
@@ -582,6 +583,7 @@
 .devis-modele-theme .devis-articles-table td { border-bottom: 1px solid var(--theme-soft); }
 .devis-modele-theme .devis-categorie-header { background: var(--theme-soft); color: var(--theme-ink); }
 .devis-theme-totaux { display: grid; grid-template-columns: 1fr minmax(240px, 320px); gap: 20px; align-items: end; }
+.devis-theme-totaux > .devis-totaux:only-child { grid-column: 2; }
 .devis-theme-totaux > p { margin: 0 0 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .devis-modele-theme .devis-total-ttc { background: var(--theme); color: #fff; }
 .devis-theme-pied {
@@ -596,13 +598,6 @@
 .devis-theme-pied section { display: flex; flex-direction: column; gap: 6px; }
 .devis-theme-pied section > strong { color: var(--theme-ink); }
 .devis-theme-pied section > span { color: var(--muted); }
-.devis-theme-signature {
-  min-height: 82px;
-  justify-content: flex-start;
-  padding: 12px 14px;
-  border: 1px solid var(--theme);
-}
-
 .devis-modele-prestige { --theme: #a77a37; --theme-soft: #f4efe5; --theme-ink: #302b22; }
 .devis-modele-prestige .devis-theme-entete { background: #292b2d; border-bottom: 4px solid #c6a56a; }
 .devis-modele-prestige .devis-theme-reference h1,
@@ -654,6 +649,143 @@
 .devis-modele-corporate .devis-theme-reference p { color: #e3eaff; }
 .devis-modele-corporate .devis-theme-client,
 .devis-modele-corporate .devis-theme-objet { border: 1px solid #d6e1ef; border-radius: 0; }
+.devis-modele-professionnel {
+  --theme: #2563eb;
+  --theme-soft: #edf3ff;
+  --theme-ink: #1e293b;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 32px rgba(30, 64, 110, 0.08);
+}
+.devis-modele-professionnel .devis-theme-entete { border-bottom: 2px solid var(--theme); }
+.devis-modele-professionnel .devis-theme-reference h1 { font-size: 22px; }
+.devis-modele-professionnel .devis-theme-client,
+.devis-modele-professionnel .devis-theme-objet { border: 1px solid #e2e8f0; background: #fff; }
+.devis-modele-professionnel .devis-articles-table th { background: #edf3ff; color: #1e3a8a; }
+.devis-modele-professionnel .devis-categorie-header {
+  border-left: 3px solid var(--theme);
+  background: #f3f6fc;
+}
+.devis-modele-professionnel .devis-total-ttc { border-radius: 3px; }
+.devis-modele-professionnel .devis-theme-pied { border-top-color: #e2e8f0; }
+.devis-modele-chantier {
+  --theme: #319fe5;
+  --theme-soft: #e8f3fc;
+  --theme-ink: #172b3a;
+  border: 1px solid #dce4eb;
+  box-shadow: 0 12px 30px rgba(27, 52, 66, 0.08);
+}
+.devis-modele-chantier .devis-theme-entete {
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 250px);
+  grid-template-rows: auto auto;
+  gap: 8px 24px;
+  align-items: start;
+  padding: 24px 34px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e1e8ee;
+}
+.devis-modele-chantier .devis-theme-entete .devis-logo {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  max-width: 120px;
+  height: 46px;
+}
+.devis-modele-chantier .devis-theme-emetteur {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: start;
+}
+.devis-modele-chantier .devis-theme-emetteur .devis-coords-ade { font-size: 10px; }
+.devis-modele-chantier .devis-theme-reference {
+  grid-column: 2;
+  grid-row: 2;
+  text-align: right;
+}
+.devis-modele-chantier .devis-theme-reference > span,
+.devis-modele-chantier .devis-theme-reference h1,
+.devis-modele-chantier .devis-theme-reference p { color: var(--theme-ink); }
+.devis-modele-chantier .devis-theme-reference h1 { font-size: 20px; }
+.devis-modele-chantier .devis-theme-reference > span { color: var(--theme); }
+.devis-modele-chantier .devis-theme-corps { padding: 18px 34px 26px; }
+.devis-modele-chantier .devis-chantier-infos { grid-template-columns: minmax(0, 1fr); margin-bottom: 10px; }
+.devis-modele-chantier .devis-theme-client {
+  min-height: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 0;
+  background: #f1f2f3;
+}
+.devis-modele-chantier .devis-theme-client > span { color: #5a6975; }
+.devis-modele-chantier .devis-chantier-objet {
+  margin: 10px 0 16px;
+  color: var(--theme-ink);
+  font-size: 14px;
+  text-align: center;
+}
+.devis-modele-chantier .devis-articles-table {
+  table-layout: fixed;
+  margin: 0 0 20px;
+  font-size: 10.5px;
+}
+.devis-modele-chantier .devis-articles-table th {
+  padding: 7px 6px;
+  background: var(--theme);
+  color: #fff;
+  text-align: center;
+}
+.devis-modele-chantier .devis-articles-table td {
+  padding: 6px;
+  border-bottom: 1px solid #e5e9ed;
+  vertical-align: middle;
+}
+.devis-modele-chantier .devis-articles-table .col-num { width: 48px; }
+.devis-modele-chantier .devis-articles-table .col-qte { width: 48px; }
+.devis-modele-chantier .devis-articles-table .col-unite { width: 48px; }
+.devis-modele-chantier .devis-articles-table .col-pu { width: 86px; }
+.devis-modele-chantier .devis-articles-table .col-tva { width: 48px; text-align: right; }
+.devis-modele-chantier .devis-articles-table .col-total { width: 88px; }
+.devis-modele-chantier .devis-articles-table .devis-categorie-row td {
+  background: #cfe8fb;
+  font-weight: 700;
+}
+.devis-modele-chantier .devis-categorie-header {
+  border-left: 0;
+  background: #cfe8fb;
+}
+.devis-modele-chantier .devis-categorie-numero { color: #1976b9; }
+.devis-modele-chantier .devis-categorie-sous-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: right;
+}
+.devis-modele-chantier .devis-categorie-sous-total strong { white-space: nowrap; }
+.devis-modele-chantier .devis-articles-table .col-desig { text-align: left; }
+.devis-modele-chantier .devis-articles-table .col-desig > strong { font-weight: 500; }
+.devis-modele-chantier .devis-articles-table .col-total,
+.devis-modele-chantier .devis-articles-table .col-pu { font-variant-numeric: tabular-nums; }
+.devis-modele-chantier .devis-theme-totaux {
+  display: flex;
+  justify-content: flex-end;
+}
+.devis-modele-chantier .devis-totaux {
+  border-top: 1px solid #dce4eb;
+  padding-top: 6px;
+}
+.devis-modele-chantier .devis-total-ttc { background: var(--theme); color: #fff; }
+.devis-modele-chantier .devis-theme-pied {
+  grid-template-columns: 1fr 1fr;
+  border-top-color: #dce4eb;
+  margin-top: 18px;
+}
+.devis-modele-chantier .devis-chantier-accord {
+  min-height: 74px;
+  padding: 10px 12px;
+  border: 1px solid #e1e6ea;
+  border-radius: 0;
+}
+.devis-modele-chantier .devis-chantier-accord > strong { color: var(--theme-ink); }
+.devis-modele-chantier .devis-chantier-accord > span { color: var(--muted); }
 .devis-modele-navy-corner { --theme: #08285d; --theme-soft: #edf1f8; --theme-ink: #12213b; position: relative; }
 .devis-modele-navy-corner::before,
 .devis-modele-navy-corner::after {
@@ -683,7 +815,6 @@
 .devis-modele-atelier { --theme: #4a98d8; --theme-soft: #edf6fd; --theme-ink: #294d6e; }
 .devis-modele-atelier .devis-theme-client { background: #fff; border-bottom: 2px solid var(--theme); }
 .devis-modele-atelier .devis-categorie-header { background: #d9ecfa; }
-.devis-modele-atelier .devis-theme-signature { min-height: 112px; }
 .devis-modele-quantitatif { --theme: #3289d5; --theme-soft: #f1f7fc; --theme-ink: #28435f; }
 .devis-modele-quantitatif .devis-theme-entete { border-bottom: 2px solid var(--theme); }
 .devis-modele-quantitatif .devis-theme-infos { margin-bottom: 26px; }
@@ -706,6 +837,7 @@
 .devis-modele-orange .devis-articles-table--tva { font-size: 10px; }
 .devis-modele-orange .devis-articles-table--tva th { padding: 7px 4px; }
 .devis-modele-orange .devis-articles-table--tva td { padding: 7px 4px; }
+.devis-modele-orange .devis-totaux div { padding-right: 4px; }
 .devis-modele-orange .devis-articles-table--tva .col-desig { width: auto; }
 .devis-modele-orange .devis-articles-table--tva .col-qte { width: 52px; }
 .devis-modele-orange .devis-articles-table--tva .col-unite { width: 52px; }
@@ -713,7 +845,6 @@
 .devis-modele-orange .devis-articles-table--tva .col-tva { width: 44px; text-align: center; }
 .devis-modele-orange .devis-articles-table--tva .col-tva-total { width: 66px; text-align: right; }
 .devis-modele-orange .devis-articles-table--tva .col-total { width: 78px; }
-.devis-modele-orange .devis-theme-signature { background: #f0f0f0; border: 0; text-align: center; }
 .devis-modele-orange .devis-theme-pied { grid-template-columns: repeat(3, minmax(0, 1fr)); border-top-color: #aaa; }
 .devis-modele-orange .devis-theme-totaux > p { display: none; }
 .devis-modele-orange .devis-theme-reference > span { color: #737373; }
@@ -900,6 +1031,8 @@
 .devis-modele-apercu--sienne .devis-modele-apercu-client,
 .devis-modele-apercu--azur .devis-modele-apercu-client { width: 62%; margin-left: auto; background: #fff; border: 1px solid rgba(25, 35, 45, 0.2); }
 .devis-modele-apercu--corporate { background: #fff; border: 1px solid #d6e1ef; }
+.devis-modele-apercu--professionnel { background: #fff; border: 1px solid #e2e8f0; }
+.devis-modele-apercu--chantier { background: #fff; border: 1px solid #dbe5e8; }
 .devis-modele-apercu--navy-corner { background: #fff; }
 .devis-modele-apercu--cyan-groupe { background: #fff; border: 1px solid #d8f1f1; }
 .devis-modele-apercu--atelier { background: #fff; }
@@ -907,6 +1040,11 @@
 .devis-modele-apercu--structure { background: #f5f7fa; }
 .devis-modele-apercu--corporate .devis-modele-apercu-entete,
 .devis-modele-apercu--corporate .devis-modele-apercu-table span { background: #2449ad; }
+.devis-modele-apercu--professionnel .devis-modele-apercu-entete,
+.devis-modele-apercu--professionnel .devis-modele-apercu-table span { background: #2563eb; }
+.devis-modele-apercu--chantier .devis-modele-apercu-entete { background: #319fe5; }
+.devis-modele-apercu--chantier .devis-modele-apercu-titre { background: #cfe8fb; }
+.devis-modele-apercu--chantier .devis-modele-apercu-table span { background: #319fe5; }
 .devis-modele-apercu--navy-corner .devis-modele-apercu-entete,
 .devis-modele-apercu--navy-corner .devis-modele-apercu-table span { background: #08285d; }
 .devis-modele-apercu--cyan-groupe .devis-modele-apercu-entete,
@@ -918,12 +1056,15 @@
 .devis-modele-apercu--structure .devis-modele-apercu-entete,
 .devis-modele-apercu--structure .devis-modele-apercu-table span { background: #456fae; }
 .devis-modele-apercu--corporate .devis-modele-apercu-titre { background: #dce7ff; }
+.devis-modele-apercu--professionnel .devis-modele-apercu-titre { background: #dbeafe; }
 .devis-modele-apercu--navy-corner .devis-modele-apercu-titre { background: #d9e2f2; }
 .devis-modele-apercu--cyan-groupe .devis-modele-apercu-titre { background: #d9f5f4; }
 .devis-modele-apercu--atelier .devis-modele-apercu-titre { background: #d9ecfa; }
 .devis-modele-apercu--quantitatif .devis-modele-apercu-titre { background: #d9eafa; }
 .devis-modele-apercu--structure .devis-modele-apercu-titre { background: #d7e1ef; }
 .devis-modele-apercu--corporate .devis-modele-apercu-client,
+.devis-modele-apercu--professionnel .devis-modele-apercu-client,
+.devis-modele-apercu--chantier .devis-modele-apercu-client,
 .devis-modele-apercu--cyan-groupe .devis-modele-apercu-client,
 .devis-modele-apercu--atelier .devis-modele-apercu-client,
 .devis-modele-apercu--quantitatif .devis-modele-apercu-client,
@@ -1023,9 +1164,15 @@
   .devis-theme-entete { grid-template-columns: 72px 1fr; padding: 20px; }
   .devis-theme-entete .devis-logo { max-width: 72px; height: 48px; }
   .devis-theme-reference { grid-column: 1 / -1; text-align: left; }
+  .devis-modele-chantier .devis-theme-entete {
+    grid-template-columns: minmax(0, 1fr) 132px;
+    padding: 18px 20px 14px;
+  }
+  .devis-modele-chantier .devis-theme-entete .devis-logo { max-width: 104px; }
+  .devis-modele-chantier .devis-theme-corps { padding: 16px 20px 22px; }
   .devis-theme-corps { padding: 18px 20px 24px; }
   .devis-theme-infos,
   .devis-theme-totaux,
   .devis-theme-pied { grid-template-columns: 1fr; }
+  .devis-theme-totaux > .devis-totaux:only-child { grid-column: 1; }
 }
-

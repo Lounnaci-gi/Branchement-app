@@ -24,7 +24,7 @@ export const MODELES_DEVIS = [
   {
     id: 'prestige',
     label: 'Prestige',
-    description: 'Anthracite et or, en-tête éditorial et signature encadrée.'
+    description: 'Anthracite et or, en-tête éditorial et mise en page structurée.'
   },
   {
     id: 'rubis',
@@ -57,6 +57,16 @@ export const MODELES_DEVIS = [
     description: 'Bandeau bleu professionnel, blocs client et projet, totaux alignés.'
   },
   {
+    id: 'professionnel',
+    label: 'Professionnel',
+    description: 'Mise en page claire, repères bleus, tableau lisible et total mis en évidence.'
+  },
+  {
+    id: 'chantier',
+    label: 'Chantier',
+    description: 'En-tête client et devis, lignes hiérarchisées, TVA détaillée et zone d’accord.'
+  },
+  {
     id: 'navy-corner',
     label: 'Marine angulaire',
     description: 'Angle bleu nuit, cartouche de référence et visa encadré.'
@@ -69,7 +79,7 @@ export const MODELES_DEVIS = [
   {
     id: 'atelier',
     label: 'Atelier',
-    description: 'Bleu clair, informations d’intervention et zone de signature.'
+    description: 'Bleu clair, informations d’intervention et présentation aérée.'
   },
   {
     id: 'quantitatif',

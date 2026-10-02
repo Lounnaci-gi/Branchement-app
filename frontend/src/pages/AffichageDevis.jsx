@@ -6,6 +6,10 @@ import DocumentDevis from '../components/devis/DocumentDevis';
 import SelecteurModeleDevis from '../components/devis/SelecteurModeleDevis';
 import { notifierErreur } from '../utils/notifications';
 import { obtenirCategorieArticle } from '../utils/devisDocumentFormat';
+import {
+  EVENEMENT_NUMEROTATION_DEVIS,
+  lireModeNumerotationDevis
+} from '../utils/devisNumerotation';
 import { enregistrerModeleDevisPrefere, lireModeleDevisPrefere } from '../utils/devisModeles';
 
 export default function AffichageDevis() {
@@ -15,6 +19,7 @@ export default function AffichageDevis() {
   const [catalogueArticles, setCatalogueArticles] = useState([]);
   const [logoDevis, setLogoDevis] = useState('/ade.png');
   const [modele, setModele] = useState(lireModeleDevisPrefere);
+  const [modeNumerotationSections, setModeNumerotationSections] = useState(lireModeNumerotationDevis);
 
   useEffect(() => {
     client.get(`/demandes/${id}`)
@@ -39,6 +44,18 @@ export default function AffichageDevis() {
     window.addEventListener('storage', actualiser);
     return () => {
       window.removeEventListener('devis-modele-change', actualiser);
+      window.removeEventListener('storage', actualiser);
+    };
+  }, []);
+
+  useEffect(() => {
+    function actualiser() {
+      setModeNumerotationSections(lireModeNumerotationDevis());
+    }
+    window.addEventListener(EVENEMENT_NUMEROTATION_DEVIS, actualiser);
+    window.addEventListener('storage', actualiser);
+    return () => {
+      window.removeEventListener(EVENEMENT_NUMEROTATION_DEVIS, actualiser);
       window.removeEventListener('storage', actualiser);
     };
   }, []);
@@ -125,6 +142,7 @@ export default function AffichageDevis() {
         articlesParCategorie={articlesParCategorie}
         totalHtArticles={totalHtArticles}
         totalTvaArticles={totalTvaArticles}
+        modeNumerotationSections={modeNumerotationSections}
       />
     </div>
   );

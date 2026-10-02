@@ -6,6 +6,7 @@ import {
   montantEnLettres,
   nomAbonne
 } from '../../utils/devisDocumentFormat';
+import { formaterNumeroSection, MODE_NUMEROTATION_DEFAUT } from '../../utils/devisNumerotation';
 import './DocumentDevis.css';
 
 function formaterDate(valeur) {
@@ -48,13 +49,17 @@ function TableauArticles({
   categoriesTriees,
   articlesParCategorie,
   devis,
+  modeNumerotationSections = MODE_NUMEROTATION_DEFAUT,
   numerote = false,
-  detailedTva = false
+  detailedTva = false,
+  chantier = false
 }) {
   let indexLigne = 0;
+  const tvaVisible = detailedTva || chantier;
+  const nombreColonnes = 5 + Number(numerote) + Number(tvaVisible) + Number(detailedTva);
   return (
     <div className="devis-table-wrap">
-    <table className={`devis-articles-table ${detailedTva ? 'devis-articles-table--tva' : ''}`}>
+    <table className={`devis-articles-table ${detailedTva ? 'devis-articles-table--tva' : ''} ${chantier ? 'devis-articles-table--chantier' : ''}`}>
       <thead>
         <tr>
           {numerote ? <th className="col-num">N°</th> : null}
@@ -62,25 +67,46 @@ function TableauArticles({
           <th className="col-qte">Qté</th>
           <th className="col-unite">Unité</th>
           <th className="col-pu">Prix unitaire HT</th>
-          {detailedTva ? <th className="col-tva">% TVA</th> : null}
+          {tvaVisible ? <th className="col-tva">{chantier ? 'TVA' : '% TVA'}</th> : null}
           {detailedTva ? <th className="col-tva-total">Total TVA</th> : null}
-          <th className="col-total">{detailedTva ? 'Total TTC' : 'Montant HT'}</th>
+          <th className="col-total">{detailedTva ? 'Total TTC' : chantier ? 'Total HT' : 'Montant HT'}</th>
         </tr>
       </thead>
       <tbody>
         {aDesArticles ? (
           categoriesTriees.flatMap((categorie, categorieIndex) => {
             const articles = articlesParCategorie.get(categorie) || [];
+            const totalCategorie = articles.reduce(
+              (total, article) => total + Number(article.montantLigne ?? (Number(article.quantite || 0) * Number(article.prix || 0))),
+              0
+            );
             return [
-              <tr key={`categorie-${categorie}`}>
-                <td colSpan={numerote ? (detailedTva ? 8 : 6) : (detailedTva ? 7 : 5)} className="devis-categorie-header">
-                  <strong>{categorie}</strong>
-                </td>
+              <tr key={`categorie-${categorie}`} className={chantier ? 'devis-categorie-row' : undefined}>
+                {chantier ? (
+                  <>
+                    <td className="col-num devis-categorie-numero">
+                      {formaterNumeroSection(categorieIndex, modeNumerotationSections)}.
+                    </td>
+                    <td className="col-desig"><strong>{categorie}</strong></td>
+                    <td colSpan={nombreColonnes - 4} />
+                    <td colSpan={2} className="devis-categorie-sous-total">
+                      <span>Sous-total</span>
+                      <strong>{formaterMontant(totalCategorie)}</strong>
+                    </td>
+                  </>
+                ) : (
+                  <td colSpan={nombreColonnes} className="devis-categorie-header">
+                    <strong>{formaterNumeroSection(categorieIndex, modeNumerotationSections)}- {categorie}</strong>
+                  </td>
+                )}
               </tr>,
               ...articles.map((art, artIndex) => {
                 indexLigne += 1;
                 const codeType = normaliserTypeLigne(art.type || art.type_ligne, art.choixPrix || art.choix_prix, art.modePrix || art.mode_prix, art);
-                const numero = `${categorieIndex + 1}.${artIndex + 1}`;
+                const numeroCategorie = chantier
+                  ? formaterNumeroSection(categorieIndex, modeNumerotationSections)
+                  : String(categorieIndex + 1);
+                const numero = `${numeroCategorie}.${artIndex + 1}`;
                 const quantite = Number(art.quantite || 0);
                 const prix = Number(art.prix || 0);
                 const montantHt = Number(art.montantLigne ?? (quantite * prix));
@@ -97,7 +123,7 @@ function TableauArticles({
                     <td className="col-qte">{art.quantite}</td>
                     <td className="col-unite">{art.unite || 'U'}</td>
                     <td className="col-pu">{formaterMontant(art.prix)}</td>
-                    {detailedTva ? <td className="col-tva">{tauxTva} %</td> : null}
+                    {tvaVisible ? <td className="col-tva">{tauxTva} %</td> : null}
                     {detailedTva ? <td className="col-tva-total">{formaterMontant(montantTva)}</td> : null}
                     <td className="col-total">{detailedTva ? formaterMontant(montantHt + montantTva) : formaterMontant(montantHt)}</td>
                   </tr>
@@ -112,7 +138,7 @@ function TableauArticles({
             <td className="col-qte">1</td>
             <td className="col-unite">U</td>
             <td className="col-pu">{formaterMontant(devis.montant)}</td>
-            {detailedTva ? <td className="col-tva">0 %</td> : null}
+            {tvaVisible ? <td className="col-tva">0 %</td> : null}
             {detailedTva ? <td className="col-tva-total">{formaterMontant(0)}</td> : null}
             <td className="col-total">{formaterMontant(devis.montant)}</td>
           </tr>
@@ -162,11 +188,12 @@ export default function DocumentDevis({
   categoriesTriees,
   articlesParCategorie,
   totalHtArticles,
-  totalTvaArticles
+  totalTvaArticles,
+  modeNumerotationSections = MODE_NUMEROTATION_DEFAUT
 }) {
   const dateEmission = formaterDate(devis.date_emission);
   const validite = dateValidite(devis.date_emission);
-  const tableProps = { aDesArticles, categoriesTriees, articlesParCategorie, devis };
+  const tableProps = { aDesArticles, categoriesTriees, articlesParCategorie, devis, modeNumerotationSections };
 
   if (modele === 'moderne') {
     return (
@@ -184,10 +211,6 @@ export default function DocumentDevis({
           </div>
           <TableauArticles {...tableProps} />
           <Totaux totalHtArticles={totalHtArticles} totalTvaArticles={totalTvaArticles} devis={devis} libelleTtc="Total" />
-          <div className="devis-bon-accord">
-            <b>Bon pour accord</b>
-            <span>À retourner daté et signé</span>
-          </div>
         </div>
         <footer className="devis-pied-agence">
           <div>
@@ -221,9 +244,6 @@ export default function DocumentDevis({
         </div>
         <TableauArticles {...tableProps} />
         <Totaux totalHtArticles={totalHtArticles} totalTvaArticles={totalTvaArticles} devis={devis} />
-        <div className="devis-bon-accord devis-bon-accord--bande">
-          Signature du client (précédée de la mention « Bon pour accord »)
-        </div>
         <footer className="devis-pied-trois">
           <div><span>Siège</span><CoordonneesAde /></div>
           <div><span>Validité</span><p>Offre valable jusqu’au {validite}</p></div>
@@ -253,10 +273,6 @@ export default function DocumentDevis({
           </div>
           <TableauArticles {...tableProps} />
           <div className="devis-bas-page">
-            <div className="devis-bon-accord">
-              <b>Signature du client</b>
-              <span>(précédée de la mention « Bon pour accord »)</span>
-            </div>
             <Totaux totalHtArticles={totalHtArticles} totalTvaArticles={totalTvaArticles} devis={devis} />
           </div>
         </div>
@@ -273,10 +289,11 @@ export default function DocumentDevis({
 
   if ([
     'prestige', 'rubis', 'graphite', 'lagon', 'sienne', 'azur',
-    'corporate', 'navy-corner', 'cyan-groupe', 'atelier', 'quantitatif', 'structure',
+    'corporate', 'professionnel', 'chantier', 'navy-corner', 'cyan-groupe', 'atelier', 'quantitatif', 'structure',
     'orange', 'minimal-turquoise', 'ecobat', 'avenant'
   ].includes(modele)) {
-    const numerote = ['rubis', 'graphite', 'atelier', 'quantitatif', 'structure'].includes(modele);
+    const chantier = modele === 'chantier';
+    const numerote = chantier || ['rubis', 'graphite', 'atelier', 'quantitatif', 'structure'].includes(modele);
     const detailedTva = modele === 'orange';
     return (
       <article className={`devis-document devis-modele-theme devis-modele-${modele}`}>
@@ -291,14 +308,19 @@ export default function DocumentDevis({
           </div>
         </header>
         <div className="devis-theme-corps">
-          <div className="devis-theme-infos">
+          <div className={`devis-theme-infos ${chantier ? 'devis-chantier-infos' : ''}`}>
             <BlocClient demande={demande} titre="Destinataire" />
-            <section className="devis-theme-objet">
-              <span>Objet du devis</span>
-              <strong>{nature}</strong>
-            </section>
+            {!chantier ? (
+              <section className="devis-theme-objet">
+                <span>Objet du devis</span>
+                <strong>{nature}</strong>
+              </section>
+            ) : null}
           </div>
-          <TableauArticles {...tableProps} numerote={numerote} detailedTva={detailedTva} />
+          {chantier ? (
+            <h2 className="devis-chantier-objet">{nature}</h2>
+          ) : null}
+          <TableauArticles {...tableProps} numerote={numerote} detailedTva={detailedTva} chantier={chantier} />
           <div className="devis-theme-totaux">
             <Totaux totalHtArticles={totalHtArticles} totalTvaArticles={totalTvaArticles} devis={devis} />
           </div>
@@ -306,12 +328,14 @@ export default function DocumentDevis({
             <section>
               <strong>Conditions</strong>
               <span>Offre valable jusqu’au {validite}.</span>
-              <span>Le devis est soumis à validation de l’agence.</span>
+              <span>{chantier ? 'Les dates d’exécution sont à convenir avec l’agence.' : 'Le devis est soumis à validation de l’agence.'}</span>
             </section>
-            <section className="devis-theme-signature">
-              <strong>Bon pour accord</strong>
-              <span>Date et signature du client</span>
-            </section>
+            {modele === 'chantier' ? (
+              <section className="devis-chantier-accord">
+                <strong>Bon pour accord</strong>
+                <span>Date, signature et mention « Bon pour accord ».</span>
+              </section>
+            ) : null}
           </footer>
         </div>
       </article>

@@ -10,6 +10,11 @@ import {
   retirerPrefixeTypeDesignation
 } from '../../utils/devisAffichage';
 import { determinerTypesDisponibles } from '../../utils/devisLigneTypes';
+import {
+  enregistrerModeNumerotationDevis,
+  formaterNumeroSection,
+  lireModeNumerotationDevis
+} from '../../utils/devisNumerotation';
 import { chargerDevisTypes } from '../../utils/devisTypes';
 import PACKS_OUVRAGES_AEP from './packsOuvragesAep';
 
@@ -95,35 +100,6 @@ function normaliserQuantite(valeur) {
 function normaliserPrix(valeur) {
   const prix = Number(valeur);
   return Number.isFinite(prix) && prix >= 0 ? prix : 0;
-}
-
-function numeroRomain(valeur) {
-  const nombres = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
-  ];
-  let reste = valeur;
-  return nombres.reduce((resultat, [nombre, symbole]) => {
-    const repetitions = Math.floor(reste / nombre);
-    reste %= nombre;
-    return resultat + symbole.repeat(repetitions);
-  }, '');
-}
-
-function numeroAlphabetique(index) {
-  let reste = index + 1;
-  let resultat = '';
-  while (reste > 0) {
-    reste -= 1;
-    resultat = String.fromCharCode(65 + (reste % 26)) + resultat;
-    reste = Math.floor(reste / 26);
-  }
-  return resultat;
-}
-
-function numeroSection(index, mode) {
-  return mode === 'ALPHABETIQUE' ? numeroAlphabetique(index) : numeroRomain(index + 1);
 }
 
 function aTarifsFournitureEtPose(article) {
@@ -222,7 +198,7 @@ export default function EditeurDevisObat({
 
   // Options d'affichage Obat
   const [afficherColonneUnite, setAfficherColonneUnite] = useState(true);
-  const [modeNumerotationSections, setModeNumerotationSections] = useState('ROMAIN');
+  const [modeNumerotationSections, setModeNumerotationSections] = useState(lireModeNumerotationDevis);
   const [masquerDetailsOuvragesPreview, setMasquerDetailsOuvragesPreview] = useState(true);
   const [autoliquidationTva, setAutoliquidationTva] = useState(false); // Obat 8:18
 
@@ -2078,7 +2054,7 @@ export default function EditeurDevisObat({
                   <div className="obat-section-bar">
                     <div className="obat-section-bar-left">
                       <span className="obat-section-number">
-                        {numeroSection(sIdx, modeNumerotationSections)} -
+                        {formaterNumeroSection(sIdx, modeNumerotationSections)} -
                       </span>
                       <h3
                         className={modeOnglet === 'edition' ? 'obat-section-title-fixed' : 'obat-section-preview-title'}
@@ -2520,11 +2496,14 @@ export default function EditeurDevisObat({
                     Numérotation
                     <select
                       value={modeNumerotationSections}
-                      onChange={(e) => setModeNumerotationSections(e.target.value)}
+                      onChange={(e) => {
+                        const mode = enregistrerModeNumerotationDevis(e.target.value);
+                        setModeNumerotationSections(mode);
+                      }}
                       aria-label="Style de numérotation des sections"
                     >
                       <option value="ROMAIN">I, II, III</option>
-                      <option value="ALPHABETIQUE">A, B, C</option>
+                      <option value="ALPHABETIQUE">a, b, c</option>
                     </select>
                   </label>
                   <button
@@ -2840,15 +2819,9 @@ export default function EditeurDevisObat({
                   <p className="obat-accord-text">
                     Le soussigné déclare accepter expressément les travaux décrits ci-dessus, ainsi que le coût et les conditions d’exécution.
                   </p>
-                  <div className="obat-accord-signatures">
-                    <div className="obat-sign-box">
-                      <span>Pour l'Algérienne Des Eaux</span>
-                      <small>Visa et Cachet de l'Agence</small>
-                    </div>
-                    <div className="obat-sign-box">
-                      <span>L'Abonné(e) / Le Demandeur</span>
-                      <small>Mention manuscrite « Lu et approuvé » + Date et signature</small>
-                    </div>
+                  <div className="obat-sign-box">
+                    <span>Pour l'Algérienne Des Eaux</span>
+                    <small>Visa et Cachet de l'Agence</small>
                   </div>
                 </div>
               )}
